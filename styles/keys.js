@@ -1,7 +1,6 @@
 import { StyleSheet } from 'react-native';
 import globalStyles from './global';
 
-const horizontalPadding = 20;
 const cardRadius = 16;
 const cardBg = '#3C3C3C';
 const btnColor1 = '#D4DE95';
@@ -47,15 +46,8 @@ const keysStyles = StyleSheet.create({
   sectionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
-    marginTop: 24,
-    marginHorizontal: 2,
-  },
-  atomImage: {
-    width: 32,
-    height: 32,
-    marginRight: 10,
-    resizeMode: 'contain',
+    marginBottom: 8,
+    marginTop: 14,
   },
   trashImage: {
     width: 28,
@@ -65,9 +57,11 @@ const keysStyles = StyleSheet.create({
   iconWrap: {
     marginRight: 12,
   },
-  atomIcon: {
-    fontSize: 24,
+  mainIcon: {
     color: '#fff',
+    fontSize: 24,
+    fontWeight: '700',
+    marginRight: 12,
   },
   sectionTitle: {
     color: '#fff',
@@ -86,6 +80,24 @@ const keysStyles = StyleSheet.create({
     marginLeft: 'auto',
     backgroundColor: 'transparent',
     borderRadius: 12,
+  },
+  infoIconWrap: {
+    marginLeft: 'auto',
+    backgroundColor: 'transparent',
+    borderRadius: 20,
+    padding: 3,
+    // Lighter shadow for subtle depth
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 1,
+    elevation: 1,
+  },
+  
+  infoIconPressed: {
+    backgroundColor: 'rgba(255, 255, 255, 0.07)', // Very subtle highlight
+    opacity: 0.85, // Slightly less opacity when pressed
+    transform: [{ scale: 0.90 }],
   },
   infoIcon: {
     color: '#fff',
@@ -123,7 +135,7 @@ const keysStyles = StyleSheet.create({
     color: '#fff',
     fontWeight: '700',
     fontSize: 16,
-    marginBottom: 10,
+    marginBottom: 20,
     marginTop: 10,
     marginLeft: 2,
   },
@@ -132,14 +144,18 @@ const keysStyles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: cardBg,
     borderRadius: cardRadius,
-    marginBottom: 24,
+    marginBottom: 16,
     paddingHorizontal: 18,
-    paddingVertical: 4,
+    paddingVertical: 6,
     width: '100%',
     minHeight: 52,
     ...cardShadow,
     marginLeft: 2,
     marginRight: 2,
+  },
+  scrollView: {
+    paddingBottom: 60,    // space for floating button
+    paddingHorizontal: 2,
   },
   input: {
     flex: 1,
@@ -148,6 +164,15 @@ const keysStyles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 0,
     backgroundColor: 'transparent',
+  },
+  starterText: {
+    flex: 1,
+    color: '#fff',
+    fontSize: 17,
+    paddingVertical: 14,
+    paddingHorizontal: 0,
+    backgroundColor: 'transparent',
+    fontStyle: 'italic',
   },
   trashWrap: {
     marginLeft: 10,
@@ -254,6 +279,62 @@ const keysStyles = StyleSheet.create({
     marginLeft: 12,
     marginRight: 16,
     resizeMode: 'contain',
+  },
+  infoModalContainer: {
+    flex: 1,
+    backgroundColor: '#2b2b2b',
+    paddingTop: 15,
+    paddingHorizontal: 20,
+  },
+  horizontalBar: {
+    width: 50,
+    height: 5,
+    backgroundColor: '#555',
+    borderRadius: 2.5,
+    alignSelf: 'center',
+    marginVertical: 10,
+  },
+  infoContent: {
+    flex: 1,
+    paddingTop: 30,
+  },
+  infoSectionTitle: {
+    fontSize: 28,
+    color: '#fff',
+    fontWeight: '600',
+    marginBottom: 40,
+  },
+  infoItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 20,
+    paddingRight: 10,
+  },
+  infoItemIcon: {
+    fontSize: 20,
+    color: '#fff',
+    marginTop: 8,
+  },
+  infoTextContainer: {
+    flex: 1,
+    marginLeft: 12,
+    paddingVertical: 8,
+  },
+  infoItemText: {
+    fontSize: 16,
+    color: '#a1a1aa',
+    lineHeight: 20,
+  },
+  
+  infoItemTitle: {
+    fontSize: 18,
+    color: '#fff',
+    fontWeight: '600',
+  },
+  infoItemDescription: {
+    fontSize: 14,
+    color: '#a1a1aa',
+    lineHeight: 20,
   },
 });
 

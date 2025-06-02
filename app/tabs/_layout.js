@@ -1,7 +1,6 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
-
+import { Image } from 'react-native';
 
 export default function TabLayout() {
   return (
@@ -12,14 +11,22 @@ export default function TabLayout() {
           borderTopWidth: 0,
         },
         tabBarActiveTintColor: '#fff',
-        tabBarInactiveTintColor: '#aaa',
+        tabBarInactiveTintColor: '#b3b3b3',
         headerShown: false,
       })}
     >
       <Tabs.Screen name="keys" options={{
         title: 'Keys',
-        tabBarIcon: ({ color, size }) => (
-          <Ionicons name="key" size={size} color={color} />
+        tabBarIcon: ({ focused }) => (
+          <Image
+            source={
+              focused
+                ? require('../../assets/keystone_transparent.png')        // Active icon
+                : require('../../assets/keystone_grey.png')   // Inactive icon
+            }
+            style={{ width: 32, height: 32 }}
+            resizeMode="contain"
+          />
         ),
       }} />
       <Tabs.Screen name="home" options={{
