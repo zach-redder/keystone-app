@@ -1,49 +1,30 @@
 import React, { useEffect, useState } from 'react';
 import { Redirect } from 'expo-router';
-import { supabase } from '../lib/supabase';
-import { View, ActivityIndicator } from 'react-native';
+import { checkUserOnboardingStatus } from '../services/auth';
 
 export default function Index() {
   const [loading, setLoading] = useState(true);
-  const [onboardingComplete, setOnboardingComplete] = useState(false);
+  const [redirectTo, setRedirectTo] = useState(null);
 
   useEffect(() => {
-    const checkOnboardingStatus = async () => {
-      const user = supabase.auth.user();
-      console.log('User:', user); // Debugging log
+    const determineRedirect = async () => {
+      const { status } = await checkUserOnboardingStatus();
 
-      if (user) {
-        const { data, error } = await supabase
-          .from('users')
-          .select('onboarding_complete')
-          .eq('id', user.id)
-          .single();
-
-        console.log('Data:', data); // Debugging log
-        console.log('Error:', error); // Debugging log
-
-        if (error) {
-          console.error('Error fetching onboarding status:', error);
-        } else {
-          setOnboardingComplete(data.onboarding_complete);
-        }
+      if (status === 'not_signed_in' || status === 'complete') {
+        setRedirectTo('/onboarding/SignUp'); // send to login/signup screen
+      } else if (status === 'incomplete') {
+        setRedirectTo('/onboarding/PreferredAIPersona');
       } else {
-        console.log('No authenticated user found.');
-        setOnboardingComplete(false); // Ensure onboarding is not complete
+        setRedirectTo('/onboarding/SignUp'); // fallback
       }
+
       setLoading(false);
     };
 
-    checkOnboardingStatus();
+    determineRedirect();
   }, []);
 
-  if (!loading) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
-  }
+  if (loading) return null;
 
-  return onboardingComplete ? <Redirect href="/tabs/home" /> : <Redirect href="/onboarding" />;
+  return <Redirect href={redirectTo} />;
 }
