@@ -1,7 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { View, Text, Button } from 'react-native';
 import React from 'react';
-import SignUpSignInForm from '../../components/SignUpSignInForm';
 import { styles } from '../../styles/onboarding';
 
 export default function OnboardingStep() {
@@ -11,8 +10,7 @@ export default function OnboardingStep() {
   const nextStepMap = {
     PreferredAIPersona: 'NotificationOptIn',
     NotificationOptIn: 'PreferredReminderTime',
-    PreferredReminderTime: 'SignUp',
-    SignUp: 'tabs/home', // redirect to home after onboarding
+    PreferredReminderTime: 'login',
   };
 
   const handleNext = () => {
@@ -42,11 +40,9 @@ export default function OnboardingStep() {
         return (
           <>
             <Text style={styles.title}>Choose your preferred reminder time</Text>
-            <Button title="Next" onPress={handleNext} />
+            <Button title="Next" onPress={() => router.replace('/login')} />
           </>
         );
-      case 'SignUp':
-        return <SignUpSignInForm />;
       default:
         return <Text style={styles.title}>Unknown step</Text>;
     }

@@ -184,8 +184,7 @@ const keysStyles = StyleSheet.create({
     fontSize: 22,
   },
   suggestionRow: {
-    gap: 16,
-    marginBottom: 24,
+    marginBottom: 16,
   },
   suggestionBox: {
     backgroundColor: cardBg,

@@ -1,4 +1,6 @@
 import { supabase } from '../lib/supabase';
+import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface Preferences {
   timezone?: string;
@@ -26,6 +28,8 @@ export const signInUser = async (email: string, password: string) => {
     password,
   });
 
+  console.log('Sign-in session:', data.session);
+
   if (error) throw error;
 
   const user = data.user;
@@ -46,6 +50,20 @@ export const insertUserProfileAfterConfirmation = async (
   if (userError || !user) throw userError;
 
   const userId = user.id;
+
+  // Check if user profile already exists
+  const { data: existingProfile, error: profileCheckError } = await supabase
+    .from('users')
+    .select('id')
+    .eq('id', userId)
+    .single();
+
+  if (profileCheckError) throw profileCheckError;
+
+  if (existingProfile) {
+    console.log('User profile already exists, skipping insert.');
+    return true;
+  }
 
   // Insert into users table
   const { error: userInsertError } = await supabase.from('users').insert([
@@ -82,35 +100,55 @@ export const insertUserProfileAfterConfirmation = async (
   return true;
 };
 
-export const checkUserOnboardingStatus = async () => {
+export const signOutUser = async () => {
+  const { error } = await supabase.auth.signOut();
+  if (error) {
+    console.error('Error signing out:', error);
+  } else {
+    console.log('User signed out successfully');
+  }
+};
+
+export const checkUserStatus = async () => {
+  // Check local storage for onboarding status
+  const onboardingComplete = await AsyncStorage.getItem('onboarding_complete');
+  if (onboardingComplete === 'true') {
+    return { status: 'complete' };
+  }
+
   const {
     data: { session },
-    error: sessionError,
   } = await supabase.auth.getSession();
 
   const user = session?.user;
 
-  if (sessionError || !user) {
-    return { status: 'not_signed_in' };
+  if (!user) {
+    // ✅ No user at all = fresh install
+    return { status: 'brand_new' };
   }
 
   const { data, error } = await supabase
     .from('users')
     .select('onboarding_complete')
     .eq('id', user.id)
-    .maybeSingle(); // ✅ won't throw if no row is found
+    .maybeSingle();
 
   if (error) {
     console.error('Error fetching onboarding status:', error);
     return { status: 'error' };
   }
 
+  console.log('data', data);
+
   if (!data) {
-    // No row exists yet — treat as onboarding not started
-    return { status: 'incomplete' };
+    return { status: 'incomplete' }; // signed in, but row not created
   }
+
+  // Store onboarding status in local storage
+  await AsyncStorage.setItem('onboarding_complete', data.onboarding_complete ? 'true' : 'false');
 
   return data.onboarding_complete
     ? { status: 'complete' }
     : { status: 'incomplete' };
 };
+

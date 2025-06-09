@@ -24,7 +24,6 @@ const menuItems = [
   { 
     label: 'Core Values', 
     iconName: 'diamond',
-    active: true 
   },
   { 
     label: 'Life Goals', 
