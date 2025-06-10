@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Redirect } from 'expo-router';
-import { View, ActivityIndicator } from 'react-native';
 import { checkUserStatus } from '../services/auth';
+import SplashScreen from './SplashScreen';
 
 export default function Index() {
   const [redirectTo, setRedirectTo] = useState(null);
@@ -12,10 +12,12 @@ export default function Index() {
 
       console.log('status', status);
   
-      if (status === 'brand_new') {
-        setRedirectTo('/onboarding/PreferredAIPersona'); // ✅ new user — start onboarding
+      if (status === 'no_session') {
+        setRedirectTo('/onboarding/Welcome'); // Route to sign-up screen if no session
+      } else if (status === 'brand_new') {
+        setRedirectTo('/onboarding/Welcome'); // ✅ new user — start onboarding
       } else if (status === 'incomplete') {
-        setRedirectTo('/onboarding/PreferredAIPersona'); // signed in, resume onboarding
+        setRedirectTo('/onboarding/Welcome'); // signed in, resume onboarding
       } else if (status === 'complete') {
         setRedirectTo('/tabs/home');
       } else {
@@ -28,11 +30,7 @@ export default function Index() {
   }, []);
 
   if (!redirectTo) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
+    return <SplashScreen />;
   }
 
   return <Redirect href={redirectTo} />;

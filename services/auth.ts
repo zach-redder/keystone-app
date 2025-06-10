@@ -1,5 +1,4 @@
 import { supabase } from '../lib/supabase';
-import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface Preferences {
@@ -56,7 +55,7 @@ export const insertUserProfileAfterConfirmation = async (
     .from('users')
     .select('id')
     .eq('id', userId)
-    .single();
+    .maybeSingle();
 
   if (profileCheckError) throw profileCheckError;
 
@@ -64,6 +63,8 @@ export const insertUserProfileAfterConfirmation = async (
     console.log('User profile already exists, skipping insert.');
     return true;
   }
+
+  console.log('Inserting user profile:', { userId, fullName, email: user.email });
 
   // Insert into users table
   const { error: userInsertError } = await supabase.from('users').insert([
@@ -76,7 +77,10 @@ export const insertUserProfileAfterConfirmation = async (
     },
   ]);
 
-  if (userInsertError) throw userInsertError;
+  if (userInsertError) {
+    console.error('Error inserting user profile:', userInsertError);
+    throw userInsertError;
+  }
 
   const {
     timezone = 'UTC',
@@ -84,6 +88,8 @@ export const insertUserProfileAfterConfirmation = async (
     preferred_reminder_time = '09:00:00',
     preferred_ai_persona = 'gentle_guide',
   } = preferences;
+
+  console.log('Inserting user preferences:', { userId, timezone, notification_opt_in, preferred_reminder_time, preferred_ai_persona });
 
   const { error: prefInsertError } = await supabase.from('user_preferences').insert([
     {
@@ -95,7 +101,10 @@ export const insertUserProfileAfterConfirmation = async (
     },
   ]);
 
-  if (prefInsertError) throw prefInsertError;
+  if (prefInsertError) {
+    console.error('Error inserting user preferences:', prefInsertError);
+    throw prefInsertError;
+  }
 
   return true;
 };
@@ -110,12 +119,7 @@ export const signOutUser = async () => {
 };
 
 export const checkUserStatus = async () => {
-  // Check local storage for onboarding status
-  const onboardingComplete = await AsyncStorage.getItem('onboarding_complete');
-  if (onboardingComplete === 'true') {
-    return { status: 'complete' };
-  }
-
+  // Check for active session
   const {
     data: { session },
   } = await supabase.auth.getSession();
@@ -123,8 +127,14 @@ export const checkUserStatus = async () => {
   const user = session?.user;
 
   if (!user) {
-    // ✅ No user at all = fresh install
-    return { status: 'brand_new' };
+    // No active session, route to sign-up screen
+    return { status: 'no_session' };
+  }
+
+  // Check local storage for onboarding status
+  const onboardingComplete = await AsyncStorage.getItem('onboarding_complete');
+  if (onboardingComplete === 'true') {
+    return { status: 'complete' };
   }
 
   const { data, error } = await supabase
@@ -151,4 +161,3 @@ export const checkUserStatus = async () => {
     ? { status: 'complete' }
     : { status: 'incomplete' };
 };
-
