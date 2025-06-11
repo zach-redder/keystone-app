@@ -1,7 +1,7 @@
 import { StyleSheet, Dimensions } from 'react-native';
 import globalStyles from './global';
 
-const { width } = Dimensions.get('window');
+export const { width } = Dimensions.get('window');
 
 export const styles = StyleSheet.create({
   container: {
@@ -21,8 +21,8 @@ export const styles = StyleSheet.create({
   logoWrapper: {
     shadowColor: '#D4DE95',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.9,
-    shadowRadius: 30,
+    shadowOpacity: 1,
+    shadowRadius: 50,
     borderRadius: 80,
     padding: 10,
     backgroundColor: 'rgba(212, 222, 149, 0.07)',
@@ -55,8 +55,8 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 40,
     borderRadius: 30,
     alignItems: 'center',
-    position: 'absolute',
-    bottom: 60,
+    justifyContent: 'center',
+    marginTop: 100,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,

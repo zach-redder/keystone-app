@@ -1,10 +1,9 @@
 import { useRouter,useLocalSearchParams } from 'expo-router';
-import { View, Text, Pressable, Image } from 'react-native';
-import React, { useEffect } from 'react';
-import { styles } from '../../styles/onboarding';
+import { View, Text, Image, TouchableOpacity, Animated } from 'react-native';
+import React, { useRef } from 'react';
+import { styles, width } from '../../styles/onboarding';
+import ConfettiCannon from 'react-native-confetti-cannon';
 import * as Haptics from 'expo-haptics';
-import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { FadeIn } from 'react-native-reanimated';
 
 export default function OnboardingStep() {
   const { step } = useLocalSearchParams();
@@ -17,6 +16,24 @@ export default function OnboardingStep() {
     PreferredReminderTime: 'login',
   };
 
+  const scaleValue = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () => {
+    Animated.spring(scaleValue, {
+      toValue: 0.95,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scaleValue, {
+      toValue: 1,
+      friction: 3,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
+  };
+
   const handleNext = () => {
     const nextStep = nextStepMap[step];
     if (nextStep) {
@@ -24,38 +41,40 @@ export default function OnboardingStep() {
     }
   };
 
+  const handleButtonPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); // Trigger a subtle haptic feedback
+    console.log('Button Pressed');
+    handleNext();
+  };
+
   const renderStep = () => {
     switch (step) {
       case 'Welcome':
         return (
           <View style={styles.container}>
-            <LinearGradient
-              colors={['#111111', '#1b1b1b', '#0a0a0a']}
-              style={styles.gradientBg}
+            <ConfettiCannon
+              count={200}
+              origin={{ x: (width / 2) - 50, y: -50 }}
+              fallSpeed={3000}
+              explosionSpeed={1000}
+              fadeOut={true}
             />
-
-            {/* Logo Glow Wrapper */}
-            <Animated.View entering={FadeIn} style={styles.logoWrapper}>
-              <Image
-                source={require('../../assets/keystone_transparent.png')}
-                style={styles.logo}
-              />
-            </Animated.View>
-
+            <View style={styles.gradientBg} />
+            <View style={styles.logoWrapper}>
+              <Image source={require('../../assets/keystone_transparent.png')} style={styles.logo} />
+            </View>
             <Text style={styles.title}>Welcome!</Text>
-            <Text style={styles.subtitle}>
-              You just chose to stop living for others.
-            </Text>
-
-            <Pressable
-              onPress={handleNext}
-              style={({ pressed }) => [
-                styles.button,
-                pressed && { transform: [{ scale: 0.97 }], opacity: 0.9 },
-              ]}
-            >
-              <Text style={styles.buttonText}>Get Started</Text>
-            </Pressable>
+            <Text style={styles.subtitle}>You just chose to stop living for others.</Text>
+            <Animated.View style={{ alignItems: 'center', transform: [{ scale: scaleValue }] }}>
+              <TouchableOpacity
+                style={styles.button}
+                onPress={handleButtonPress}
+                onPressIn={handlePressIn}
+                onPressOut={handlePressOut}
+              >
+                <Text style={styles.buttonText}>Get Started</Text>
+              </TouchableOpacity>
+            </Animated.View>
           </View>
         )
       case 'PreferredAIPersona':
