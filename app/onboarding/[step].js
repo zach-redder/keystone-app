@@ -1,15 +1,29 @@
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { View, Text, Image, TouchableOpacity, Animated } from 'react-native';
+import { View, Text, TouchableOpacity, Animated, Platform } from 'react-native';
 import React, { useRef, useEffect, useState  } from 'react';
 import { styles } from '../../styles/onboarding';
 import * as Haptics from 'expo-haptics';
 import OnboardingHeader from './OnboardingHeader';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import * as Notifications from 'expo-notifications';
+import CustomTimePicker from './CustomTimePicker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function OnboardingStep() {
 
   const { step } = useLocalSearchParams();
   const router = useRouter();
+  const [time, setTime] = useState(new Date());
+
+  const onTimeChange = (event, selectedTime) => {
+    const currentTime = selectedTime || time;
+    setTime(currentTime);
+    // Update preferences or state with the selected time
+    setPreferences((prev) => ({
+      ...prev,
+      preferred_reminder_time: currentTime.toTimeString().slice(0, 8),
+    }));
+  };
 
   const [selectedOption, setSelectedOption] = useState(null);
   const [preferences, setPreferences] = useState({
@@ -18,6 +32,37 @@ export default function OnboardingStep() {
     preferred_reminder_time: '09:00:00',
     preferred_ai_persona: 'gentle',
   });
+
+  const [notificationPermissionShown, setNotificationPermissionShown] = useState(false);
+
+  useEffect(() => {
+    const checkPermissionShown = async () => {
+      const shown = await AsyncStorage.getItem('notificationPermissionShown');
+      if (shown) {
+        setNotificationPermissionShown(true);
+      }
+    };
+
+    checkPermissionShown();
+  }, []);
+
+  useEffect(() => {
+    if (step === 'NotificationOptIn' && !notificationPermissionShown) {
+      const askPermission = async () => {
+        const { status } = await Notifications.getPermissionsAsync();
+        if (status !== 'granted') {
+          await Notifications.requestPermissionsAsync();
+        }
+        await AsyncStorage.setItem('notificationPermissionShown', 'true');
+        setNotificationPermissionShown(true);
+        handleNext();
+      };
+
+      askPermission();
+    } else if (step === 'NotificationOptIn' && notificationPermissionShown) {
+      handleNext(); // Skip the step if already shown
+    }
+  }, [step, notificationPermissionShown]);
 
   const swipeGesture = Gesture.Pan()
     .onUpdate((event) => {
@@ -129,9 +174,9 @@ export default function OnboardingStep() {
         return (
           <View style={styles.container}>
             <OnboardingHeader />
-            <Text style={styles.title}>Engage with Keystone</Text>
+            <Text style={styles.title}>Life Goals</Text>
             <Text style={styles.subtitle}>
-              Enter your values, talk with AI, affirm your vision, log actions, and receive daily reminders.
+              Placeholder text for life goals.
             </Text>
             <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
               <Text style={styles.buttonText}>Next</Text>
@@ -177,19 +222,16 @@ export default function OnboardingStep() {
         return (
           <View style={styles.container}>
             <OnboardingHeader />
-            <Text style={styles.title}>Log Actions</Text>
-            <Text style={styles.subtitle}>Placeholder text for logging actions.</Text>
-            <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
-              <Text style={styles.buttonText}>Next</Text>
-            </TouchableOpacity>
+            <Text style={styles.notificationHeader}>Daily reminders to keep you aligned.</Text>
+            <View style={styles.notificationContainer} />
           </View>
         );
       case 'NotificationTime':
         return (
           <View style={styles.container}>
             <OnboardingHeader />
-            <Text style={styles.title}>Notification Time</Text>
-            <Text style={styles.subtitle}>When should your AI remind you?</Text>
+            <Text style={styles.reminderTimeHeader}>What time do you want to be reminded?</Text>
+            <CustomTimePicker selectedTime={time} onTimeChange={onTimeChange} />
             <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
               <Text style={styles.buttonText}>Finish</Text>
             </TouchableOpacity>
