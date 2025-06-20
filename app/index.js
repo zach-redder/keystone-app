@@ -22,7 +22,7 @@ export default function Index() {
         setRedirectTo('/tabs/home');
       } else {
         console.error('Unknown error or user state.');
-        setRedirectTo('/login');
+        setRedirectTo('/signin');
       }
     };
   

@@ -90,7 +90,7 @@ export default function OnboardingStep() {
     CoreValues: 'AIPersonality',
     AIPersonality: 'NotificationOptIn',
     NotificationOptIn: 'NotificationTime', 
-    NotificationTime: '../login',
+    NotificationTime: '../register',
   };
 
   const descriptions = {
@@ -100,7 +100,6 @@ export default function OnboardingStep() {
     'Drill Sergeant': "No excuses. Sharp, intense, and built to push you beyond your limits.",
   };
 
-  const scaleValue = useRef(new Animated.Value(1)).current;
   const pulseValue = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -120,35 +119,12 @@ export default function OnboardingStep() {
     ).start();
   }, [step]);
 
-  const handlePressIn = () => {
-    Animated.spring(scaleValue, {
-      toValue: 0.95,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const handlePressOut = () => {
-    Animated.spring(scaleValue, {
-      toValue: 1,
-      friction: 3,
-      tension: 40,
-      useNativeDriver: true,
-    }).start();
-  };
-
   const handleNext = () => {
     const nextStep = nextStepMap[step];
     if (nextStep) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       router.push(`/onboarding/${nextStep}`);
     }
-  };
-
-  const handleButtonPress = () => {
-    console.log('Current step:', step);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    console.log('Button Pressed');
-    handleNext();
   };
 
   const handlePersonalitySelect = (personality) => {
@@ -197,26 +173,30 @@ export default function OnboardingStep() {
       case 'AIPersonality':
         return (
           <View style={styles.container}>
-            <OnboardingHeader />
-            <Text style={styles.secondaryHeader}>Choose your AI personality.</Text>
-            <View style={styles.buttonContainer}>
-              {['Gentle Guide', 'Honest Mentor', 'Accountability Partner', 'Drill Sergeant'].map((option) => (
-                <TouchableOpacity
-                  key={option}
-                  style={selectedOption === option ? styles.selectedOptionButton : styles.optionButton}
-                  onPress={() => handlePersonalitySelect(option)}
-                >
-                  <Text style={styles.optionText}>{option}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <Text style={styles.description}>
-              {descriptions[selectedOption] || 'Select an option to see the description.'}
-            </Text>
-            <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
-              <Text style={styles.buttonText}>Next</Text>
-            </TouchableOpacity>
-          </View>
+             <OnboardingHeader />
+             <Text style={styles.secondaryHeader}>Choose your AI personality.</Text>
+             <View style={styles.buttonContainer}>
+               {['Gentle Guide', 'Honest Mentor', 'Accountability Partner', 'Drill Sergeant'].map((option) => (
+                 <TouchableOpacity
+                   key={option}
+                   style={selectedOption === option ? styles.selectedOptionButton : styles.optionButton}
+                   onPress={() => handlePersonalitySelect(option)}
+                 >
+                   <Text style={styles.optionText}>{option}</Text>
+                 </TouchableOpacity>
+               ))}
+             </View>
+             <Text style={styles.description}>
+               {descriptions[selectedOption] || 'Select an option to see the description.'}
+             </Text>
+             <TouchableOpacity
+               style={selectedOption ? styles.nextButton : styles.disabledButton}
+               onPress={handleNext}
+               disabled={!selectedOption}
+             >
+               <Text style={styles.buttonText}>Next</Text>
+             </TouchableOpacity>
+           </View>
         );
       case 'NotificationOptIn':
         return (
@@ -232,9 +212,11 @@ export default function OnboardingStep() {
             <OnboardingHeader />
             <Text style={styles.reminderTimeHeader}>What time do you want to be reminded?</Text>
             <CustomTimePicker selectedTime={time} onTimeChange={onTimeChange} />
-            <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
-              <Text style={styles.buttonText}>Finish</Text>
-            </TouchableOpacity>
+            <Animated.View style={{ transform: [{ scale: pulseValue }] }}>
+              <TouchableOpacity style={styles.glowingButton} onPress={handleNext}>
+                <Text style={styles.buttonText}>Finish</Text>
+              </TouchableOpacity>
+            </Animated.View>
           </View>
         );
       default:

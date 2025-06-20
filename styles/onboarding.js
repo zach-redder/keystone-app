@@ -97,6 +97,16 @@ export const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
   },
+  disabledButton: {
+    backgroundColor: '#cccccc', // Grey color for disabled state
+    paddingVertical: 15,
+    paddingHorizontal: 40,
+    borderRadius: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 20,
+    opacity: 0.5,
+  },
   featureImage: {
     width: width * 0.8, // 80% of the screen width
     height: width * 0.5, // Maintain aspect ratio
@@ -209,7 +219,8 @@ export const styles = StyleSheet.create({
     color: '#b3b3b3',
     fontSize: 18,
     textAlign: 'center',
-    marginBottom: 60,
+    marginBottom: 45,
+    minHeight: 60,
     paddingHorizontal: 20,
   },
   notificationContainer: {
@@ -244,6 +255,11 @@ export const styles = StyleSheet.create({
     bottom: 130,
     height: 250,
     width: 300,
+    shadowColor: '#d4de95',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 5,
+    elevation: 5,
   },
   picker: {
     width: 100,
