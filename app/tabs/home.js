@@ -1,6 +1,6 @@
 import { View, Text, SafeAreaView } from 'react-native';
 import globalStyles from '../../styles/global';
-import LogActionButton from '../../components/LogActionButton';
+import AlignButton from '../../components/AlignButton';
 
 export default function HomeScreen() {
   return (
@@ -10,7 +10,7 @@ export default function HomeScreen() {
           <Text style={globalStyles.header}>Keystone</Text>
         </View>
         {/* Other home content here */}
-        <LogActionButton onPress={() => {}} />
+        <AlignButton onPress={() => {}} />
       </View>
     </SafeAreaView>
   );

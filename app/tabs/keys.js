@@ -2,7 +2,7 @@ import { View, Text, TextInput, Pressable, SafeAreaView, TouchableOpacity, Image
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useRef } from 'react';
 import keysStyles from '../../styles/keys';
-import LogActionButton from '../../components/LogActionButton';
+import AlignButton from '../../components/AlignButton';
 import Menu from '../../components/Menu';
 import InfoModal from '../../components/InfoModal';
 
@@ -188,7 +188,7 @@ export default function Keys() {
 
         </ScrollView>
 
-        <LogActionButton onPress={() => {}} />
+        <AlignButton onPress={() => {}} />
       </View>
 
       <InfoModal visible={infoVisible} onClose={() => setInfoVisible(false)} />

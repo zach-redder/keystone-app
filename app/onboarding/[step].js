@@ -1,5 +1,5 @@
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { View, Text, TouchableOpacity, Animated, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, Animated, ScrollView } from 'react-native';
 import React, { useRef, useEffect, useState  } from 'react';
 import { styles } from '../../styles/onboarding';
 import * as Haptics from 'expo-haptics';
@@ -25,7 +25,7 @@ export default function OnboardingStep() {
     }));
   };
 
-  const [selectedOption, setSelectedOption] = useState(null);
+  const [selectedOptions, setSelectedOptions] = useState([]);
   const [preferences, setPreferences] = useState({
     timezone: 'UTC',
     notification_opt_in: true,
@@ -129,8 +129,26 @@ export default function OnboardingStep() {
 
   const handlePersonalitySelect = (personality) => {
     preferences.preferred_ai_persona = personality;
-    setSelectedOption(personality);
+    setSelectedOptions((prevSelected) => {
+      if (prevSelected.includes(personality)) {
+        return prevSelected.filter((item) => item !== personality);
+      } else if (prevSelected.length < 5) {
+        return [...prevSelected, personality];
+      }
+      return prevSelected;
+    });
     console.log('Selected AI Personality:', preferences.preferred_ai_persona);
+  };
+
+  const toggleOption = (option) => {
+    setSelectedOptions((prevSelected) => {
+      if (prevSelected.includes(option)) {
+        return prevSelected.filter((item) => item !== option);
+      } else if (prevSelected.length < 5) {
+        return [...prevSelected, option];
+      }
+      return prevSelected;
+    });
   };
 
   const renderStep = () => {
@@ -139,8 +157,54 @@ export default function OnboardingStep() {
         return (
           <View style={styles.container}>
             <OnboardingHeader />
-            <Text style={styles.title}>Future Self Vision</Text>
-            <Text style={styles.subtitle}>Placeholder text for future self vision.</Text>
+            <Text style={styles.selfVisionTitle}>Fast forward 5 years.</Text>
+            <Text style={styles.selfVisionSubtitle}>Who do you wish to be?</Text>
+            <Text style={styles.selfVisionDescription}>Select up to 5.</Text>
+            <View style={styles.separator} />
+            <View style={styles.categoryContainer}>
+              <Text style={styles.categoryTitle}>Popular</Text>
+              <ScrollView horizontal style={styles.scrollView}>
+                <View style={styles.optionsContainer}>
+                  {['Gym Goer', 'Software Developer', 'Runner', 'Business Owner', 'Athlete', 'Pastor', 'Engineer', 'Doctor', 'Artist', 'Lawyer'].map((option) => (
+                    <TouchableOpacity
+                      key={option}
+                      style={selectedOptions.includes(option) ? styles.selectedMultiSelectButton : styles.multiSelectButton}
+                      onPress={() => toggleOption(option)}
+                    >
+                      <Text style={styles.multiSelectButtonText}>{option}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </ScrollView>
+            </View>
+            <View style={styles.categoryContainer}>
+              <Text style={styles.categoryTitle}>Career</Text>
+              <View style={styles.optionsContainer}>
+                {['Gym Goer', 'Software Developer', 'Runner', 'Business Owner', 'Athlete'].map((option) => (
+                  <TouchableOpacity
+                    key={option}
+                    style={selectedOptions.includes(option) ? styles.selectedMultiSelectButton : styles.multiSelectButton}
+                    onPress={() => toggleOption(option)}
+                  >
+                    <Text style={styles.multiSelectButtonText}>{option}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+            <View style={styles.categoryContainer}>
+              <Text style={styles.categoryTitle}>Fitness</Text>
+              <View style={styles.optionsContainer}>
+                {['Gym Goer', 'Software Developer', 'Runner', 'Business Owner', 'Athlete'].map((option) => (
+                  <TouchableOpacity
+                    key={option}
+                    style={selectedOptions.includes(option) ? styles.selectedMultiSelectButton : styles.multiSelectButton}
+                    onPress={() => toggleOption(option)}
+                  >
+                    <Text style={styles.multiSelectButtonText}>{option}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
             <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
               <Text style={styles.buttonText}>Next</Text>
             </TouchableOpacity>
@@ -179,7 +243,7 @@ export default function OnboardingStep() {
                {['Gentle Guide', 'Honest Mentor', 'Accountability Partner', 'Drill Sergeant'].map((option) => (
                  <TouchableOpacity
                    key={option}
-                   style={selectedOption === option ? styles.selectedOptionButton : styles.optionButton}
+                   style={selectedOptions.includes(option) ? styles.selectedOptionButton : styles.optionButton}
                    onPress={() => handlePersonalitySelect(option)}
                  >
                    <Text style={styles.optionText}>{option}</Text>
@@ -187,12 +251,12 @@ export default function OnboardingStep() {
                ))}
              </View>
              <Text style={styles.description}>
-               {descriptions[selectedOption] || 'Select an option to see the description.'}
+               {descriptions[selectedOptions[0]] || 'Select an option to see the description.'}
              </Text>
              <TouchableOpacity
-               style={selectedOption ? styles.nextButton : styles.disabledButton}
+               style={selectedOptions.length > 0 ? styles.nextButton : styles.disabledButton}
                onPress={handleNext}
-               disabled={!selectedOption}
+               disabled={selectedOptions.length === 0}
              >
                <Text style={styles.buttonText}>Next</Text>
              </TouchableOpacity>

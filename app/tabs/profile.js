@@ -8,7 +8,7 @@ export default function ProfileScreen() {
 
   function handleSignOut() {
     signOutUser();
-    router.replace('/login');
+    router.replace('/signin');
   }
 
   return (

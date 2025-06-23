@@ -3,8 +3,8 @@ import { StyleSheet } from 'react-native';
 const btnColor1 = '#D4DE95';
 const darkBg = '#2B2B2B';
 
-const logActionButtonStyles = StyleSheet.create({
-  logActionBtn: {
+const alignButtonStyles = StyleSheet.create({
+  alignBtn: {
     backgroundColor: btnColor1,
     position: 'absolute',
     bottom: 0,
@@ -24,19 +24,19 @@ const logActionButtonStyles = StyleSheet.create({
     elevation: 12,
     paddingHorizontal: 20,
   },
-  logActionContent: {
+  alignContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 18,
   },
-  logActionIcon: {
+  alignIcon: {
     color: darkBg,
     fontWeight: '900',
     fontSize: 26,
     marginRight: 10,
   },
-  logActionText: {
+  alignText: {
     color: darkBg,
     fontWeight: '700',
     fontSize: 22,
@@ -51,4 +51,4 @@ const logActionButtonStyles = StyleSheet.create({
   },
 });
 
-export default logActionButtonStyles;
+export default alignButtonStyles;
