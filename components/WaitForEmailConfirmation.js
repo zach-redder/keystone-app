@@ -131,13 +131,25 @@ export default function WaitForEmailConfirmationScreen({ email, preferences: ini
 
       console.log('Creating user profile with preferences:', preferences);
       // Create the user profile with preferences
+      console.log('About to call insertUserProfileAfterConfirmation...');
       await insertUserProfileAfterConfirmation(preferences);
+      console.log('insertUserProfileAfterConfirmation completed successfully');
 
       console.log('Profile created, cleaning up AsyncStorage...');
       // Clean up stored preferences and password
-      await AsyncStorage.removeItem('final_preferences');
-      await AsyncStorage.removeItem('user_preferences');
-      await AsyncStorage.removeItem('tempPassword');
+      await AsyncStorage.multiRemove([
+        'final_preferences',
+        'user_preferences',
+        'tempPassword',
+        'future_self_vision',
+        'life_goals',
+        'core_values',
+        'ai_personality',
+        'futureselfvision_custom_options',
+        'lifegoals_custom_options',
+        'corevalues_custom_options',
+        'aipersonality_custom_options',
+      ]);
       
       console.log('Navigating to home...');
       // Navigate to home
@@ -185,7 +197,7 @@ export default function WaitForEmailConfirmationScreen({ email, preferences: ini
         </Text>
         <Text style={styles.emailText}>{email}</Text>
         <Text style={styles.description}>
-          Click the link in the email to confirm your account. If you don't see it, check your spam.
+          Click the link to confirm your account.
         </Text>
 
         {error && (

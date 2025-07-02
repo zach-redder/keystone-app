@@ -38,6 +38,15 @@ export const signInUser = async (email: string, password: string) => {
   return user;
 };
 
+export const resetPassword = async (email: string) => {
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: 'keystone-app://reset-password', // Deep link for password reset
+  });
+
+  if (error) throw error;
+  return true;
+};
+
 export const insertUserProfileAfterConfirmation = async (
   preferences: Preferences
 ) => {
@@ -101,15 +110,48 @@ export const insertUserProfileAfterConfirmation = async (
 
   // Get identity keys from AsyncStorage
   try {
+    console.log('Loading identity keys from AsyncStorage...');
+    
+    // Add a small delay to ensure AsyncStorage operations are complete
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
     const futureSelfVision = await AsyncStorage.getItem('future_self_vision');
     const lifeGoals = await AsyncStorage.getItem('life_goals');
     const coreValues = await AsyncStorage.getItem('core_values');
+    
+    console.log('Raw AsyncStorage data:', {
+      futureSelfVision,
+      lifeGoals,
+      coreValues,
+    });
+    
+    // Get custom options for each category
+    const futureSelfCustom = await AsyncStorage.getItem('futureselfvision_custom_options');
+    const lifeGoalsCustom = await AsyncStorage.getItem('lifegoals_custom_options');
+    const coreValuesCustom = await AsyncStorage.getItem('corevalues_custom_options');
+
+    console.log('Custom options:', {
+      futureSelfCustom,
+      lifeGoalsCustom,
+      coreValuesCustom,
+    });
 
     const identityKeys: IdentityKey[] = [];
 
     if (futureSelfVision) {
       const visions = JSON.parse(futureSelfVision);
       visions.forEach((vision: string) => {
+        identityKeys.push({
+          category: 'future_self_vision',
+          description: vision,
+        });
+      });
+    }
+
+    // Add custom future self visions
+    if (futureSelfCustom) {
+      const customVisions = JSON.parse(futureSelfCustom);
+      customVisions.forEach((vision: string) => {
         identityKeys.push({
           category: 'future_self_vision',
           description: vision,
@@ -127,6 +169,17 @@ export const insertUserProfileAfterConfirmation = async (
       });
     }
 
+    // Add custom life goals
+    if (lifeGoalsCustom) {
+      const customGoals = JSON.parse(lifeGoalsCustom);
+      customGoals.forEach((goal: string) => {
+        identityKeys.push({
+          category: 'life_goals',
+          description: goal,
+        });
+      });
+    }
+
     if (coreValues) {
       const values = JSON.parse(coreValues);
       values.forEach((value: string) => {
@@ -137,15 +190,42 @@ export const insertUserProfileAfterConfirmation = async (
       });
     }
 
-    if (identityKeys.length > 0) {
-      await addIdentityKeysBatch(identityKeys);
+    // Add custom core values
+    if (coreValuesCustom) {
+      const customValues = JSON.parse(coreValuesCustom);
+      customValues.forEach((value: string) => {
+        identityKeys.push({
+          category: 'core_values',
+          description: value,
+        });
+      });
     }
 
-    // Clean up AsyncStorage
+    if (identityKeys.length > 0) {
+      console.log('Inserting identity keys:', identityKeys);
+      console.log('Number of keys to insert:', identityKeys.length);
+      await addIdentityKeysBatch(identityKeys);
+      console.log('Identity keys inserted successfully');
+    } else {
+      console.log('No identity keys to insert - this might be the issue!');
+      console.log('Raw data check:', {
+        futureSelfVision: !!futureSelfVision,
+        lifeGoals: !!lifeGoals,
+        coreValues: !!coreValues,
+        futureSelfCustom: !!futureSelfCustom,
+        lifeGoalsCustom: !!lifeGoalsCustom,
+        coreValuesCustom: !!coreValuesCustom,
+      });
+    }
+
+    // Clean up AsyncStorage - include all the new keys
     await AsyncStorage.multiRemove([
       'future_self_vision',
       'life_goals',
       'core_values',
+      'futureselfvision_custom_options',
+      'lifegoals_custom_options',
+      'corevalues_custom_options',
     ]);
 
   } catch (error) {

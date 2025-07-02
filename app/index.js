@@ -12,12 +12,12 @@ export default function Index() {
 
       console.log('status', status);
   
-      if (status === 'no_session') {
-        setRedirectTo('/onboarding/Welcome'); // Route to sign-up screen if no session
-      } else if (status === 'brand_new') {
+      if (status === 'brand_new') {
         setRedirectTo('/onboarding/Welcome'); // ✅ new user — start onboarding
       } else if (status === 'incomplete') {
-        setRedirectTo('/onboarding/Welcome'); // signed in, resume onboarding
+        setRedirectTo('/onboarding/LifeGoals'); // resume onboarding
+      } else if (status === 'no_session') {
+        setRedirectTo('/signin'); // Route to sign-in screen if no session
       } else if (status === 'complete') {
         setRedirectTo('/tabs/home');
       } else {

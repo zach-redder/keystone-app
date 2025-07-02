@@ -1,10 +1,11 @@
 import { View, Text, TextInput, Pressable, SafeAreaView, TouchableOpacity, Image, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import keysStyles from '../../styles/keys';
 import AlignButton from '../../components/AlignButton';
 import Menu from '../../components/Menu';
 import InfoModal from '../../components/InfoModal';
+import { fetchIdentityKeys } from '../../services/userKeys';
 
 function AppButton({ title, onPress, style, icon, iconRight, plusMarginRight }) {
   return (
@@ -24,26 +25,38 @@ const menuItems = [
   { 
     label: 'Core Values', 
     iconName: 'diamond',
+    category: 'core_values',
+    display: 'core value'
   },
   { 
     label: 'Life Goals', 
-    iconName: 'flag'
-  },
-  { 
-    label: 'Identity Traits', 
-    iconName: 'person'
+    iconName: 'flag',
+    category: 'life_goals',
+    display: 'life goal'
   },
   { 
     label: 'Future Identity', 
-    iconName: 'eye'
+    iconName: 'eye',
+    category: 'future_self_vision',
+    display: 'future identity'
+  },
+  { 
+    label: 'Identity Traits', 
+    iconName: 'person',
+    category: 'identity_traits',
+    display: 'identity trait'
   },
   { 
     label: 'Motivations', 
-    iconName: 'flash'
+    iconName: 'flash',
+    category: 'motivations',
+    display: 'motivation'
   },
   { 
     label: 'Avoidances', 
-    iconName: 'warning'
+    iconName: 'warning',
+    category: 'avoidances',
+    display: 'avoidance'
   },
 ];
 
@@ -53,7 +66,70 @@ export default function Keys() {
   const [selectedItem, setSelectedItem] = useState(menuItems[0]); // Track selected item
   const [infoVisible, setInfoVisible] = useState(false);
   const [infoPressed, setInfoPressed] = useState(false);
+  const [userKeys, setUserKeys] = useState([]);
+  const [loading, setLoading] = useState(false);
   const menuBtnRef = useRef(null);
+
+  // Load user keys when component mounts or selected item changes
+  useEffect(() => {
+    loadUserKeys();
+  }, [selectedItem]);
+
+  const loadUserKeys = async () => {
+    try {
+      setLoading(true);
+      const keys = await fetchIdentityKeys();
+      setUserKeys(keys || []);
+    } catch (error) {
+      console.error('Error loading user keys:', error);
+      setUserKeys([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Filter keys by current selected category
+  const getCurrentCategoryKeys = () => {
+    return userKeys.filter(key => key.category === selectedItem.category);
+  };
+
+  // Render keys for current category
+  const renderCategoryKeys = () => {
+    if (loading) {
+      return (
+        <View style={keysStyles.inputRow}>
+          <Text style={keysStyles.starterText}>Loading...</Text>
+        </View>
+      );
+    }
+
+    const categoryKeys = getCurrentCategoryKeys();
+    
+    if (categoryKeys.length === 0) {
+      return (
+        <View style={keysStyles.inputRow}>
+          <Text style={keysStyles.starterText}>
+            Add your first {selectedItem.display}!
+          </Text>
+        </View>
+      );
+    }
+
+    return categoryKeys.map((key, index) => (
+      <View key={key.id || index} style={keysStyles.inputRow}>
+        <TextInput
+          placeholder="Enter value..."
+          placeholderTextColor="#aaa"
+          style={keysStyles.input}
+          value={key.description}
+          editable={false}
+        />
+        <Pressable style={keysStyles.trashWrap}>
+          <Image source={require('../../assets/delete.png')} style={{ width: 28, height: 28 }} resizeMode="contain" />
+        </Pressable>
+      </View>
+    ));
+  };
 
   const handleMenuPress = () => {
     if (menuBtnRef.current) {
@@ -147,44 +223,18 @@ export default function Keys() {
           onItemSelect={handleMenuItemSelect}
         />
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={keysStyles.scrollView}>  
-          <AppButton
+        <AppButton
             title={`New ${selectedItem.label == 'Future Identity' ? 'Future Identity' : selectedItem.label.slice(0, -1)}`}
             style={keysStyles.newCoreValueBtn}
             iconRight={"+"}
             plusMarginRight={0}
           />
 
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={keysStyles.scrollView}>  
+
           <Text style={keysStyles.subSectionTitle}>My {selectedItem.label}</Text>
 
-          <View style={keysStyles.inputRow}>
-            <Text style={keysStyles.starterText}>
-              Press 'New {selectedItem.label == 'Future Identity' ? 'Future Identity' : selectedItem.label.slice(0, -1)}'
-            </Text>
-          </View>
-
-          <View style={keysStyles.inputRow}>
-            <TextInput
-              placeholder="Enter value..."
-              placeholderTextColor="#aaa"
-              style={keysStyles.input}
-            />
-            <Pressable style={keysStyles.trashWrap}>
-              <Image source={require('../../assets/delete.png')} style={{ width: 28, height: 28 }} resizeMode="contain" />
-            </Pressable>
-          </View>
-
-          <Text style={keysStyles.subSectionTitle}>AI Suggestions</Text>
-          <View style={keysStyles.suggestionRow}>
-            <View style={keysStyles.suggestionBox}>
-              <Text style={keysStyles.suggestionText}>Open-Mindedness</Text>
-              <Pressable style={keysStyles.suggestionAdd}><Text style={keysStyles.suggestionAddText}>+ Add</Text></Pressable>
-            </View>
-            <View style={keysStyles.suggestionBox}>
-              <Text style={keysStyles.suggestionText}>Fitness</Text>
-              <Pressable style={keysStyles.suggestionAdd}><Text style={keysStyles.suggestionAddText}>+ Add</Text></Pressable>
-            </View>
-          </View>
+          {renderCategoryKeys()}
 
         </ScrollView>
 

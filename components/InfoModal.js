@@ -36,21 +36,21 @@ const InfoModal = ({ visible, onClose }) => {
           </View>
 
           <View style={keysStyles.infoItem}>
-            <Ionicons name="person" size={16} color="#fff" style={keysStyles.infoItemIcon} />
-            <View style={keysStyles.infoTextContainer}>
-              <Text style={keysStyles.infoItemText}>
-                <Text style={keysStyles.infoItemTitle}>Identity Traits </Text>
-                are your unique predispositions that distinguish you from others. What makes you, you.
-              </Text>
-            </View>
-          </View>
-
-          <View style={keysStyles.infoItem}>
             <Ionicons name="eye" size={16} color="#fff" style={keysStyles.infoItemIcon} />
             <View style={keysStyles.infoTextContainer}>
               <Text style={keysStyles.infoItemText}>
                 <Text style={keysStyles.infoItemTitle}>Future Identity </Text>
                 is the identity you see for yourself in the future. The version of yourself you are aspiring to become.
+              </Text>
+            </View>
+          </View>
+
+          <View style={keysStyles.infoItem}>
+            <Ionicons name="person" size={16} color="#fff" style={keysStyles.infoItemIcon} />
+            <View style={keysStyles.infoTextContainer}>
+              <Text style={keysStyles.infoItemText}>
+                <Text style={keysStyles.infoItemTitle}>Identity Traits </Text>
+                are your unique predispositions that distinguish you from others. What makes you, you.
               </Text>
             </View>
           </View>

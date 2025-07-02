@@ -1,8 +1,9 @@
 {
   "expo": {
     "name": "Keystone",
-    "slug": "keystone-app",
-    "scheme": "keystone-app",
+    "slug": "keystone",
+    "scheme": "keystone",
+    "deepLinking": true,
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/keystone.png",
@@ -14,7 +15,11 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "keystone-ios",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -25,6 +30,11 @@
     },
     "web": {
       "favicon": "./assets/keystone.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "8d662333-69a6-44eb-a191-21cb7666a62b"
+      }
     }
   }
 }

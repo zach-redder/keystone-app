@@ -1,9 +1,11 @@
 // components/SignInForm.js
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Image } from 'react-native';
-import { signInUser } from '../services/auth';
+import { View, Text, TextInput, TouchableOpacity, Image, Alert } from 'react-native';
+import { signInUser, resetPassword } from '../services/auth';
 import { styles } from '../styles/authentication';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 
 export default function SignInForm() {
   const router = useRouter();
@@ -12,6 +14,7 @@ export default function SignInForm() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [resetLoading, setResetLoading] = useState(false);
 
   const handleSignIn = async () => {
     setLoading(true);
@@ -27,10 +30,41 @@ export default function SignInForm() {
     }
   };
 
+  const handleForgotPassword = async () => {
+    if (!email.trim()) {
+      Alert.alert('Error', 'Please enter your email address first.');
+      return;
+    }
+
+    setResetLoading(true);
+    try {
+      await resetPassword(email);
+      Alert.alert(
+        'Password Reset Sent',
+        'Check your email for password reset instructions.',
+        [{ text: 'OK' }]
+      );
+    } catch (err) {
+      Alert.alert('Error', err.message || 'Failed to send password reset email.');
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
+  const handleBack = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push('/onboarding/Welcome');
+  };
+
   return (
     <View style={styles.container}>
+      <View style={styles.headerContainer}>
+        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={48} color="#FFFFFF" />
+        </TouchableOpacity>
+      </View>
       <Image source={require('../assets/keystone_transparent.png')} style={styles.logo} />
-      <Text style={styles.title}>Sign in to your account.</Text>
+      <Text style={styles.title}>Log in to your account.</Text>
 
       <TextInput
         placeholder="Email"
@@ -51,10 +85,18 @@ export default function SignInForm() {
         onChangeText={setPassword}
       />
 
+      <View style={styles.forgotPasswordContainer}>
+        <TouchableOpacity onPress={handleForgotPassword} disabled={resetLoading}>
+          <Text style={styles.forgotPasswordText}>
+            {resetLoading ? 'Sending...' : 'Forgot Password?'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       {error && <Text style={styles.error}>{error}</Text>}
 
       <TouchableOpacity style={styles.registerButton} onPress={handleSignIn} disabled={loading}>
-        <Text style={styles.buttonText}>Sign In</Text>
+        <Text style={styles.buttonText}>Log In</Text>
       </TouchableOpacity>
 
       <View style={styles.dividerContainer}>

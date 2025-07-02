@@ -16,7 +16,7 @@ export const styles = StyleSheet.create({
     logo: {
       width: 100,
       height: 100,
-      marginBottom: 25,
+      marginVertical: 25,
     },
     title: {
       fontSize: 28,
@@ -198,5 +198,28 @@ export const styles = StyleSheet.create({
     },
     secondaryButtonText: {
       color: '#2b2b2b',
+    },
+    forgotPasswordContainer: {
+      width: '100%',
+      maxWidth: 350,
+      alignItems: 'flex-end',
+      marginBottom: 20,
+    },
+    forgotPasswordText: {
+      color: '#rgba(255, 255, 255, 0.75)',
+      fontSize: 16,
+    },
+    headerContainer: {
+      position: 'absolute',
+      top: 50,
+      left: 20,
+      right: 20,
+      flexDirection: 'row',
+      justifyContent: 'flex-start',
+      alignItems: 'center',
+      zIndex: 1,
+    },
+    backButton: {
+      padding: 8,
     },
   });

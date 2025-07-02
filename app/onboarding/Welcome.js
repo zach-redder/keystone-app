@@ -57,7 +57,7 @@ export default function Welcome() {
       <View style={styles.titleContainer}>
         <Image source={require('../../assets/keystone_transparent.png')} style={styles.logo} />
         <Text style={styles.title}>Keystone</Text>
-        <Text style={styles.subtitle}>You just chose to overcome doubt and seeking validation.</Text>
+        <Text style={styles.subtitle}>You just chose to overcome internal tension.</Text>
       </View>
       <Animated.View style={{ transform: [{ scale: pulseValue }] }}>
         <TouchableOpacity

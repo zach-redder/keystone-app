@@ -1,6 +1,6 @@
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { View, Text, TouchableOpacity, Animated, ScrollView, TextInput, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
-import React, { useRef, useEffect, useState  } from 'react';
+import { View, Text, TouchableOpacity, Animated, TextInput } from 'react-native';
+import React, { useRef, useEffect, useState } from 'react';
 import { styles } from '../../styles/onboarding';
 import * as Haptics from 'expo-haptics';
 import OnboardingHeader from './OnboardingHeader';
@@ -13,11 +13,10 @@ export default function OnboardingStep() {
 
   const { step } = useLocalSearchParams();
   const router = useRouter();
-  const [time, setTime] = useState(new Date());
   const verticalScrollRef = useRef(null);
+  const [time, setTime] = useState(new Date());
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [customInputValue, setCustomInputValue] = useState('');
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   const steps = [
     'FutureSelfVision',
@@ -38,23 +37,49 @@ export default function OnboardingStep() {
 
   const [customOptions, setCustomOptions] = useState([]);
 
-  const horizontalScrollRef = useRef(null);
-  const [contentWidth, setContentWidth] = useState(0);
-
   // Load preferences from AsyncStorage on mount
   useEffect(() => {
     const loadPreferences = async () => {
       try {
+        // Clear previous step data
+        setSelectedOptions([]);
+        setCustomOptions([]);
+        
         const savedPrefs = await AsyncStorage.getItem('user_preferences');
         if (savedPrefs) {
           setPreferences(JSON.parse(savedPrefs));
+        }
+
+        // Load saved selections for the current step
+        let stepKey;
+        if (step === 'FutureSelfVision') {
+          stepKey = 'future_self_vision';
+        } else if (step === 'LifeGoals') {
+          stepKey = 'life_goals';
+        } else if (step === 'CoreValues') {
+          stepKey = 'core_values';
+        } else if (step === 'AIPersonality') {
+          stepKey = 'ai_personality';
+        }
+
+        if (stepKey) {
+          const savedSelections = await AsyncStorage.getItem(stepKey);
+          const savedCustomOptions = await AsyncStorage.getItem(`${step.toLowerCase()}_custom_options`);
+          
+          if (savedSelections) {
+            setSelectedOptions(JSON.parse(savedSelections));
+          }
+          
+          if (savedCustomOptions) {
+            setCustomOptions(JSON.parse(savedCustomOptions));
+          }
         }
       } catch (error) {
         console.error('Error loading preferences:', error);
       }
     };
     loadPreferences();
-  }, []);
+  }, [step]);
 
   // Save preferences to AsyncStorage whenever they change
   useEffect(() => {
@@ -149,11 +174,23 @@ export default function OnboardingStep() {
       // Save the current step's selections to AsyncStorage
       try {
         if (step === 'FutureSelfVision') {
+          console.log('Saving FutureSelfVision selections:', selectedOptions);
           await AsyncStorage.setItem('future_self_vision', JSON.stringify(selectedOptions));
         } else if (step === 'LifeGoals') {
+          console.log('Saving LifeGoals selections:', selectedOptions);
           await AsyncStorage.setItem('life_goals', JSON.stringify(selectedOptions));
         } else if (step === 'CoreValues') {
+          console.log('Saving CoreValues selections:', selectedOptions);
           await AsyncStorage.setItem('core_values', JSON.stringify(selectedOptions));
+        } else if (step === 'AIPersonality') {
+          console.log('Saving AIPersonality selections:', selectedOptions);
+          await AsyncStorage.setItem('ai_personality', JSON.stringify(selectedOptions));
+        }
+        
+        // Also save any custom options that were added
+        if (customOptions.length > 0) {
+          console.log('Saving custom options for', step, ':', customOptions);
+          await AsyncStorage.setItem(`${step.toLowerCase()}_custom_options`, JSON.stringify(customOptions));
         }
       } catch (error) {
         console.error('Error saving selections:', error);
@@ -161,7 +198,17 @@ export default function OnboardingStep() {
       
       // If this is the last step, save final preferences
       if (nextStep === '/register') {
+        console.log('Saving final preferences before registration:', preferences);
         await AsyncStorage.setItem('final_preferences', JSON.stringify(preferences));
+        
+        // Debug: Let's also check what's currently in AsyncStorage
+        const debugData = {
+          future_self_vision: await AsyncStorage.getItem('future_self_vision'),
+          life_goals: await AsyncStorage.getItem('life_goals'),
+          core_values: await AsyncStorage.getItem('core_values'),
+          ai_personality: await AsyncStorage.getItem('ai_personality'),
+        };
+        console.log('Current AsyncStorage data before registration:', debugData);
       }
       
       router.push(nextStep);
@@ -185,11 +232,21 @@ export default function OnboardingStep() {
   };
 
   const handlePersonalitySelect = (personality) => {
+    console.log('Personality selected:', personality);
     setPreferences(prev => ({
       ...prev,
       preferred_ai_persona: personality.toLowerCase().replace(' ', '_'),
     }));
     setSelectedOptions([personality]);
+    console.log('Updated selectedOptions for personality:', [personality]);
+    
+    // Save immediately to AsyncStorage
+    try {
+      AsyncStorage.setItem('ai_personality', JSON.stringify([personality]));
+      console.log('Saved AI personality to AsyncStorage:', [personality]);
+    } catch (error) {
+      console.error('Error saving AI personality:', error);
+    }
   };
 
   const toggleOption = (option) => {
@@ -203,30 +260,6 @@ export default function OnboardingStep() {
     });
   };
 
-  useEffect(() => {
-    const keyboardWillShow = (event) => {
-      setKeyboardHeight(event.endCoordinates.height);
-    };
-
-    const keyboardWillHide = () => {
-      setKeyboardHeight(0);
-    };
-
-    const showSubscription = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      keyboardWillShow
-    );
-    const hideSubscription = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
-      keyboardWillHide
-    );
-
-    return () => {
-      showSubscription.remove();
-      hideSubscription.remove();
-    };
-  }, []);
-
   const handleCustomInputSubmit = () => {
     if (customInputValue.trim()) {
       const newOption = customInputValue.trim();
@@ -234,37 +267,17 @@ export default function OnboardingStep() {
       toggleOption(newOption);
       setCustomInputValue('');
       setShowCustomInput(false);
-      Keyboard.dismiss();
     }
   };
 
   const handleShowCustomInput = () => {
     setShowCustomInput(true);
-    // Wait for the input to render and then scroll
-    setTimeout(() => {
-      if (horizontalScrollRef.current) {
-        horizontalScrollRef.current.scrollToEnd({ animated: true });
-      }
-    }, 100);
-  };
-
-  const handleLayout = (event) => {
-    setContentWidth(event.nativeEvent.layout.width);
   };
 
   const renderCustomSection = () => (
     <View style={styles.categoryContainer}>
       <Text style={styles.categoryTitle}>Custom</Text>
-      <GestureScrollView 
-        ref={horizontalScrollRef}
-        horizontal 
-        style={styles.scrollView}
-        simultaneousHandlers={verticalScrollRef}
-      >
-        <View 
-          style={styles.customOptionsRow}
-          onLayout={handleLayout}
-        >
+        <View style={styles.customOptionsRow}>
           {customOptions.map((option) => (
             <TouchableOpacity
               key={option}
@@ -275,9 +288,9 @@ export default function OnboardingStep() {
             </TouchableOpacity>
           ))}
           {showCustomInput ? (
-            <View style={styles.customInputContainer}>
+            <View style={[styles.customInputContainer, { minWidth: Math.max(100, customInputValue.length * 8 + 20) }]}>
               <TextInput
-                style={styles.customInput}
+                style={[styles.customInput, { width: Math.max(100, customInputValue.length * 8 + 20) }]}
                 value={customInputValue}
                 onChangeText={setCustomInputValue}
                 placeholder="Type here..."
@@ -285,6 +298,13 @@ export default function OnboardingStep() {
                 onSubmitEditing={handleCustomInputSubmit}
                 autoFocus
                 returnKeyType="done"
+                keyboardType="web-search"
+                inputAccessoryViewID={null}
+                autoComplete="off"
+                autoCorrect={false}
+                spellCheck={false}
+                multiline={false}
+                maxLength={30}
               />
             </View>
           ) : null}
@@ -292,10 +312,9 @@ export default function OnboardingStep() {
             style={styles.addCustomButton}
             onPress={handleShowCustomInput}
           >
-            <Text style={styles.addCustomButtonText}>+  Add</Text>
+            <Text style={styles.addCustomButtonText}>+ Add</Text>
           </TouchableOpacity>
         </View>
-      </GestureScrollView>
     </View>
   );
 
@@ -303,19 +322,16 @@ export default function OnboardingStep() {
     switch (step) {
       case 'FutureSelfVision':
         return (
-          <KeyboardAvoidingView 
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={[styles.container, { paddingBottom: keyboardHeight }]}
-          >
+          <View style={styles.container}>
             <OnboardingHeader />
             <Text style={styles.selfVisionTitle}>Fast forward 10 years.</Text>
             <Text style={styles.selfVisionSubtitle}>Who do you wish to be?</Text>
             <Text style={styles.selfVisionDescription}>Select up to 5.</Text>
             <GestureScrollView 
-              ref={verticalScrollRef}
               style={{ flex: 1, width: '100%' }}
               keyboardShouldPersistTaps="handled"
             >
+              {renderCustomSection()}
               <View style={styles.categoryContainer}>
                 <Text style={styles.categoryTitle}>Popular</Text>
                 <GestureScrollView 
@@ -341,7 +357,6 @@ export default function OnboardingStep() {
                 <GestureScrollView 
                   horizontal 
                   style={styles.scrollView}
-                  simultaneousHandlers={verticalScrollRef}
                 >
                   <View style={[styles.optionsContainer, { maxWidth: 800 }]}>
                     {['Software Developer', 'Business Owner', 'Pastor', 'Engineer', 'Doctor', 'Artist', 'Lawyer', 'Nurse', 'Personal Trainer', 'Influencer', 'Therapist', 'Writer', 'Chef'].map((option) => (
@@ -416,150 +431,142 @@ export default function OnboardingStep() {
                   </View>
                 </GestureScrollView>
               </View>
-              {renderCustomSection()}
             </GestureScrollView>
             <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
               <Text style={styles.buttonText}>Next</Text>
             </TouchableOpacity>
-          </KeyboardAvoidingView>
-        );
-      case 'LifeGoals':
-        return (
-          <KeyboardAvoidingView 
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={[styles.container, { paddingBottom: keyboardHeight }]}
-          >
-            <OnboardingHeader />
-            <Text style={styles.selfVisionTitle}>You have big goals.</Text>
-            <Text style={styles.selfVisionSubtitle}>What are they?</Text>
-            <Text style={styles.selfVisionDescription}>Select up to 5.</Text>
-            <GestureScrollView 
-              ref={verticalScrollRef}
-              style={{ flex: 1, width: '100%' }}
-              keyboardShouldPersistTaps="handled"
-            >
-              <View style={styles.categoryContainer}>
-                <Text style={styles.categoryTitle}>Popular</Text>
-                <GestureScrollView 
-                  horizontal 
-                  style={styles.scrollView}
-                  simultaneousHandlers={verticalScrollRef}
-                >
-                  <View style={[styles.optionsContainer, { maxWidth: 900 }]}>
-                    {['Millionaire', 'Freedom', 'Have Family', 'Travel World', 'Write Book', 'Own House', 'Get Married', 'Own Business', 'Dream Car', 'Bench 315', 'Retire Parents', 'Run Ultra', 'Six Pack Abs'].map((option) => (
-                      <TouchableOpacity
-                        key={option}
-                        style={selectedOptions.includes(option) ? styles.selectedMultiSelectButton : styles.multiSelectButton}
-                        onPress={() => toggleOption(option)}
-                      >
-                        <Text style={styles.multiSelectButtonText}>{option}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </GestureScrollView>
-              </View>
-              <View style={styles.categoryContainer}>
-                <Text style={styles.categoryTitle}>Career</Text>
-                <GestureScrollView 
-                  horizontal 
-                  style={styles.scrollView}
-                  simultaneousHandlers={verticalScrollRef}
-                >
-                  <View style={[styles.optionsContainer, { maxWidth: 600 }]}>
-                    {['Own Business', 'Top Executive', 'Six Figure Income', 'Work Remote', 'Millionaire', 'Generational Wealth', 'Top Investor'].map((option) => (
-                      <TouchableOpacity
-                        key={option}
-                        style={selectedOptions.includes(option) ? styles.selectedMultiSelectButton : styles.multiSelectButton}
-                        onPress={() => toggleOption(option)}
-                      >
-                        <Text style={styles.multiSelectButtonText}>{option}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </GestureScrollView>
-              </View>
-              <View style={styles.categoryContainer}>
-                <Text style={styles.categoryTitle}>Fitness</Text>
-                <GestureScrollView 
-                  horizontal 
-                  style={styles.scrollView}
-                  simultaneousHandlers={verticalScrollRef}
-                >
-                  <View style={[styles.optionsContainer, { maxWidth: 500 }]}>
-                    {['Run Marathon', 'Six Pack Abs', 'Bench 315', 'Squat 405', 'Deadlift 495', 'Run Ultra'].map((option) => (
-                      <TouchableOpacity
-                        key={option}
-                        style={selectedOptions.includes(option) ? styles.selectedMultiSelectButton : styles.multiSelectButton}
-                        onPress={() => toggleOption(option)}
-                      >
-                        <Text style={styles.multiSelectButtonText}>{option}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </GestureScrollView>
-              </View>
-              <View style={styles.categoryContainer}>
-                <Text style={styles.categoryTitle}>Family</Text>
-                <GestureScrollView 
-                  horizontal 
-                  style={styles.scrollView}
-                  simultaneousHandlers={verticalScrollRef}
-                >
-                  <View style={[styles.optionsContainer, { maxWidth: 500 }]}>
-                    {['Get Married', 'Have Family', 'Own House', 'Retire Parents', 'Family Vacation Home'].map((option) => (
-                      <TouchableOpacity
-                        key={option}
-                        style={selectedOptions.includes(option) ? styles.selectedMultiSelectButton : styles.multiSelectButton}
-                        onPress={() => toggleOption(option)}
-                      >
-                        <Text style={styles.multiSelectButtonText}>{option}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </GestureScrollView>
-              </View>
-              <View style={styles.categoryContainer}>
-                <Text style={styles.categoryTitle}>Lifestyle</Text>
-                <GestureScrollView 
-                  horizontal 
-                  style={styles.scrollView}
-                  simultaneousHandlers={verticalScrollRef}
-                >
-                  <View style={[styles.optionsContainer, { maxWidth: 500 }]}>
-                    {['Travel World', 'Live Abroad', 'Learn Language', 'Write Book', 'Start Podcast', 'Learn Instrument'].map((option) => (
-                      <TouchableOpacity
-                        key={option}
-                        style={selectedOptions.includes(option) ? styles.selectedMultiSelectButton : styles.multiSelectButton}
-                        onPress={() => toggleOption(option)}
-                      >
-                        <Text style={styles.multiSelectButtonText}>{option}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </GestureScrollView>
-              </View>
-              {renderCustomSection()}
-            </GestureScrollView>
-            <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
-              <Text style={styles.buttonText}>Next</Text>
-            </TouchableOpacity>
-          </KeyboardAvoidingView>
-        );
+          </View>
+        );        
+        case 'LifeGoals':
+          return (
+            <View style={styles.container}>
+              <OnboardingHeader />
+              <Text style={styles.selfVisionTitle}>You have big goals.</Text>
+              <Text style={styles.selfVisionSubtitle}>What are they?</Text>
+              <Text style={styles.selfVisionDescription}>Select up to 5.</Text>
+              <GestureScrollView 
+                style={{ flex: 1, width: '100%' }}
+                keyboardShouldPersistTaps="handled"
+              >
+                {renderCustomSection()}
+                <View style={styles.categoryContainer}>
+                  <Text style={styles.categoryTitle}>Popular</Text>
+                  <GestureScrollView 
+                    horizontal 
+                    style={styles.scrollView}
+                    simultaneousHandlers={verticalScrollRef}
+                  >
+                    <View style={[styles.optionsContainer, { maxWidth: 900 }]}>
+                      {['Millionaire', 'Freedom', 'Have Family', 'Travel World', 'Write Book', 'Own House', 'Get Married', 'Own Business', 'Dream Car', 'Bench 315', 'Retire Parents', 'Run Ultra', 'Six Pack Abs'].map((option) => (
+                        <TouchableOpacity
+                          key={option}
+                          style={selectedOptions.includes(option) ? styles.selectedMultiSelectButton : styles.multiSelectButton}
+                          onPress={() => toggleOption(option)}
+                        >
+                          <Text style={styles.multiSelectButtonText}>{option}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </GestureScrollView>
+                </View>
+                <View style={styles.categoryContainer}>
+                  <Text style={styles.categoryTitle}>Career</Text>
+                  <GestureScrollView 
+                    horizontal 
+                    style={styles.scrollView}
+                    simultaneousHandlers={verticalScrollRef}
+                  >
+                    <View style={[styles.optionsContainer, { maxWidth: 600 }]}>
+                      {['Own Business', 'Top Executive', 'Six Figure Income', 'Work Remote', 'Millionaire', 'Generational Wealth', 'Top Investor'].map((option) => (
+                        <TouchableOpacity
+                          key={option}
+                          style={selectedOptions.includes(option) ? styles.selectedMultiSelectButton : styles.multiSelectButton}
+                          onPress={() => toggleOption(option)}
+                        >
+                          <Text style={styles.multiSelectButtonText}>{option}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </GestureScrollView>
+                </View>
+                <View style={styles.categoryContainer}>
+                  <Text style={styles.categoryTitle}>Fitness</Text>
+                  <GestureScrollView 
+                    horizontal 
+                    style={styles.scrollView}
+                    simultaneousHandlers={verticalScrollRef}
+                  >
+                    <View style={[styles.optionsContainer, { maxWidth: 500 }]}>
+                      {['Run Marathon', 'Six Pack Abs', 'Bench 315', 'Squat 405', 'Deadlift 495', 'Run Ultra'].map((option) => (
+                        <TouchableOpacity
+                          key={option}
+                          style={selectedOptions.includes(option) ? styles.selectedMultiSelectButton : styles.multiSelectButton}
+                          onPress={() => toggleOption(option)}
+                        >
+                          <Text style={styles.multiSelectButtonText}>{option}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </GestureScrollView>
+                </View>
+                <View style={styles.categoryContainer}>
+                  <Text style={styles.categoryTitle}>Family</Text>
+                  <GestureScrollView 
+                    horizontal 
+                    style={styles.scrollView}
+                    simultaneousHandlers={verticalScrollRef}
+                  >
+                    <View style={[styles.optionsContainer, { maxWidth: 500 }]}>
+                      {['Get Married', 'Have Family', 'Own House', 'Retire Parents', 'Family Vacation Home'].map((option) => (
+                        <TouchableOpacity
+                          key={option}
+                          style={selectedOptions.includes(option) ? styles.selectedMultiSelectButton : styles.multiSelectButton}
+                          onPress={() => toggleOption(option)}
+                        >
+                          <Text style={styles.multiSelectButtonText}>{option}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </GestureScrollView>
+                </View>
+                <View style={styles.categoryContainer}>
+                  <Text style={styles.categoryTitle}>Lifestyle</Text>
+                  <GestureScrollView 
+                    horizontal 
+                    style={styles.scrollView}
+                    simultaneousHandlers={verticalScrollRef}
+                  >
+                    <View style={[styles.optionsContainer, { maxWidth: 500 }]}>
+                      {['Travel World', 'Live Abroad', 'Learn Language', 'Write Book', 'Start Podcast', 'Learn Instrument'].map((option) => (
+                        <TouchableOpacity
+                          key={option}
+                          style={selectedOptions.includes(option) ? styles.selectedMultiSelectButton : styles.multiSelectButton}
+                          onPress={() => toggleOption(option)}
+                        >
+                          <Text style={styles.multiSelectButtonText}>{option}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </GestureScrollView>
+                </View>
+              </GestureScrollView>
+              <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
+                <Text style={styles.buttonText}>Next</Text>
+              </TouchableOpacity>
+            </View>
+          );
       case 'CoreValues':
         return (
-          <KeyboardAvoidingView 
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={[styles.container, { paddingBottom: keyboardHeight }]}
-          >
+          <View style={styles.container}>
             <OnboardingHeader />
             <Text style={styles.selfVisionTitle}>Values define you.</Text>
             <Text style={styles.selfVisionSubtitle}>What should people notice in you?</Text>
             <Text style={styles.selfVisionDescription}>Select up to 5.</Text>
             <GestureScrollView 
-              ref={verticalScrollRef}
               style={{ flex: 1, width: '100%' }}
               keyboardShouldPersistTaps="handled"
             >
+              {renderCustomSection()}
               <View style={styles.categoryContainer}>
                 <Text style={styles.categoryTitle}>Popular</Text>
                 <GestureScrollView 
@@ -660,12 +667,11 @@ export default function OnboardingStep() {
                   </View>
                 </GestureScrollView>
               </View>
-              {renderCustomSection()}
             </GestureScrollView>
             <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
               <Text style={styles.buttonText}>Next</Text>
             </TouchableOpacity>
-          </KeyboardAvoidingView>
+          </View>
         );
       case 'AIPersonality':
         return (
