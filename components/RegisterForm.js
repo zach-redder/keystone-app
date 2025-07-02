@@ -1,18 +1,18 @@
 // components/RegisterForm.js
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Image } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { signUpUser } from '../services/auth';
 import { styles } from '../styles/authentication';
-import { useRouter } from 'expo-router';
+import WaitForEmailConfirmation from './WaitForEmailConfirmation';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function RegisterForm() {
-  const router = useRouter();
-
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [showConfirmation, setShowConfirmation] = useState(false);
 
   const handleSignUp = async () => {
     if (password !== confirmPassword) {
@@ -24,14 +24,32 @@ export default function RegisterForm() {
     setError(null);
 
     try {
+      // Sign up the user
       await signUpUser(email, password);
-      router.replace('/tabs/home');
+      // Store password temporarily for the confirmation process
+      await AsyncStorage.setItem('tempPassword', password);
+      setShowConfirmation(true);
     } catch (err) {
       setError(err.message || 'Something went wrong.');
     } finally {
       setLoading(false);
     }
   };
+
+  if (showConfirmation) {
+    return (
+      <WaitForEmailConfirmation 
+        email={email}
+        preferences={null}
+        onTryDifferentEmail={() => {
+          setShowConfirmation(false);
+          setEmail('');
+          setPassword('');
+          setConfirmPassword('');
+        }}
+      />
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -68,8 +86,16 @@ export default function RegisterForm() {
 
       {error && <Text style={styles.error}>{error}</Text>}
 
-      <TouchableOpacity style={styles.registerButton} onPress={handleSignUp} disabled={loading}>
-        <Text style={styles.buttonText}>Register</Text>
+      <TouchableOpacity 
+        style={[styles.registerButton, loading && styles.disabledButton]} 
+        onPress={handleSignUp} 
+        disabled={loading}
+      >
+        {loading ? (
+          <ActivityIndicator color="#2b2b2b" />
+        ) : (
+          <Text style={styles.buttonText}>Register</Text>
+        )}
       </TouchableOpacity>
 
       <View style={styles.dividerContainer}>

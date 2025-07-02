@@ -305,11 +305,11 @@ export const styles = StyleSheet.create({
   },
   optionsContainer: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
   },
   scrollView: {
     flexDirection: 'row',
-    maxHeight: 105,
-    overflow: 'hidden',
+    height: 115,
   },
   categoryTitle: {
     color: '#ffffff',
@@ -318,7 +318,7 @@ export const styles = StyleSheet.create({
     marginBottom: 5,
   },
   categoryContainer: {
-    marginVertical: 10,
+    marginVertical: 5,
     paddingHorizontal: 20,
   },
   selfVisionTitle: {
@@ -326,6 +326,7 @@ export const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 32,
     marginBottom: 10,
+    marginTop: 130,
     textShadowColor: 'rgba(0, 0, 0, 0.5)',
     textShadowOffset: { width: -1, height: 2 },
     textShadowRadius: 5,
@@ -350,5 +351,46 @@ export const styles = StyleSheet.create({
     fontStyle: 'italic',
     alignSelf: 'flex-start',
     paddingHorizontal: 20,
+  },
+  customInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 5,
+    maxWidth: 200,
+  },
+  customInput: {
+    flex: 1,
+    backgroundColor: '#3c3c3c',
+    borderRadius: 25,
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    margin: 5,
+    borderWidth: 2,
+    borderColor: '#D4DE95',
+    color: '#FFFFFF',
+    fontSize: 16,
+    height: 45,
+  },
+  addCustomButton: {
+    backgroundColor: '#B9C096',
+    borderRadius: 25,
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    margin: 5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    maxWidth: 150,
+  },
+  addCustomButtonText: {
+    color: '#2b2b2b',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 5,
+  },
+  customOptionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    paddingHorizontal: 5,
   },
 });

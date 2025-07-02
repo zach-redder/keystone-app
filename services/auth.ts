@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { addIdentityKeysBatch, IdentityKey } from './userKeys';
 
 interface Preferences {
   timezone?: string;
@@ -38,8 +39,7 @@ export const signInUser = async (email: string, password: string) => {
 };
 
 export const insertUserProfileAfterConfirmation = async (
-  fullName: string,
-  preferences: Preferences = {}
+  preferences: Preferences
 ) => {
   const {
     data: { user },
@@ -64,13 +64,12 @@ export const insertUserProfileAfterConfirmation = async (
     return true;
   }
 
-  console.log('Inserting user profile:', { userId, fullName, email: user.email });
+  console.log('Inserting user profile:', { userId, email: user.email });
 
   // Insert into users table
   const { error: userInsertError } = await supabase.from('users').insert([
     {
       id: userId,
-      full_name: fullName,
       email: user.email,
       is_pro: false,
       onboarding_complete: true,
@@ -82,28 +81,76 @@ export const insertUserProfileAfterConfirmation = async (
     throw userInsertError;
   }
 
-  const {
-    timezone = 'UTC',
-    notification_opt_in = true,
-    preferred_reminder_time = '09:00:00',
-    preferred_ai_persona = 'gentle_guide',
-  } = preferences;
+  // Use provided preferences or fallback to defaults
+  const userPreferences = {
+    user_id: userId,
+    timezone: preferences.timezone || 'UTC',
+    notification_opt_in: preferences.notification_opt_in ?? true,
+    preferred_reminder_time: preferences.preferred_reminder_time || '09:00:00',
+    preferred_ai_persona: preferences.preferred_ai_persona || 'gentle',
+  };
 
-  console.log('Inserting user preferences:', { userId, timezone, notification_opt_in, preferred_reminder_time, preferred_ai_persona });
+  console.log('Inserting user preferences:', userPreferences);
 
-  const { error: prefInsertError } = await supabase.from('user_preferences').insert([
-    {
-      user_id: userId,
-      timezone,
-      notification_opt_in,
-      preferred_reminder_time,
-      preferred_ai_persona,
-    },
-  ]);
+  const { error: prefInsertError } = await supabase.from('user_preferences').insert([userPreferences]);
 
   if (prefInsertError) {
     console.error('Error inserting user preferences:', prefInsertError);
     throw prefInsertError;
+  }
+
+  // Get identity keys from AsyncStorage
+  try {
+    const futureSelfVision = await AsyncStorage.getItem('future_self_vision');
+    const lifeGoals = await AsyncStorage.getItem('life_goals');
+    const coreValues = await AsyncStorage.getItem('core_values');
+
+    const identityKeys: IdentityKey[] = [];
+
+    if (futureSelfVision) {
+      const visions = JSON.parse(futureSelfVision);
+      visions.forEach((vision: string) => {
+        identityKeys.push({
+          category: 'future_self_vision',
+          description: vision,
+        });
+      });
+    }
+
+    if (lifeGoals) {
+      const goals = JSON.parse(lifeGoals);
+      goals.forEach((goal: string) => {
+        identityKeys.push({
+          category: 'life_goals',
+          description: goal,
+        });
+      });
+    }
+
+    if (coreValues) {
+      const values = JSON.parse(coreValues);
+      values.forEach((value: string) => {
+        identityKeys.push({
+          category: 'core_values',
+          description: value,
+        });
+      });
+    }
+
+    if (identityKeys.length > 0) {
+      await addIdentityKeysBatch(identityKeys);
+    }
+
+    // Clean up AsyncStorage
+    await AsyncStorage.multiRemove([
+      'future_self_vision',
+      'life_goals',
+      'core_values',
+    ]);
+
+  } catch (error) {
+    console.error('Error inserting identity keys:', error);
+    throw error;
   }
 
   return true;
@@ -160,4 +207,14 @@ export const checkUserStatus = async () => {
   return data.onboarding_complete
     ? { status: 'complete' }
     : { status: 'incomplete' };
+};
+
+export const resendConfirmationEmail = async (email: string) => {
+  const { error } = await supabase.auth.resend({
+    type: 'signup',
+    email,
+  });
+
+  if (error) throw error;
+  return true;
 };
