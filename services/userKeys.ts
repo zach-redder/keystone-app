@@ -68,6 +68,15 @@ export const updateIdentityKey = async (keyId: string, updates: object) => {
   return data
 }
 
+export const deleteIdentityKey = async (keyId: string) => {
+  const { data, error } = await supabase
+    .from('user_keys')
+    .delete()
+    .eq('id', keyId)
+  if (error) throw error
+  return data
+}
+
 export const fetchIdentityKeys = async () => {
   const {
     data: { user },

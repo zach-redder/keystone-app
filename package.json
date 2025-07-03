@@ -19,6 +19,7 @@
     "@supabase/supabase-js": "^2.49.9",
     "expo": "~53.0.9",
     "expo-blur": "~14.1.5",
+    "expo-dev-client": "~5.2.3",
     "expo-haptics": "~14.1.4",
     "expo-linear-gradient": "~14.1.5",
     "expo-notifications": "~0.31.3",
@@ -35,11 +36,11 @@
     "react-native-safe-area-context": "^5.4.1",
     "react-native-screens": "^4.11.1",
     "react-native-url-polyfill": "^2.0.0",
-    "react-native-web": "^0.20.0",
-    "expo-dev-client": "~5.2.3"
+    "react-native-web": "^0.20.0"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
+    "@types/react-native": "^0.72.8",
     "typescript": "~5.8.3"
   },
   "private": true

@@ -158,12 +158,13 @@ const keysStyles = StyleSheet.create({
     paddingHorizontal: 2,
   },
   input: {
-    flex: 1,
     color: '#fff',
-    fontSize: 17,
-    paddingVertical: 14,
-    paddingHorizontal: 0,
-    backgroundColor: 'transparent',
+    fontSize: 16,
+    backgroundColor: '#2b2b2b',
+    borderRadius: 12,
+    padding: 12,
+    flex: 1,
+    minHeight: 48,
   },
   starterText: {
     flex: 1,
@@ -334,6 +335,10 @@ const keysStyles = StyleSheet.create({
     fontSize: 14,
     color: '#a1a1aa',
     lineHeight: 20,
+  },
+  keyTextContainer: {
+    flex: 1,
+    marginRight: 10,
   },
 });
 

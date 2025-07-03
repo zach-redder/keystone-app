@@ -5,7 +5,9 @@ import keysStyles from '../../styles/keys';
 import AlignButton from '../../components/AlignButton';
 import Menu from '../../components/Menu';
 import InfoModal from '../../components/InfoModal';
-import { fetchIdentityKeys } from '../../services/userKeys';
+import DeleteConfirmationModal from '../../components/DeleteConfirmationModal';
+import EditKeyModal from '../../components/EditKeyModal';
+import { fetchIdentityKeys, deleteIdentityKey, updateIdentityKey } from '../../services/userKeys';
 
 function AppButton({ title, onPress, style, icon, iconRight, plusMarginRight }) {
   return (
@@ -63,11 +65,15 @@ const menuItems = [
 export default function Keys() {
   const [menuVisible, setMenuVisible] = useState(false);
   const [menuAnchorY, setMenuAnchorY] = useState(100);
-  const [selectedItem, setSelectedItem] = useState(menuItems[0]); // Track selected item
+  const [selectedItem, setSelectedItem] = useState(menuItems[0]);
   const [infoVisible, setInfoVisible] = useState(false);
   const [infoPressed, setInfoPressed] = useState(false);
   const [userKeys, setUserKeys] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [keyToDelete, setKeyToDelete] = useState(null);
+  const [keyToEdit, setKeyToEdit] = useState(null);
   const menuBtnRef = useRef(null);
 
   // Load user keys when component mounts or selected item changes
@@ -117,16 +123,24 @@ export default function Keys() {
 
     return categoryKeys.map((key, index) => (
       <View key={key.id || index} style={keysStyles.inputRow}>
-        <TextInput
-          placeholder="Enter value..."
-          placeholderTextColor="#aaa"
-          style={keysStyles.input}
-          value={key.description}
-          editable={false}
-        />
-        <Pressable style={keysStyles.trashWrap}>
+        <TouchableOpacity 
+          style={keysStyles.keyTextContainer}
+          onPress={() => handleEditPress(key)}
+        >
+          <TextInput
+            placeholder="Enter value..."
+            placeholderTextColor="#aaa"
+            style={keysStyles.input}
+            value={key.description}
+            editable={false}
+          />
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={keysStyles.trashWrap}
+          onPress={() => handleDeletePress(key)}
+        >
           <Image source={require('../../assets/delete.png')} style={{ width: 28, height: 28 }} resizeMode="contain" />
-        </Pressable>
+        </TouchableOpacity>
       </View>
     ));
   };
@@ -154,6 +168,50 @@ export default function Keys() {
       setInfoPressed(false);
       setInfoVisible(true);
     }, 50);
+  };
+
+  const handleDeletePress = (key) => {
+    setKeyToDelete(key);
+    setDeleteModalVisible(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!keyToDelete) return;
+
+    try {
+      await deleteIdentityKey(keyToDelete.id);
+      // Update local state to remove the deleted key
+      setUserKeys(userKeys.filter(key => key.id !== keyToDelete.id));
+    } catch (error) {
+      console.error('Error deleting key:', error);
+    } finally {
+      setDeleteModalVisible(false);
+      setKeyToDelete(null);
+    }
+  };
+
+  const handleEditPress = (key) => {
+    setKeyToEdit(key);
+    setEditModalVisible(true);
+  };
+
+  const handleEditSave = async (newValue) => {
+    if (!keyToEdit) return;
+
+    try {
+      await updateIdentityKey(keyToEdit.id, { description: newValue });
+      // Update local state
+      setUserKeys(userKeys.map(key => 
+        key.id === keyToEdit.id 
+          ? { ...key, description: newValue }
+          : key
+      ));
+    } catch (error) {
+      console.error('Error updating key:', error);
+    } finally {
+      setEditModalVisible(false);
+      setKeyToEdit(null);
+    }
   };
 
   return (
@@ -231,17 +289,32 @@ export default function Keys() {
           />
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={keysStyles.scrollView}>  
-
           <Text style={keysStyles.subSectionTitle}>My {selectedItem.label}</Text>
-
           {renderCategoryKeys()}
-
         </ScrollView>
 
         <AlignButton onPress={() => {}} />
       </View>
 
       <InfoModal visible={infoVisible} onClose={() => setInfoVisible(false)} />
+      <DeleteConfirmationModal
+        visible={deleteModalVisible}
+        onClose={() => {
+          setDeleteModalVisible(false);
+          setKeyToDelete(null);
+        }}
+        onConfirm={handleDeleteConfirm}
+      />
+      <EditKeyModal
+        visible={editModalVisible}
+        onClose={() => {
+          setEditModalVisible(false);
+          setKeyToEdit(null);
+        }}
+        onSave={handleEditSave}
+        initialValue={keyToEdit?.description}
+        keyType={selectedItem.label.slice(0, -1)}
+      />
     </SafeAreaView>
   );
 }
