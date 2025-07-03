@@ -6,7 +6,7 @@ export default function AlignButton({ onPress }) {
   return (
     <Pressable style={alignButtonStyles.alignBtn} onPress={onPress}>
       <View style={alignButtonStyles.alignContent}>
-        <Image source={require('../assets/plus.png')} style={alignButtonStyles.plusImage} />
+        <Image source={require('../assets/checkmark.png')} style={alignButtonStyles.plusImage} />
         <Text style={alignButtonStyles.alignText}>Align Now</Text>
       </View>
     </Pressable>

@@ -17,14 +17,22 @@ export default function EditKeyModal({ visible, onClose, onSave, initialValue, k
 
   return (
     <Modal
-      animationType="fade"
+      animationType="none"
       transparent={true}
       visible={visible}
       onRequestClose={onClose}
     >
-      <View style={styles.centeredView}>
-        <View style={styles.modalView}>
-          <Text style={styles.modalTitle}>{keyType}</Text>
+      <TouchableOpacity 
+        style={styles.centeredView} 
+        activeOpacity={1} 
+        onPress={onClose}
+      >
+        <TouchableOpacity 
+          style={styles.modalView} 
+          activeOpacity={1}
+          onPress={(e) => e.stopPropagation()}
+        >
+          <Text style={styles.modalTitle}>Edit {keyType}</Text>
           <TextInput
             style={styles.input}
             value={value}
@@ -32,7 +40,7 @@ export default function EditKeyModal({ visible, onClose, onSave, initialValue, k
             multiline={true}
             placeholderTextColor="#666"
             autoFocus={true}
-            selectionColor="#86C7A7"
+            selectionColor="#d4de95"
           />
           <View style={styles.buttonContainer}>
             <TouchableOpacity
@@ -48,8 +56,8 @@ export default function EditKeyModal({ visible, onClose, onSave, initialValue, k
               <Text style={styles.saveButtonText}>Save</Text>
             </TouchableOpacity>
           </View>
-        </View>
-      </View>
+        </TouchableOpacity>
+      </TouchableOpacity>
     </Modal>
   );
 }
@@ -59,14 +67,15 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
   },
   modalView: {
-    backgroundColor: '#1C1C1E',
-    borderRadius: 14,
+    backgroundColor: '#2b2b2b',
+    borderRadius: 25,
     padding: 20,
-    width: '90%',
-    maxWidth: 340,
+    width: '80%',
+    maxWidth: 350,
+    marginBottom: 250,
   },
   modalTitle: {
     color: 'white',
@@ -75,7 +84,7 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   input: {
-    backgroundColor: '#2C2C2E',
+    backgroundColor: '#1E1E1E',
     borderRadius: 8,
     padding: 12,
     color: 'white',
@@ -86,24 +95,24 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-around',
     gap: 10,
   },
   button: {
-    borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 20,
-    minWidth: 80,
+    borderRadius: 16,
+    padding: 12,
+    minWidth: 120,
     alignItems: 'center',
   },
   cancelButton: {
-    backgroundColor: '#2C2C2E',
+    backgroundColor: '#B3B3B3',
   },
   saveButton: {
-    backgroundColor: '#86C7A7',
+    backgroundColor: '#D4DE95',
   },
   cancelButtonText: {
-    color: 'white',
+    color: '#black',
+    fontWeight: '600',
     fontSize: 17,
   },
   saveButtonText: {

@@ -1,5 +1,6 @@
-import { View, Text, TextInput, Pressable, SafeAreaView, TouchableOpacity, Image, ScrollView } from 'react-native';
+import { View, Text, Pressable, SafeAreaView, TouchableOpacity, Image, ScrollView, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { useState, useRef, useEffect } from 'react';
 import keysStyles from '../../styles/keys';
 import AlignButton from '../../components/AlignButton';
@@ -7,19 +8,80 @@ import Menu from '../../components/Menu';
 import InfoModal from '../../components/InfoModal';
 import DeleteConfirmationModal from '../../components/DeleteConfirmationModal';
 import EditKeyModal from '../../components/EditKeyModal';
-import { fetchIdentityKeys, deleteIdentityKey, updateIdentityKey } from '../../services/userKeys';
+import CreateKeyModal from '../../components/CreateKeyModal';
+import ProUpgradeModal from '../../components/ProUpgradeModal';
+import CommunityModal from '../../components/CommunityModal';
+import { fetchIdentityKeys, deleteIdentityKey, updateIdentityKey, addIdentityKey } from '../../services/userKeys';
+import { checkUserProStatus } from '../../services/auth';
 
-function AppButton({ title, onPress, style, icon, iconRight, plusMarginRight }) {
+function AppButton({ title, onPress, style, icon, iconRight, plusMarginRight, animatedStyle }) {
+  const pressScale = useRef(new Animated.Value(1)).current;
+  const pressOpacity = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () => {
+    Animated.parallel([
+      Animated.timing(pressScale, {
+        toValue: 0.96,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+      Animated.timing(pressOpacity, {
+        toValue: 0.7,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+    ]).start();
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  const handlePressOut = () => {
+    // Trigger onPress when finger is released
+    if (onPress) {
+      onPress();
+    }
+    
+    Animated.parallel([
+      Animated.timing(pressScale, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+      Animated.timing(pressOpacity, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+    ]).start();
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+  };
+
+  const combinedAnimatedStyle = [
+    animatedStyle,
+    {
+      transform: [
+        ...(animatedStyle?.transform || []),
+        { scale: pressScale }
+      ],
+      opacity: pressOpacity,
+    }
+  ];
+
   return (
-    <Pressable onPress={onPress} style={[keysStyles.button, style]}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-        {icon && <Text style={keysStyles.buttonIcon}>{icon}</Text>}
-        <Text style={keysStyles.buttonText}>{title}</Text>
-        {iconRight && (
-          <Image source={require('../../assets/plus.png')} style={{ ...keysStyles.plusImage, marginRight: plusMarginRight }} />
-        )}
-      </View>
-    </Pressable>
+    <Animated.View style={combinedAnimatedStyle}>
+      <Pressable 
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        style={[keysStyles.button, style]}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+          {icon && <Text style={keysStyles.buttonIcon}>{icon}</Text>}
+          <Text style={keysStyles.buttonText}>{title}</Text>
+          {iconRight && (
+            <Image source={require('../../assets/plus.png')} style={{ ...keysStyles.plusImage, marginRight: plusMarginRight }} />
+          )}
+        </View>
+      </Pressable>
+    </Animated.View>
   );
 }
 
@@ -72,14 +134,29 @@ export default function Keys() {
   const [loading, setLoading] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
+  const [createModalVisible, setCreateModalVisible] = useState(false);
+  const [proModalVisible, setProModalVisible] = useState(false);
+  const [communityModalVisible, setCommunityModalVisible] = useState(false);
   const [keyToDelete, setKeyToDelete] = useState(null);
   const [keyToEdit, setKeyToEdit] = useState(null);
+  const [badgeText, setBadgeText] = useState('PRO');
   const menuBtnRef = useRef(null);
 
   // Load user keys when component mounts or selected item changes
   useEffect(() => {
     loadUserKeys();
+    checkProStatus();
   }, [selectedItem]);
+
+  const checkProStatus = async () => {
+    try {
+      const isPro = await checkUserProStatus();
+      setBadgeText(isPro ? 'COMMUNITY' : 'PRO');
+    } catch (error) {
+      console.error('Error checking Pro status:', error);
+      setBadgeText('PRO');
+    }
+  };
 
   const loadUserKeys = async () => {
     try {
@@ -127,13 +204,7 @@ export default function Keys() {
           style={keysStyles.keyTextContainer}
           onPress={() => handleEditPress(key)}
         >
-          <TextInput
-            placeholder="Enter value..."
-            placeholderTextColor="#aaa"
-            style={keysStyles.input}
-            value={key.description}
-            editable={false}
-          />
+          <Text style={keysStyles.keyText}>{key.description}</Text>
         </TouchableOpacity>
         <TouchableOpacity 
           style={keysStyles.trashWrap}
@@ -154,16 +225,40 @@ export default function Keys() {
     } else {
       setMenuVisible(true);
     }
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
-  const handleMenuItemSelect = (item) => {
+  const handleMenuItemSelect = async (item) => {
+    // Define Pro-only categories
+    const proOnlyCategories = ['identity_traits', 'motivations', 'avoidances'];
+    
+    // Check if the selected category requires Pro
+    if (proOnlyCategories.includes(item.category)) {
+      try {
+        const isPro = await checkUserProStatus();
+        if (!isPro) {
+          // User doesn't have Pro, show upgrade modal instead
+          setProModalVisible(true);
+          setMenuVisible(false);
+          return;
+        }
+      } catch (error) {
+        console.error('Error checking Pro status:', error);
+        // Show Pro modal on error for restricted categories
+        setProModalVisible(true);
+        setMenuVisible(false);
+        return;
+      }
+    }
+    
+    // User has Pro or category is free, proceed normally
     setSelectedItem(item);
     setMenuVisible(false);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
   const handleInfoPress = () => {
     setInfoPressed(true);
-    // Add a small delay to show the pressed state before opening the modal
     setTimeout(() => {
       setInfoPressed(false);
       setInfoVisible(true);
@@ -214,14 +309,69 @@ export default function Keys() {
     }
   };
 
+  const handleCreatePress = async () => {
+    const categoryKeys = getCurrentCategoryKeys();
+    
+    try {
+      const isPro = await checkUserProStatus();
+      
+      // Check if user already has 5 keys in this category and is not Pro
+      if (categoryKeys.length >= 5 && !isPro) {
+        // Show pro upgrade modal instead
+        setProModalVisible(true);
+        return;
+      }
+    } catch (error) {
+      console.error('Error checking Pro status:', error);
+      // If there's an error checking Pro status and user has 5+ keys, show Pro modal
+      if (categoryKeys.length >= 5) {
+        setProModalVisible(true);
+        return;
+      }
+    }
+    
+    // Open modal instantly
+    setCreateModalVisible(true);
+  };
+
+  const handleCreateSave = async (value) => {
+    try {
+      await addIdentityKey(selectedItem.category, value);
+      // Reload keys to get the complete data with ID
+      await loadUserKeys();
+    } catch (error) {
+      console.error('Error creating key:', error);
+    } finally {
+      setCreateModalVisible(false);
+    }
+  };
+
+  const handleBadgePress = async () => {
+    try {
+      const isPro = await checkUserProStatus();
+      if (isPro) {
+        // Show Community modal for Pro users
+        setCommunityModalVisible(true);
+      } else {
+        // Show Pro upgrade modal for non-Pro users
+        setProModalVisible(true);
+      }
+    } catch (error) {
+      console.error('Error checking Pro status:', error);
+      // Show Pro modal on error to be safe
+      setProModalVisible(true);
+    }
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
   return (
     <SafeAreaView style={keysStyles.pageBg}>
       <View style={keysStyles.pageBg}>
         <View style={keysStyles.headerRow}>
           <Text style={keysStyles.header}>Your Keys</Text>
-          <View style={keysStyles.proBadgeWrap}>
-            <Text style={keysStyles.proBadge}>PRO</Text>
-          </View>
+          <TouchableOpacity style={keysStyles.proBadgeWrap} onPress={handleBadgePress}>
+            <Text style={keysStyles.proBadge}>{badgeText}</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={keysStyles.sectionRow}>
@@ -281,16 +431,18 @@ export default function Keys() {
           onItemSelect={handleMenuItemSelect}
         />
 
-        <AppButton
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={keysStyles.scrollView}>  
+
+          {renderCategoryKeys()}
+
+          <AppButton
             title={`New ${selectedItem.label == 'Future Identity' ? 'Future Identity' : selectedItem.label.slice(0, -1)}`}
             style={keysStyles.newCoreValueBtn}
+            onPress={handleCreatePress}
             iconRight={"+"}
             plusMarginRight={0}
           />
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={keysStyles.scrollView}>  
-          <Text style={keysStyles.subSectionTitle}>My {selectedItem.label}</Text>
-          {renderCategoryKeys()}
         </ScrollView>
 
         <AlignButton onPress={() => {}} />
@@ -314,6 +466,20 @@ export default function Keys() {
         onSave={handleEditSave}
         initialValue={keyToEdit?.description}
         keyType={selectedItem.label.slice(0, -1)}
+      />
+      <CreateKeyModal
+        visible={createModalVisible}
+        onClose={() => setCreateModalVisible(false)}
+        onCreate={handleCreateSave}
+        keyType={selectedItem.label.slice(0, -1)}
+      />
+      <ProUpgradeModal
+        visible={proModalVisible}
+        onClose={() => setProModalVisible(false)}
+      />
+      <CommunityModal
+        visible={communityModalVisible}
+        onClose={() => setCommunityModalVisible(false)}
       />
     </SafeAreaView>
   );

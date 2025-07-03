@@ -3,7 +3,7 @@ import { StyleSheet } from 'react-native';
 const menuStyles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.08)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-start',
     alignItems: 'flex-start',
   },

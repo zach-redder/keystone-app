@@ -46,7 +46,7 @@ const keysStyles = StyleSheet.create({
   sectionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
     marginTop: 14,
   },
   trashImage: {
@@ -111,7 +111,6 @@ const keysStyles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 16,
     paddingHorizontal: 24,
-    marginTop: 12,
     marginBottom: 24,
     ...cardShadow,
     width: '100%',
@@ -154,7 +153,7 @@ const keysStyles = StyleSheet.create({
     marginRight: 2,
   },
   scrollView: {
-    paddingBottom: 60,    // space for floating button
+    paddingBottom: 80,
     paddingHorizontal: 2,
   },
   input: {
@@ -165,15 +164,29 @@ const keysStyles = StyleSheet.create({
     padding: 12,
     flex: 1,
     minHeight: 48,
+    fontWeight: '500',
+  },
+  keyText: {
+    color: '#fff',
+    fontSize: 16,
+    backgroundColor: '#3C3C3C',
+    borderRadius: 12,
+    padding: 12,
+    flex: 1,
+    minHeight: 48,
+    textAlign: 'left',
+    lineHeight: 24,
+    paddingVertical: 12,
+    fontWeight: '500',
   },
   starterText: {
     flex: 1,
     color: '#fff',
+    opacity: 0.5,
     fontSize: 17,
     paddingVertical: 14,
     paddingHorizontal: 0,
     backgroundColor: 'transparent',
-    fontStyle: 'italic',
   },
   trashWrap: {
     marginLeft: 10,

@@ -298,3 +298,26 @@ export const resendConfirmationEmail = async (email: string) => {
   if (error) throw error;
   return true;
 };
+
+export const checkUserProStatus = async () => {
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+  
+  if (authError || !user) {
+    throw new Error('User not authenticated');
+  }
+
+  const { data, error } = await supabase
+    .from('users')
+    .select('is_pro')
+    .eq('id', user.id)
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return data?.is_pro || false;
+};

@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import * as Linking from 'expo-linking';
 import { supabase } from '../lib/supabase';
 import { useEffect } from 'react';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 export default function RootLayout() {
   const router = useRouter();
@@ -19,7 +20,7 @@ export default function RootLayout() {
         console.error("Auth redirect error:", error);
       } else {
         console.log("Session recovered!", data.session);
-        router.replace('/home'); // redirect wherever you want
+        router.replace('/tabs/home'); // redirect wherever you want
       }
     };
 
@@ -35,8 +36,10 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <StatusBar style="light" />
-      <Slot />
+      <SafeAreaProvider>
+        <StatusBar style="light" />
+        <Slot />
+      </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }
