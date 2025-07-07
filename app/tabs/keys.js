@@ -3,6 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useState, useRef, useEffect } from 'react';
 import keysStyles from '../../styles/keys';
+import AlignModal from '../../components/AlignModal';
 import AlignButton from '../../components/AlignButton';
 import Menu from '../../components/Menu';
 import InfoModal from '../../components/InfoModal';
@@ -141,6 +142,7 @@ export default function Keys() {
   const [keyToEdit, setKeyToEdit] = useState(null);
   const [badgeText, setBadgeText] = useState('PRO');
   const menuBtnRef = useRef(null);
+  const [alignModalVisible, setAlignModalVisible] = useState(false);
 
   // Load user keys when component mounts or selected item changes
   useEffect(() => {
@@ -174,6 +176,10 @@ export default function Keys() {
   // Filter keys by current selected category
   const getCurrentCategoryKeys = () => {
     return userKeys.filter(key => key.category === selectedItem.category);
+  };
+
+  const handleAlignButtonPress = () => {
+    setAlignModalVisible(true);
   };
 
   // Render keys for current category
@@ -445,7 +451,7 @@ export default function Keys() {
 
         </ScrollView>
 
-        <AlignButton onPress={() => {}} />
+        <AlignButton onPress={handleAlignButtonPress} />
       </View>
 
       <InfoModal visible={infoVisible} onClose={() => setInfoVisible(false)} />
@@ -476,10 +482,15 @@ export default function Keys() {
       <ProUpgradeModal
         visible={proModalVisible}
         onClose={() => setProModalVisible(false)}
+        currentPage="keys"
       />
       <CommunityModal
         visible={communityModalVisible}
         onClose={() => setCommunityModalVisible(false)}
+      />
+      <AlignModal
+        visible={alignModalVisible}
+        onClose={() => setAlignModalVisible(false)}
       />
     </SafeAreaView>
   );

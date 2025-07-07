@@ -235,7 +235,7 @@ export default function OnboardingStep() {
     console.log('Personality selected:', personality);
     setPreferences(prev => ({
       ...prev,
-      preferred_ai_persona: personality.toLowerCase().replace(' ', '_'),
+      preferred_ai_persona: personality,
     }));
     setSelectedOptions([personality]);
     console.log('Updated selectedOptions for personality:', [personality]);

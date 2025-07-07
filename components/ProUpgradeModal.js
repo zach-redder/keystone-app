@@ -2,10 +2,11 @@ import React, { useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, Modal, Animated, Dimensions, PanResponder } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 
 const { height: screenHeight } = Dimensions.get('window');
 
-const ProUpgradeModal = ({ visible, onClose }) => {
+const ProUpgradeModal = ({ visible, onClose, currentPage }) => {
   const slideAnim = useRef(new Animated.Value(screenHeight)).current;
   const overlayOpacity = useRef(new Animated.Value(0)).current;
   const dragOffset = useRef(new Animated.Value(0)).current;
@@ -80,8 +81,12 @@ const ProUpgradeModal = ({ visible, onClose }) => {
   const handleTryPress = () => {
     // Close modal first
     closeModal();
-    // Navigate to subscription screen
-    router.push('/subscription');
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    // Navigate to subscription screen with current page info
+    router.push({
+      pathname: '/subscription',
+      params: { returnTo: currentPage || 'home' }
+    });
   };
 
   useEffect(() => {

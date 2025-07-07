@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -42,6 +42,7 @@ const features = [
 
 export default function SubscriptionScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
   const scrollViewRef = useRef(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isUserScrolling, setIsUserScrolling] = useState(false);
@@ -91,7 +92,18 @@ export default function SubscriptionScreen() {
   };
 
   const handleClose = () => {
-    router.back();
+    const returnTo = params.returnTo || 'home';
+    
+    // Navigate back to the specific page
+    if (returnTo === 'home') {
+      router.push('/tabs/home');
+    } else if (returnTo === 'keys') {
+      router.push('/tabs/keys');
+    } else if (returnTo === 'profile') {
+      router.push('/tabs/profile');
+    } else {
+      router.back();
+    }
   };
 
   return (
