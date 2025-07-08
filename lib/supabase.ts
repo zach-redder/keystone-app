@@ -9,6 +9,7 @@ const options: SupabaseClientOptions<'public'> = {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
+    flowType: 'implicit', // Change from 'pkce' to 'implicit' for React Native
   },
 };
 

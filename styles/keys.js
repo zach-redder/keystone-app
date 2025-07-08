@@ -43,6 +43,20 @@ const keysStyles = StyleSheet.create({
     fontSize: 16,
     letterSpacing: 1,
   },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  shareButton: {
+    backgroundColor: 'transparent',
+    borderRadius: 20,
+    padding: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 42,
+    height: 42,
+  },
   sectionRow: {
     flexDirection: 'row',
     alignItems: 'center',

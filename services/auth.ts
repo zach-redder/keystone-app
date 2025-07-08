@@ -10,32 +10,56 @@ interface Preferences {
 }
 
 export const signUpUser = async (email: string, password: string) => {
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    // options: {
-    //   emailRedirectTo: 'keystone-app://onboarding/SignUp', // for deep linking (optional)
-    // },
-  });
+  try {
+    // Initialize auth state first
+    await initializeAuth();
+    
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+    });
 
-  if (error) throw error;
-  return data.user;
+    if (error) {
+      console.error('Signup error:', error);
+      throw error;
+    }
+    
+    console.log('Signup successful:', data);
+    return data.user;
+  } catch (error) {
+    console.error('Error in signUpUser:', error);
+    throw error;
+  }
 };
 
 export const signInUser = async (email: string, password: string) => {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
+  try {
+    // Initialize auth state first
+    await initializeAuth();
+    
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-  console.log('Sign-in session:', data.session);
+    console.log('Sign-in response:', { data, error });
 
-  if (error) throw error;
+    if (error) {
+      console.error('Sign-in error:', error);
+      throw error;
+    }
 
-  const user = data.user;
-  if (!user) throw new Error('Sign-in succeeded but no user returned.');
+    const user = data.user;
+    if (!user) {
+      throw new Error('Sign-in succeeded but no user returned.');
+    }
 
-  return user;
+    console.log('Sign-in successful for user:', user.id);
+    return user;
+  } catch (error) {
+    console.error('Error in signInUser:', error);
+    throw error;
+  }
 };
 
 export const resetPassword = async (email: string) => {
@@ -242,6 +266,91 @@ export const signOutUser = async () => {
     console.error('Error signing out:', error);
   } else {
     console.log('User signed out successfully');
+  }
+  
+  // Clear any auth-related storage
+  try {
+    await AsyncStorage.multiRemove([
+      'onboarding_complete',
+      'user_preferences',
+      'final_preferences'
+    ]);
+  } catch (storageError) {
+    console.error('Error clearing auth storage:', storageError);
+  }
+};
+
+export const clearAuthState = async () => {
+  try {
+    // Sign out from Supabase
+    await supabase.auth.signOut();
+    
+    // Clear all AsyncStorage
+    await AsyncStorage.clear();
+    
+    // Force clear any auth-related storage keys specifically
+    await AsyncStorage.multiRemove([
+      'supabase.auth.token',
+      'sb-supabase-auth-token',
+      'supabase.session',
+      'onboarding_complete',
+      'user_preferences',
+      'final_preferences',
+      'notificationPermissionShown'
+    ]);
+    
+    console.log('Auth state cleared successfully');
+  } catch (error) {
+    console.error('Error clearing auth state:', error);
+  }
+};
+
+export const initializeAuth = async () => {
+  try {
+    // Clear any existing auth state first
+    await clearAuthState();
+    
+    // Initialize fresh auth state
+    const { data: { session }, error } = await supabase.auth.getSession();
+    
+    if (error) {
+      console.error('Error initializing auth:', error);
+      return false;
+    }
+    
+    console.log('Auth initialized successfully', session ? 'with session' : 'without session');
+    return true;
+  } catch (error) {
+    console.error('Error in initializeAuth:', error);
+    return false;
+  }
+};
+
+export const debugAuthState = async () => {
+  try {
+    const { data: { session }, error } = await supabase.auth.getSession();
+    console.log('=== AUTH DEBUG ===');
+    console.log('Session:', session);
+    console.log('Error:', error);
+    console.log('User:', session?.user);
+    console.log('Access Token:', session?.access_token ? 'Present' : 'Missing');
+    console.log('Refresh Token:', session?.refresh_token ? 'Present' : 'Missing');
+    console.log('==================');
+    
+    // Check AsyncStorage keys
+    const keys = await AsyncStorage.getAllKeys();
+    const authKeys = keys.filter(key => 
+      key.includes('auth') || 
+      key.includes('supabase') || 
+      key.includes('token') ||
+      key.includes('session')
+    );
+    console.log('Auth-related AsyncStorage keys:', authKeys);
+    
+    return { session, error };
+  } catch (error) {
+    console.error('Error in debugAuthState:', error);
+    return { session: null, error };
   }
 };
 

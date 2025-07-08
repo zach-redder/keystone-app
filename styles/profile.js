@@ -30,6 +30,11 @@ const profileStyles = StyleSheet.create({
     marginBottom: 10,
     marginHorizontal: 2,
   },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   header: {
     fontSize: 28,
     color: '#fff',
@@ -56,6 +61,15 @@ const profileStyles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 16,
     letterSpacing: 1,
+  },
+  shareButton: {
+    backgroundColor: 'transparent',
+    borderRadius: 20,
+    padding: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 42,
+    height: 42,
   },
   contentContainer: {
     flex: 1,
@@ -119,7 +133,7 @@ const profileStyles = StyleSheet.create({
     marginLeft: 8,
   },
   signOutIcon: {
-    marginRight: 4,
+    marginRight: 0,
   },
   statsContainer: {
     flexDirection: 'row',
@@ -136,7 +150,7 @@ const profileStyles = StyleSheet.create({
     shadowColor: btnColor1,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.25,
-    shadowRadius: 16,
+    shadowRadius: 10,
     elevation: 12,
     borderWidth: 1,
     borderColor: '#4A4A4A',
@@ -160,7 +174,7 @@ const profileStyles = StyleSheet.create({
     marginBottom: 8,
     textShadowColor: btnColor1,
     textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 10,
+    textShadowRadius: 5,
     letterSpacing: -1,
   },
   statLabel: {
@@ -171,6 +185,11 @@ const profileStyles = StyleSheet.create({
     letterSpacing: 0.5,
     textTransform: 'uppercase',
     opacity: 0.9,
+  },
+  profileItemRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
 });
 

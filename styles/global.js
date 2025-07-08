@@ -41,6 +41,11 @@ const globalStyles = StyleSheet.create({
     marginBottom: 10,
     marginHorizontal: 2,
   },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   header: {
     fontSize: 28,
     color: '#fff',

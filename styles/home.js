@@ -1,6 +1,9 @@
 import { StyleSheet } from 'react-native';
 
 const homeStyles = StyleSheet.create({
+  sectionContainer: {
+    marginBottom: 24,
+  },
   sectionTitle: {
     fontSize: 20,
     color: '#fff',
@@ -78,6 +81,8 @@ const homeStyles = StyleSheet.create({
   trendsChart: {
     height: 120,
     marginBottom: 20,
+    justifyContent: 'center', // Center the chart vertically
+    alignItems: 'center', // Center the chart horizontally
     // Placeholder for chart content
   },
   keyTypeSelector: {
@@ -146,6 +151,251 @@ const homeStyles = StyleSheet.create({
     color: '#2B2B2B',
     fontSize: 16,
     fontWeight: '700',
+  },
+  alignmentGraph: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+  },
+  alignmentTitle: {
+    fontSize: 18,
+    color: '#fff',
+    fontWeight: '600',
+    marginBottom: 16,
+  },
+  alignmentMeter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    width: '100%',
+  },
+  alignmentMeterBg: {
+    flex: 1,
+    height: 8,
+    backgroundColor: '#1E1E1E',
+    borderRadius: 4,
+    marginRight: 12,
+    overflow: 'hidden',
+  },
+  alignmentMeterFill: {
+    height: '100%',
+    backgroundColor: '#D4DE95',
+    borderRadius: 4,
+    shadowColor: '#D4DE95',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  alignmentScore: {
+    fontSize: 20,
+    color: '#D4DE95',
+    fontWeight: '700',
+    minWidth: 50,
+    textAlign: 'right',
+  },
+  alignmentSubtitle: {
+    fontSize: 14,
+    color: '#CCCCCC',
+    textAlign: 'center',
+    marginBottom: 12,
+    lineHeight: 20,
+  },
+  trendIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  trendArrow: {
+    fontSize: 16,
+    color: '#4CAF50',
+    marginRight: 6,
+  },
+  trendText: {
+    fontSize: 14,
+    color: '#4CAF50',
+    fontWeight: '500',
+  },
+  // Golden Mean Alignment Chart Styles
+  goldenMeanContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    width: '100%',
+  },
+  goldenMeanChart: {
+    width: '95%', // Slightly reduce width to add padding on sides
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scaleLabels: {
+    width: '100%',
+    marginBottom: 12,
+    position: 'relative',
+    height: 20, // Fixed height to accommodate labels
+  },
+  scaleLabelDeficient: {
+    fontSize: 12,
+    color: '#999',
+    fontWeight: '500',
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    maxWidth: '30%', // Prevent overlap
+  },
+  scaleLabelIdeal: {
+    fontSize: 12,
+    color: '#D4DE95',
+    fontWeight: '600',
+    position: 'absolute',
+    left: '50%',
+    top: 0,
+    marginLeft: -50, // Increased to accommodate longer words
+    textAlign: 'center',
+    width: 100, // Increased width for longer words
+  },
+  scaleLabelExcess: {
+    fontSize: 12,
+    color: '#999',
+    fontWeight: '500',
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    maxWidth: '30%', // Prevent overlap
+    textAlign: 'right',
+  },
+  progressContainer: {
+    width: '100%',
+    marginBottom: 16,
+  },
+  progressBar: {
+    height: 12,
+    backgroundColor: '#1E1E1E',
+    borderRadius: 6,
+    position: 'relative',
+    overflow: 'visible',
+  },
+  goldenMeanIndicator: {
+    position: 'absolute',
+    left: '50%',
+    top: -2,
+    width: 2,
+    height: 16,
+    backgroundColor: '#D4DE95',
+    borderRadius: 1,
+    shadowColor: '#D4DE95',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
+    elevation: 5,
+    zIndex: 2,
+  },
+  userPosition: {
+    position: 'absolute',
+    top: -6, // Adjusted for better vertical centering with 12px bar
+    alignItems: 'center',
+    zIndex: 3,
+    transform: [{ translateX: -12 }],
+  },
+  userDot: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#fff',
+    borderWidth: 3,
+    borderColor: '#D4DE95',
+    shadowColor: '#D4DE95',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 6,
+    elevation: 8,
+  },
+  userScoreText: {
+    fontSize: 12,
+    color: '#fff',
+    fontWeight: '600',
+    marginTop: 4,
+  },
+  progressFill: {
+    height: '100%',
+    opacity: 0.9,
+    shadowColor: '#D4DE95',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  interpretationText: {
+    fontSize: 14,
+    color: '#CCCCCC',
+    textAlign: 'center',
+    fontStyle: 'italic',
+    marginTop: 8,
+  },
+  // Action Log Section Styles
+  actionLogCard: {
+    backgroundColor: '#3C3C3C',
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.10,
+    shadowRadius: 8,
+    elevation: 3,
+    marginBottom: 55,
+  },
+  actionLogLoading: {
+    fontSize: 16,
+    color: '#CCCCCC',
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  actionLogAction: {
+    fontSize: 16,
+    color: '#fff',
+    fontWeight: '500',
+    marginBottom: 8,
+    lineHeight: 22,
+  },
+  actionLogDate: {
+    fontSize: 14,
+    color: '#CCCCCC',
+    marginBottom: 4,
+  },
+  actionLogKeyType: {
+    fontSize: 12,
+    color: '#D4DE95',
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  noActionLogContainer: {
+    alignItems: 'center',
+    paddingVertical: 10,
+  },
+  noActionLogText: {
+    fontSize: 16,
+    color: '#CCCCCC',
+    textAlign: 'center',
+    marginBottom: 20,
+    lineHeight: 22,
+  },
+  firstActionButton: {
+    backgroundColor: '#D4DE95',
+    borderRadius: 25,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    shadowColor: '#D4DE95',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  firstActionButtonText: {
+    color: '#2B2B2B',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 

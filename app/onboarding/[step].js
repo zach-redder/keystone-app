@@ -332,7 +332,7 @@ export default function OnboardingStep() {
               keyboardShouldPersistTaps="handled"
             >
               {renderCustomSection()}
-              <View style={styles.categoryContainer}>
+              {/* <View style={styles.categoryContainer}>
                 <Text style={styles.categoryTitle}>Popular</Text>
                 <GestureScrollView 
                   horizontal 
@@ -351,7 +351,7 @@ export default function OnboardingStep() {
                     ))}
                   </View>
                 </GestureScrollView>
-              </View>
+              </View> */}
               <View style={styles.categoryContainer}>
                 <Text style={styles.categoryTitle}>Career</Text>
                 <GestureScrollView 
@@ -449,7 +449,7 @@ export default function OnboardingStep() {
                 keyboardShouldPersistTaps="handled"
               >
                 {renderCustomSection()}
-                <View style={styles.categoryContainer}>
+                {/* <View style={styles.categoryContainer}>
                   <Text style={styles.categoryTitle}>Popular</Text>
                   <GestureScrollView 
                     horizontal 
@@ -468,7 +468,7 @@ export default function OnboardingStep() {
                       ))}
                     </View>
                   </GestureScrollView>
-                </View>
+                </View> */}
                 <View style={styles.categoryContainer}>
                   <Text style={styles.categoryTitle}>Career</Text>
                   <GestureScrollView 
@@ -567,7 +567,7 @@ export default function OnboardingStep() {
               keyboardShouldPersistTaps="handled"
             >
               {renderCustomSection()}
-              <View style={styles.categoryContainer}>
+              {/* <View style={styles.categoryContainer}>
                 <Text style={styles.categoryTitle}>Popular</Text>
                 <GestureScrollView 
                   horizontal 
@@ -586,7 +586,7 @@ export default function OnboardingStep() {
                     ))}
                   </View>
                 </GestureScrollView>
-              </View>
+              </View> */}
               <View style={styles.categoryContainer}>
                 <Text style={styles.categoryTitle}>Career</Text>
                 <GestureScrollView 

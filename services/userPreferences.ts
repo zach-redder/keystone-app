@@ -81,3 +81,84 @@ export const updatePreferredAiPersona = async (persona: string): Promise<boolean
     return false;
   }
 };
+
+export const getNotificationOptIn = async (): Promise<boolean> => {
+  try {
+    const preferences = await fetchUserPreferences();
+    return preferences?.notification_opt_in || false;
+  } catch (error) {
+    console.error('Error getting notification opt-in preference:', error);
+    return false;
+  }
+};
+
+export const updateNotificationOptIn = async (optIn: boolean): Promise<boolean> => {
+  try {
+    return await updateUserPreferences({ notification_opt_in: optIn });
+  } catch (error) {
+    console.error('Error updating notification opt-in preference:', error);
+    return false;
+  }
+};
+
+export const getUserEmail = async (): Promise<string> => {
+  try {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError || !user) {
+      console.error('Error getting user for email:', userError);
+      return '';
+    }
+
+    return user.email || '';
+  } catch (error) {
+    console.error('Error in getUserEmail:', error);
+    return '';
+  }
+};
+
+export const getPreferredReminderTime = async (): Promise<string> => {
+  try {
+    const preferences = await fetchUserPreferences();
+    return preferences?.preferred_reminder_time || '9:00 AM';
+  } catch (error) {
+    console.error('Error getting preferred reminder time:', error);
+    return '9:00 AM';
+  }
+};
+
+export const updatePreferredReminderTime = async (time: string): Promise<boolean> => {
+  try {
+    return await updateUserPreferences({ preferred_reminder_time: time });
+  } catch (error) {
+    console.error('Error updating preferred reminder time:', error);
+    return false;
+  }
+};
+
+export const getUserDayStreak = async (): Promise<number> => {
+  try {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError || !user) {
+      console.error('Error getting user for day streak:', userError);
+      return 0;
+    }
+
+    const { data, error } = await supabase
+      .from('users')
+      .select('day_streak')
+      .eq('id', user.id)
+      .single();
+
+    if (error) {
+      console.error('Error fetching user day streak:', error);
+      return 0;
+    }
+
+    return data?.day_streak || 0;
+  } catch (error) {
+    console.error('Error in getUserDayStreak:', error);
+    return 0;
+  }
+};

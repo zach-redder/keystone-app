@@ -375,9 +375,17 @@ export default function Keys() {
       <View style={keysStyles.pageBg}>
         <View style={keysStyles.headerRow}>
           <Text style={keysStyles.header}>Your Keys</Text>
-          <TouchableOpacity style={keysStyles.proBadgeWrap} onPress={handleBadgePress}>
-            <Text style={keysStyles.proBadge}>{badgeText}</Text>
-          </TouchableOpacity>
+          <View style={keysStyles.headerButtons}>
+            <TouchableOpacity style={keysStyles.proBadgeWrap} onPress={handleBadgePress}>
+              <Text style={keysStyles.proBadge}>{badgeText}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={keysStyles.shareButton} onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              // Share functionality to be implemented
+            }}>
+              <Ionicons name="share-outline" size={28} color="#CCCCCC" />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={keysStyles.sectionRow}>

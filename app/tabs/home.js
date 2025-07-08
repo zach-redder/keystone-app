@@ -1,4 +1,5 @@
 import { View, Text, SafeAreaView, TouchableOpacity, ScrollView, Linking } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect } from 'react';
 import globalStyles from '../../styles/global';
 import keysStyles from '../../styles/keys';
@@ -8,6 +9,7 @@ import CommunityModal from '../../components/CommunityModal';
 import AlignModal from '../../components/AlignModal';
 import AlignButton from '../../components/AlignButton';
 import { checkUserProStatus } from '../../services/auth';
+import { fetchRecentActionLog } from '../../services/actionLogs';
 import * as Haptics from 'expo-haptics';
 
 export default function HomeScreen() {
@@ -17,6 +19,8 @@ export default function HomeScreen() {
   const [badgeText, setBadgeText] = useState('PRO');
   const [selectedTimePeriod, setSelectedTimePeriod] = useState('Week');
   const [selectedKeyTypeIndex, setSelectedKeyTypeIndex] = useState(0);
+  const [recentActionLog, setRecentActionLog] = useState(null);
+  const [loadingActionLog, setLoadingActionLog] = useState(true);
 
   const keyTypes = [
     'Core Values',
@@ -27,9 +31,53 @@ export default function HomeScreen() {
     'Identity Traits'
   ];
 
+  // Mock Golden Mean alignment data (0.5 is the golden mean/ideal)
+  const goldenMeanData = {
+    'Core Values': 0.7, // Slightly excessive
+    'Future Identity': 0.5, // Perfect balance
+    'Life Goals': 0.3, // Deficient
+    'Motivations': 0.6, // Slightly excessive
+    'Avoidances': 0.4, // Slightly deficient
+    'Identity Traits': 0.8 // Excessive
+  };
+
+  // Labels for each key type
+  const keyTypeLabels = {
+    'Core Values': { deficient: 'Conformity', ideal: 'Integrity', excess: 'Dogmatism' },
+    'Identity Traits': { deficient: 'Suppression', ideal: 'Authenticity', excess: 'Egotism' },
+    'Future Identity': { deficient: 'Drift', ideal: 'Purpose', excess: 'Obsession' },
+    'Avoidances': { deficient: 'Denial', ideal: 'Discernment', excess: 'Paranoia' },
+    'Motivations': { deficient: 'Apathy', ideal: 'Drive', excess: 'Fixation' },
+    'Life Goals': { deficient: 'Aimlessness', ideal: 'Vision', excess: 'Overreach' }
+  };
+
+  const getCurrentAlignment = () => {
+    const currentKey = keyTypes[selectedKeyTypeIndex];
+    return goldenMeanData[currentKey] || 0.5;
+  };
+
+  const getCurrentLabels = () => {
+    const currentKey = keyTypes[selectedKeyTypeIndex];
+    return keyTypeLabels[currentKey] || { deficient: 'Deficient', ideal: 'Aligned', excess: 'Excessive' };
+  };
+
   useEffect(() => {
     checkProStatus();
+    loadRecentActionLog();
   }, []);
+
+  const loadRecentActionLog = async () => {
+    try {
+      setLoadingActionLog(true);
+      const actionLog = await fetchRecentActionLog();
+      setRecentActionLog(actionLog);
+    } catch (error) {
+      console.error('Error loading action log:', error);
+      setRecentActionLog(null);
+    } finally {
+      setLoadingActionLog(false);
+    }
+  };
 
   const checkProStatus = async () => {
     try {
@@ -91,14 +139,33 @@ export default function HomeScreen() {
     setAlignModalVisible(true);
   };
 
+  const formatActionLogDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
   return (
     <SafeAreaView style={globalStyles.pageBg}>
       <View style={globalStyles.pageBg}>
         <View style={globalStyles.headerRow}>
           <Text style={globalStyles.header}>Keystone</Text>
-          <TouchableOpacity style={keysStyles.proBadgeWrap} onPress={handleBadgePress}>
-            <Text style={keysStyles.proBadge}>{badgeText}</Text>
-          </TouchableOpacity>
+          <View style={globalStyles.headerButtons}>
+            <TouchableOpacity style={keysStyles.proBadgeWrap} onPress={handleBadgePress}>
+              <Text style={keysStyles.proBadge}>{badgeText}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={keysStyles.shareButton} onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              // Share functionality to be implemented
+            }}>
+              <Ionicons name="share-outline" size={28} color="#CCCCCC" />
+            </TouchableOpacity>
+          </View>
         </View>
         
         <ScrollView 
@@ -119,7 +186,7 @@ export default function HomeScreen() {
 
           {/* Alignment Trends Section */}
           <View style={homeStyles.sectionContainer}>
-            <Text style={homeStyles.sectionTitle}>Alignment Trends</Text>
+            <Text style={homeStyles.sectionTitle}>Alignment</Text>
             <View style={homeStyles.trendsContainer}>
               <View style={homeStyles.timePeriodButtons}>
                 {['Week', 'Month', 'Year'].map((period) => (
@@ -141,7 +208,44 @@ export default function HomeScreen() {
                 ))}
               </View>
               <View style={homeStyles.trendsChart}>
-                {/* Placeholder for chart - you can add chart library here */}
+                {/* Golden Mean Alignment Chart */}
+                <View style={homeStyles.goldenMeanContainer}>
+                  <View style={homeStyles.goldenMeanChart}>
+                    {/* Scale Labels */}
+                    <View style={homeStyles.scaleLabels}>
+                      <Text style={homeStyles.scaleLabelDeficient}>{getCurrentLabels().deficient}</Text>
+                      <Text style={homeStyles.scaleLabelIdeal}>{getCurrentLabels().ideal}</Text>
+                      <Text style={homeStyles.scaleLabelExcess}>{getCurrentLabels().excess}</Text>
+                    </View>
+                    
+                    {/* Progress Bar */}
+                    <View style={homeStyles.progressContainer}>
+                      <View style={homeStyles.progressBar}>
+                        {/* Golden Mean Indicator */}
+                        <View style={homeStyles.goldenMeanIndicator} />
+                        
+                        {/* User Position */}
+                        <View style={[
+                          homeStyles.userPosition,
+                          { left: `${getCurrentAlignment() * 100}%` }
+                        ]}>
+                          <View style={homeStyles.userDot} />
+
+                        </View>
+                        
+                        {/* Progress Fill */}
+                        <View style={[
+                          homeStyles.progressFill,
+                          { 
+                            left: `${Math.min(50, getCurrentAlignment() * 100)}%`,
+                            width: `${Math.abs(getCurrentAlignment() * 100 - 50)}%`,
+                            backgroundColor: '#D4DE95' // Use app's primary accent color
+                          }
+                        ]} />
+                      </View>
+                    </View>
+                  </View>
+                </View>
               </View>
               
               {/* Key Type Selector */}
@@ -159,7 +263,41 @@ export default function HomeScreen() {
             </View>
           </View>
 
-          {/* Community Section */}
+          {/* Previous Action Log Section */}
+          <View style={homeStyles.sectionContainer}>
+            <Text style={homeStyles.sectionTitle}>Previous Action Log</Text>
+            <View style={homeStyles.actionLogCard}>
+              {loadingActionLog ? (
+                <Text style={homeStyles.actionLogLoading}>Loading...</Text>
+              ) : recentActionLog ? (
+                <View>
+                  <Text style={homeStyles.actionLogAction}>{recentActionLog.action}</Text>
+                  <Text style={homeStyles.actionLogDate}>
+                    {formatActionLogDate(recentActionLog.created_at)}
+                  </Text>
+                  {recentActionLog.key_type && (
+                    <Text style={homeStyles.actionLogKeyType}>
+                      {recentActionLog.key_type}
+                    </Text>
+                  )}
+                </View>
+              ) : (
+                <View style={homeStyles.noActionLogContainer}>
+                  <Text style={homeStyles.noActionLogText}>
+                    No actions logged yet. Start tracking your alignment journey!
+                  </Text>
+                  <TouchableOpacity 
+                    style={homeStyles.firstActionButton}
+                    onPress={handleAlignButtonPress}
+                  >
+                    <Text style={homeStyles.firstActionButtonText}>Log Your First Action</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          </View>
+
+          {/* Community Section
           <View style={homeStyles.sectionContainer}>
             <Text style={homeStyles.sectionTitle}>Community</Text>
             <View style={homeStyles.communityCard}>
@@ -174,7 +312,7 @@ export default function HomeScreen() {
                 <Text style={homeStyles.joinDiscordButtonText}>Join Discord</Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </View> */}
         </ScrollView>
 
         <AlignButton onPress={handleAlignButtonPress} />
