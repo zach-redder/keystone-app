@@ -12,7 +12,7 @@ export const fetchUserPreferences = async (): Promise<UserPreferences | null> =>
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
     if (userError || !user) {
-      console.error('Error getting user:', userError);
+      console.log('User not authenticated, returning null for preferences');
       return null;
     }
 
@@ -20,10 +20,15 @@ export const fetchUserPreferences = async (): Promise<UserPreferences | null> =>
       .from('user_preferences')
       .select('*')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle(); // Use maybeSingle instead of single
 
     if (error) {
       console.error('Error fetching user preferences:', error);
+      return null;
+    }
+
+    if (!data) {
+      console.log('User preferences not found, returning null');
       return null;
     }
 
@@ -39,9 +44,16 @@ export const updateUserPreferences = async (preferences: Partial<UserPreferences
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
     if (userError || !user) {
-      console.error('Error getting user:', userError);
+      console.log('User not authenticated, cannot update preferences');
       return false;
     }
+
+    // First check if user preferences record exists
+    const { data: existingPrefs } = await supabase
+      .from('user_preferences')
+      .select('user_id')
+      .eq('user_id', user.id)
+      .maybeSingle();
 
     const { error } = await supabase
       .from('user_preferences')
@@ -53,6 +65,12 @@ export const updateUserPreferences = async (preferences: Partial<UserPreferences
 
     if (error) {
       console.error('Error updating user preferences:', error);
+      
+      // If it's an RLS policy violation, it might mean the user record doesn't exist in users table
+      if (error.code === '42501') {
+        console.error('RLS policy violation - user may not have a record in users table');
+      }
+      
       return false;
     }
 
@@ -141,7 +159,7 @@ export const getUserDayStreak = async (): Promise<number> => {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
     if (userError || !user) {
-      console.error('Error getting user for day streak:', userError);
+      console.log('User not authenticated, returning 0 for day streak');
       return 0;
     }
 
@@ -149,10 +167,15 @@ export const getUserDayStreak = async (): Promise<number> => {
       .from('users')
       .select('day_streak')
       .eq('id', user.id)
-      .single();
+      .maybeSingle(); // Use maybeSingle instead of single
 
     if (error) {
       console.error('Error fetching user day streak:', error);
+      return 0;
+    }
+
+    if (!data) {
+      console.log('User record not found, returning 0 for day streak');
       return 0;
     }
 

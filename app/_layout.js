@@ -13,14 +13,27 @@ export default function RootLayout() {
     const handleDeepLink = async (event) => {
       const url = event.url;
 
-      // Tell Supabase to handle the session from the URL
-      const { data, error } = await supabase.auth.exchangeCodeForSession(url);
+      // Only handle Supabase auth URLs
+      if (!url || !url.includes('auth/callback')) {
+        return;
+      }
 
-      if (error) {
-        console.error("Auth redirect error:", error);
-      } else {
-        console.log("Session recovered!", data.session);
-        router.replace('/tabs/home'); // redirect wherever you want
+      try {
+        // Tell Supabase to handle the session from the URL
+        const { data, error } = await supabase.auth.exchangeCodeForSession(url);
+
+        if (error) {
+          console.error("Auth redirect error:", error);
+          // Don't redirect on auth errors, let the user try again
+          return;
+        }
+
+        if (data.session) {
+          console.log("Session recovered!", data.session);
+          router.replace('/tabs/home'); // redirect wherever you want
+        }
+      } catch (error) {
+        console.error("Error handling deep link:", error);
       }
     };
 

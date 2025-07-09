@@ -9,8 +9,8 @@ import { signOutUser, checkUserProStatus } from '../../services/auth';
 import { fetchIdentityKeys } from '../../services/userKeys';
 import { getPreferredAiPersona, updateNotificationOptIn, getUserEmail, getPreferredReminderTime, getUserDayStreak } from '../../services/userPreferences';
 import profileStyles from '../../styles/profile';
-import ProUpgradeModal from '../../components/ProUpgradeModal';
-import CommunityModal from '../../components/CommunityModal';
+import ProUpgradeModal from '../../components/modals/ProUpgradeModal';
+import CommunityModal from '../../components/modals/CommunityModal';
 
 export default function ProfileScreen() {
   const router = useRouter();

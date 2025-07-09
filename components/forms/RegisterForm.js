@@ -1,9 +1,9 @@
 // components/RegisterForm.js
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
-import { signUpUser } from '../services/auth';
-import { styles } from '../styles/authentication';
-import WaitForEmailConfirmation from './WaitForEmailConfirmation';
+import { signUpUser } from '../../services/auth';
+import { styles } from '../../styles/authentication';
+import WaitForEmailConfirmation from '../WaitForEmailConfirmation';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function RegisterForm() {
@@ -53,7 +53,7 @@ export default function RegisterForm() {
 
   return (
     <View style={styles.container}>
-      <Image source={require('../assets/keystone_transparent.png')} style={styles.logo} />
+      <Image source={require('../../assets/keystone_transparent.png')} style={styles.logo} />
       <Text style={styles.title}>Register to get started!</Text>
 
       <TextInput
@@ -106,13 +106,13 @@ export default function RegisterForm() {
 
       <View style={styles.socialContainer}>
         <TouchableOpacity style={styles.socialButton}>
-          <Image source={require('../assets/google.png')} style={styles.socialIcon} />
+          <Image source={require('../../assets/google.png')} style={styles.socialIcon} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.socialButton}>
-          <Image source={require('../assets/apple.png')} style={styles.socialIcon} />
+          <Image source={require('../../assets/apple.png')} style={styles.socialIcon} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.socialButton}>
-          <Image source={require('../assets/x.png')} style={styles.socialIcon} />
+          <Image source={require('../../assets/x.png')} style={styles.socialIcon} />
         </TouchableOpacity>
       </View>
     </View>

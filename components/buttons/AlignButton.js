@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { Pressable, View, Text, Image, Animated, Easing, StyleSheet } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import alignButtonStyles from '../styles/AlignButton';
+import alignButtonStyles from '../../styles/AlignButton';
 
 export default function AlignButton({ onPress }) {
   const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -112,7 +112,7 @@ export default function AlignButton({ onPress }) {
         >
           <View style={alignButtonStyles.alignContent}>
             <Image
-              source={require('../assets/checkmark.png')}
+              source={require('../../assets/checkmark.png')}
               style={alignButtonStyles.plusImage}
             />
             <Text style={alignButtonStyles.alignText}>Align Now</Text>

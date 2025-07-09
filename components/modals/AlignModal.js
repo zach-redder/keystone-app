@@ -1,6 +1,7 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, Modal, Animated, Dimensions, PanResponder } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import AffirmIdentityModal from './AffirmIdentityModal';
 
 const { height: screenHeight } = Dimensions.get('window');
 
@@ -9,6 +10,7 @@ const AlignModal = ({ visible, onClose }) => {
   const overlayOpacity = useRef(new Animated.Value(0)).current;
   const dragOffset = useRef(new Animated.Value(0)).current;
   const isClosing = useRef(false);
+  const [showAffirmIdentityModal, setShowAffirmIdentityModal] = useState(false);
 
   // Pan responder for drag gestures - applies only to draggable content area
   const panResponder = useRef(
@@ -76,9 +78,10 @@ const AlignModal = ({ visible, onClose }) => {
   };
 
   const handleAffirmIdentity = () => {
+    console.log('AlignModal: Affirm Identity clicked');
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    // TODO: Add affirm identity functionality
-    console.log('Affirm Identity pressed');
+    setShowAffirmIdentityModal(true);
+    console.log('AlignModal: showAffirmIdentityModal set to true');
   };
 
   const handleLogAction = () => {
@@ -90,6 +93,14 @@ const AlignModal = ({ visible, onClose }) => {
   const handleCancel = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     closeModal();
+  };
+
+  const handleAffirmIdentityClose = () => {
+    console.log('AlignModal: AffirmIdentityModal is closing');
+    setShowAffirmIdentityModal(false);
+    // Close the entire modal flow after affirmation
+    console.log('AlignModal: Closing parent modal');
+    onClose();
   };
 
   useEffect(() => {
@@ -117,57 +128,64 @@ const AlignModal = ({ visible, onClose }) => {
   }, [visible]);
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="none"
-      onRequestClose={onClose}
-    >
-      <Animated.View style={[styles.overlay, { opacity: overlayOpacity }]}>
-        <TouchableOpacity style={styles.overlayTouchable} activeOpacity={1} onPress={closeModal} />
-        <Animated.View 
-          style={[
-            styles.modalContainer,
-            {
-              transform: [
-                { translateY: Animated.add(slideAnim, dragOffset) }
-              ]
-            }
-          ]}
-        >
-          {/* Draggable content area */}
-          <View {...panResponder.panHandlers}>
-            {/* Draggable handle area */}
-            <View style={styles.handleArea}>
-              <View style={styles.handleBar} />
+    <>
+      <Modal
+        visible={visible && !showAffirmIdentityModal}
+        transparent
+        animationType="none"
+        onRequestClose={onClose}
+      >
+        <Animated.View style={[styles.overlay, { opacity: overlayOpacity }]}>
+          <TouchableOpacity style={styles.overlayTouchable} activeOpacity={1} onPress={closeModal} />
+          <Animated.View 
+            style={[
+              styles.modalContainer,
+              {
+                transform: [
+                  { translateY: Animated.add(slideAnim, dragOffset) }
+                ]
+              }
+            ]}
+          >
+            {/* Draggable content area */}
+            <View {...panResponder.panHandlers}>
+              {/* Draggable handle area */}
+              <View style={styles.handleArea}>
+                <View style={styles.handleBar} />
+              </View>
+
+              {/* Title */}
+              <Text style={styles.title}>Align Yourself</Text>
+
+              {/* Description */}
+              <Text style={styles.description}>
+                Choose how you want to align with your identity and values.
+              </Text>
             </View>
 
-            {/* Title */}
-            <Text style={styles.title}>Align with Your Identity</Text>
-
-            {/* Description */}
-            <Text style={styles.description}>
-              Choose how you want to align with your identity and values today.
-            </Text>
-          </View>
-
-          {/* Action buttons - separate from draggable area */}
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity style={styles.actionButton} onPress={handleAffirmIdentity}>
-              <Text style={styles.actionButtonText}>Affirm Identity</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.actionButton} onPress={handleLogAction}>
-              <Text style={styles.actionButtonText}>Log Action</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
+            {/* Action buttons - separate from draggable area */}
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity style={styles.actionButton} onPress={handleAffirmIdentity}>
+                <Text style={styles.actionButtonText}>Affirm Identity</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.actionButton} onPress={handleLogAction}>
+                <Text style={styles.actionButtonText}>Log Action</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
         </Animated.View>
-      </Animated.View>
-    </Modal>
+      </Modal>
+
+      <AffirmIdentityModal
+        visible={showAffirmIdentityModal}
+        onClose={handleAffirmIdentityClose}
+      />
+    </>
   );
 };
 

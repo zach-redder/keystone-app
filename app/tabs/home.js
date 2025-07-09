@@ -4,10 +4,10 @@ import { useState, useEffect } from 'react';
 import globalStyles from '../../styles/global';
 import keysStyles from '../../styles/keys';
 import homeStyles from '../../styles/home';
-import ProUpgradeModal from '../../components/ProUpgradeModal';
-import CommunityModal from '../../components/CommunityModal';
-import AlignModal from '../../components/AlignModal';
-import AlignButton from '../../components/AlignButton';
+import ProUpgradeModal from '../../components/modals/ProUpgradeModal';
+import CommunityModal from '../../components/modals/CommunityModal';
+import AlignModal from '../../components/modals/AlignModal';
+import AlignButton from '../../components/buttons//AlignButton';
 import { checkUserProStatus } from '../../services/auth';
 import { fetchRecentActionLog } from '../../services/actionLogs';
 import * as Haptics from 'expo-haptics';
@@ -243,6 +243,13 @@ export default function HomeScreen() {
                           }
                         ]} />
                       </View>
+                    </View>
+                    
+                    {/* Subtitle Labels Below */}
+                    <View style={homeStyles.scaleSubtitles}>
+                      <Text style={homeStyles.scaleSubtitleDeficient}>Deficiency</Text>
+                      <Text style={homeStyles.scaleSubtitleIdeal}>Aligned</Text>
+                      <Text style={homeStyles.scaleSubtitleExcess}>Excess</Text>
                     </View>
                   </View>
                 </View>

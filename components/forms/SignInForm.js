@@ -1,8 +1,8 @@
 // components/SignInForm.js
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Image, Alert } from 'react-native';
-import { signInUser, resetPassword } from '../services/auth';
-import { styles } from '../styles/authentication';
+import { signInUser, resetPassword } from '../../services/auth';
+import { styles } from '../../styles/authentication';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -63,7 +63,7 @@ export default function SignInForm() {
           <Ionicons name="arrow-back" size={48} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
-      <Image source={require('../assets/keystone_transparent.png')} style={styles.logo} />
+      <Image source={require('../../assets/keystone_transparent.png')} style={styles.logo} />
       <Text style={styles.title}>Log in to your account.</Text>
 
       <TextInput
@@ -107,13 +107,13 @@ export default function SignInForm() {
 
       <View style={styles.signInSocialContainer}>
         <TouchableOpacity style={styles.socialButton}>
-          <Image source={require('../assets/google.png')} style={styles.socialIcon} />
+          <Image source={require('../../assets/google.png')} style={styles.socialIcon} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.socialButton}>
-          <Image source={require('../assets/apple.png')} style={styles.socialIcon} />
+          <Image source={require('../../assets/apple.png')} style={styles.socialIcon} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.socialButton}>
-          <Image source={require('../assets/x.png')} style={styles.socialIcon} />
+          <Image source={require('../../assets/x.png')} style={styles.socialIcon} />
         </TouchableOpacity>
       </View>
     </View>

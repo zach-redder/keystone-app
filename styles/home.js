@@ -264,6 +264,42 @@ const homeStyles = StyleSheet.create({
     maxWidth: '30%', // Prevent overlap
     textAlign: 'right',
   },
+  scaleSubtitles: {
+    width: '100%',
+    marginTop: 12,
+    position: 'relative',
+    height: 20, // Fixed height to accommodate labels
+  },
+  scaleSubtitleDeficient: {
+    fontSize: 11,
+    color: '#666',
+    fontWeight: '400',
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    maxWidth: '30%', // Prevent overlap
+  },
+  scaleSubtitleIdeal: {
+    fontSize: 11,
+    color: '#A8B89E', // Slightly muted version of #D4DE95
+    fontWeight: '500',
+    position: 'absolute',
+    left: '50%',
+    top: 0,
+    marginLeft: -50, // Center alignment
+    textAlign: 'center',
+    width: 100,
+  },
+  scaleSubtitleExcess: {
+    fontSize: 11,
+    color: '#666',
+    fontWeight: '400',
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    maxWidth: '30%', // Prevent overlap
+    textAlign: 'right',
+  },
   progressContainer: {
     width: '100%',
     marginBottom: 16,

@@ -14,8 +14,10 @@ export default function Index() {
   
       if (status === 'brand_new') {
         setRedirectTo('/onboarding/Welcome'); // ✅ new user — start onboarding
+      } else if (status === 'needs_onboarding') {
+        setRedirectTo('/onboarding/Welcome'); // email confirmed, start onboarding from beginning
       } else if (status === 'incomplete') {
-        setRedirectTo('/onboarding/LifeGoals'); // resume onboarding
+        setRedirectTo('/onboarding/FutureSelfVision'); // resume onboarding
       } else if (status === 'no_session') {
         setRedirectTo('/signin'); // Route to sign-in screen if no session
       } else if (status === 'complete') {

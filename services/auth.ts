@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { addIdentityKeysBatch, IdentityKey } from './userKeys';
+import { handleNewUserEmailList } from './emailListService';
 
 interface Preferences {
   timezone?: string;
@@ -11,8 +12,7 @@ interface Preferences {
 
 export const signUpUser = async (email: string, password: string) => {
   try {
-    // Initialize auth state first
-    await initializeAuth();
+    console.log('Starting signup process for:', email);
     
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -24,7 +24,19 @@ export const signUpUser = async (email: string, password: string) => {
       throw error;
     }
     
-    console.log('Signup successful:', data);
+    console.log('Signup response:', {
+      user: data.user?.id,
+      session: !!data.session,
+      emailConfirmed: data.user?.email_confirmed_at,
+    });
+    
+    if (!data.user) {
+      throw new Error('Signup succeeded but no user returned');
+    }
+    
+    // When email confirmation is required, no session is created until email is confirmed
+    // This is expected behavior
+    console.log('Signup successful - user created, waiting for email confirmation');
     return data.user;
   } catch (error) {
     console.error('Error in signUpUser:', error);
@@ -34,9 +46,6 @@ export const signUpUser = async (email: string, password: string) => {
 
 export const signInUser = async (email: string, password: string) => {
   try {
-    // Initialize auth state first
-    await initializeAuth();
-    
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -112,6 +121,21 @@ export const insertUserProfileAfterConfirmation = async (
   if (userInsertError) {
     console.error('Error inserting user profile:', userInsertError);
     throw userInsertError;
+  }
+
+  // Add user to Resend email list
+  try {
+    if (user.email) {
+      console.log('Adding user to Resend email list:', user.email);
+      await handleNewUserEmailList({
+        email: user.email,
+        sendWelcome: true,
+      });
+    }
+  } catch (resendError) {
+    console.error('Error adding user to Resend email list:', resendError);
+    // Don't throw the error here - we don't want to fail user creation if email list fails
+    // You might want to log this to your error tracking service
   }
 
   // Use provided preferences or fallback to defaults
@@ -367,12 +391,18 @@ export const checkUserStatus = async () => {
     return { status: 'no_session' };
   }
 
-  // Check local storage for onboarding status
-  const onboardingComplete = await AsyncStorage.getItem('onboarding_complete');
-  if (onboardingComplete === 'true') {
-    return { status: 'complete' };
+  // Check if user's email is confirmed
+  const emailConfirmed = user.email_confirmed_at !== null;
+  
+  if (!emailConfirmed) {
+    // User signed up but hasn't confirmed email yet
+    // This should be handled in the registration flow, not here
+    // If we get here, something went wrong, so sign them out and start fresh
+    await supabase.auth.signOut();
+    return { status: 'no_session' };
   }
 
+  // Check database for user profile and onboarding status
   const { data, error } = await supabase
     .from('users')
     .select('onboarding_complete')
@@ -384,13 +414,17 @@ export const checkUserStatus = async () => {
     return { status: 'error' };
   }
 
-  console.log('data', data);
+  console.log('User database record:', data);
 
   if (!data) {
-    return { status: 'incomplete' }; // signed in, but row not created
+    // User is signed in and email confirmed, but no database record exists
+    // This means they need to start onboarding from the beginning
+    // Clear any stale onboarding data
+    await clearOnboardingData();
+    return { status: 'needs_onboarding' };
   }
 
-  // Store onboarding status in local storage
+  // Update local storage with current database state
   await AsyncStorage.setItem('onboarding_complete', data.onboarding_complete ? 'true' : 'false');
 
   return data.onboarding_complete
@@ -409,24 +443,117 @@ export const resendConfirmationEmail = async (email: string) => {
 };
 
 export const checkUserProStatus = async () => {
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-  
-  if (authError || !user) {
-    throw new Error('User not authenticated');
+  try {
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+      console.log('User not authenticated, returning false for pro status');
+      return false; // Return false instead of throwing
+    }
+
+    const { data, error } = await supabase
+      .from('users')
+      .select('is_pro')
+      .eq('id', user.id)
+      .maybeSingle(); // Use maybeSingle instead of single
+
+    if (error) {
+      console.error('Error checking pro status:', error);
+      return false; // Return false on error instead of throwing
+    }
+
+    if (!data) {
+      console.log('User record not found, returning false for pro status');
+      return false;
+    }
+
+    return data?.is_pro || false;
+  } catch (error) {
+    console.error('Error in checkUserProStatus:', error);
+    return false;
   }
+};
 
-  const { data, error } = await supabase
-    .from('users')
-    .select('is_pro')
-    .eq('id', user.id)
-    .single();
+export const upgradeUserToPro = async (userId?: string) => {
+  try {
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+      throw new Error('User not authenticated');
+    }
 
-  if (error) {
+    const targetUserId = userId || user.id;
+
+    // Update user to pro status in database
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({ is_pro: true })
+      .eq('id', targetUserId);
+
+    if (updateError) {
+      throw updateError;
+    }
+
+    console.log('Successfully upgraded user to pro:', targetUserId);
+    return true;
+  } catch (error) {
+    console.error('Error upgrading user to pro:', error);
     throw error;
   }
+};
 
-  return data?.is_pro || false;
+export const checkUserProfileExists = async (): Promise<boolean> => {
+  try {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError || !user) {
+      console.log('User not authenticated, profile does not exist');
+      return false;
+    }
+
+    const { data, error } = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error checking user profile:', error);
+      return false;
+    }
+
+    return !!data;
+  } catch (error) {
+    console.error('Error in checkUserProfileExists:', error);
+    return false;
+  }
+};
+
+export const clearOnboardingData = async () => {
+  try {
+    console.log('Clearing onboarding data from AsyncStorage...');
+    await AsyncStorage.multiRemove([
+      'onboarding_complete',
+      'final_preferences',
+      'user_preferences',
+      'tempPassword',
+      'future_self_vision',
+      'life_goals',
+      'core_values',
+      'ai_personality',
+      'futureselfvision_custom_options',
+      'lifegoals_custom_options',
+      'corevalues_custom_options',
+      'aipersonality_custom_options',
+    ]);
+    console.log('Onboarding data cleared successfully');
+  } catch (error) {
+    console.error('Error clearing onboarding data:', error);
+  }
 };

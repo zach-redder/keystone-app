@@ -1,5 +1,5 @@
 import { View, Text, TouchableOpacity, Modal, Dimensions, Animated } from 'react-native';
-import menuStyles from '../styles/Menu';
+import menuStyles from '../../styles/Menu';
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useRef } from 'react';
 

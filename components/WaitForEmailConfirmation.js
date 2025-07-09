@@ -16,93 +16,109 @@ export default function WaitForEmailConfirmationScreen({ email, preferences: ini
 
   const checkEmailConfirmation = async () => {
     try {
-      console.log('Checking email confirmation status...');
+      console.log('Checking email confirmation status in auth.users table...');
       
-      // First check if we have a session
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      // We need to check the auth.users table directly to see if email_confirmed_at is not null
+      // Since we can't directly query auth.users from the client, we'll use a different approach
       
-      if (sessionError) {
-        console.error('Error getting session:', sessionError);
-        return false;
+      // Try to sign in with the stored credentials to check if email is confirmed
+      const storedPassword = await AsyncStorage.getItem('tempPassword');
+      
+      if (!storedPassword) {
+        console.log('No stored password found');
+        return { confirmed: false, error: 'no_password' };
       }
-
-      if (!session) {
-        console.log('No active session, trying to sign in with stored credentials...');
-        // Try to get a new session by signing in with stored email
-        const { data, error: signInError } = await supabase.auth.signInWithPassword({
-          email: email,
-          password: await AsyncStorage.getItem('tempPassword') // We'll need to store this temporarily
-        });
-
-        if (signInError) {
-          if (signInError.message.includes('Email not confirmed')) {
-            console.log('Email still not confirmed');
-            return false;
-          }
-          console.error('Error signing in:', signInError);
-          return false;
-        }
-
-        if (data.user) {
-          console.log('Successfully signed in after confirmation!');
-          return true;
+      
+      // Attempt to sign in - this will only work if email is confirmed
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password: storedPassword,
+      });
+      
+      if (error) {
+        if (error.message.includes('Email not confirmed')) {
+          console.log('Email not yet confirmed');
+          return { confirmed: false, error: null };
+        } else {
+          console.error('Sign in error:', error);
+          return { confirmed: false, error: 'signin_error' };
         }
       }
-
-      // If we have a session, check the user
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
       
-      if (userError) {
-        console.error('Error getting user:', userError);
-        return false;
+      if (data.session && data.user) {
+        console.log('Email confirmed! User signed in successfully.');
+        console.log('User ID:', data.user.id);
+        console.log('Email confirmed at:', data.user.email_confirmed_at);
+        
+        // Email is confirmed and user is now signed in
+        return { confirmed: true, error: null };
       }
-
-      if (!user) {
-        console.log('No user found in session');
-        return false;
-      }
-
-      console.log('Full user object:', user);
-      console.log('Last sign in:', user.last_sign_in_at);
       
-      const isConfirmed = user.last_sign_in_at && !user.last_sign_in_at.includes("Waiting");
-
-      console.log('Is email confirmed?', isConfirmed);
-      
-      if (isConfirmed) {
-        console.log('Email confirmed! Processing...');
-        return true;
-      }
-
-      return false;
+      console.log('Unexpected state - no error but no session');
+      return { confirmed: false, error: null };
     } catch (err) {
       console.error('Error checking email confirmation:', err);
-      return false;
+      // Check if it's a network error
+      if (err.message.includes('Network request failed') || err.name === 'TypeError') {
+        return { confirmed: false, error: 'network_error' };
+      }
+      return { confirmed: false, error: 'unknown_error' };
     }
   };
 
   useEffect(() => {
+    // Debug session state on mount
+    debugSessionState();
+    
+    // Listen for auth state changes (email confirmation)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state change:', event, session ? 'with session' : 'no session');
+      
+      if (event === 'SIGNED_IN' && session) {
+        console.log('User signed in after email confirmation!');
+        setPolling(false);
+        await handleConfirmedEmail();
+      }
+    });
+    
     let isSubscribed = true;
     const interval = setInterval(async () => {
       if (!polling) return;
 
       try {
-        const isConfirmed = await checkEmailConfirmation();
+        const result = await checkEmailConfirmation();
         
-        if (isConfirmed && isSubscribed) {
-          console.log('Email confirmed, clearing interval and proceeding...');
+        // Only proceed if email is actually confirmed (user signed in)
+        if (result.confirmed && isSubscribed) {
+          console.log('Email confirmed and user signed in! Proceeding...');
           clearInterval(interval);
           setPolling(false);
           await handleConfirmedEmail();
+        } else if (result.error === 'network_error') {
+          console.log('Network error during polling, will retry...');
+          // Don't do anything, just wait for next poll
+        } else if (result.error === 'no_password') {
+          console.log('No stored password - cannot check confirmation');
+          setError('Password not found. Please try registering again.');
+          setPolling(false);
+        } else if (result.error === 'signin_error') {
+          console.log('Sign in error during polling, will retry...');
+          // Continue polling, might be temporary
+        } else if (result.error && result.error !== null) {
+          console.error('Error during polling:', result.error);
+          // For other errors, continue polling
         }
+        // If result.confirmed is false and no error, just continue polling (normal state)
       } catch (err) {
         console.error('Error in polling interval:', err);
+        // Continue polling even if there's an error
       }
-    }, 2000); // Poll every 2 seconds instead of 3
+    }, 3000); // Poll every 3 seconds (slightly longer since we're doing sign-in attempts)
 
     return () => {
       isSubscribed = false;
       clearInterval(interval);
+      subscription.unsubscribe();
     };
   }, [polling]);
 
@@ -122,10 +138,12 @@ export default function WaitForEmailConfirmationScreen({ email, preferences: ini
       }
 
       if (!preferences) {
-        console.log('No preferences found, redirecting to onboarding...');
-        // Clean up stored password before redirecting
+        console.log('No preferences found, user needs to complete onboarding');
+        // Clean up stored password
         await AsyncStorage.removeItem('tempPassword');
-        router.replace('/onboarding/FutureSelfVision');
+        // Don't redirect - let the main app routing handle this
+        // The app will detect the user is signed in but needs onboarding
+        router.replace('/');
         return;
       }
 
@@ -180,6 +198,35 @@ export default function WaitForEmailConfirmationScreen({ email, preferences: ini
     }
   };
 
+  const handleSignInAfterConfirmation = async () => {
+    setIsChecking(true);
+    setError(null);
+    
+    try {
+      console.log('Manually checking email confirmation and signing in...');
+      
+      const result = await checkEmailConfirmation();
+      
+      if (result.confirmed) {
+        console.log('Email confirmed and signed in successfully!');
+        setPolling(false);
+        await handleConfirmedEmail();
+      } else if (result.error === 'no_password') {
+        setError('Password not found. Please try registering again.');
+      } else if (result.error === 'signin_error') {
+        setError('Sign in failed. Please check your email confirmation.');
+      } else {
+        setError('Please confirm your email first by clicking the link we sent you.');
+      }
+      
+    } catch (err) {
+      console.error('Error signing in after confirmation:', err);
+      setError(err.message);
+    } finally {
+      setIsChecking(false);
+    }
+  };
+
   const handleTryDifferentEmail = () => {
     if (onTryDifferentEmail) {
       onTryDifferentEmail();
@@ -188,17 +235,58 @@ export default function WaitForEmailConfirmationScreen({ email, preferences: ini
     }
   };
 
+  // Debug function to check session state
+  const debugSessionState = async () => {
+    console.log('=== SESSION DEBUG ===');
+    
+    try {
+      // Check session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      console.log('Session error:', sessionError);
+      console.log('Session exists:', !!session);
+      if (session) {
+        console.log('User ID:', session.user.id);
+        console.log('Email:', session.user.email);
+        console.log('Email confirmed:', session.user.email_confirmed_at);
+      } else {
+        console.log('No session - expected until email is confirmed');
+      }
+      
+      // Check AsyncStorage
+      const storedToken = await AsyncStorage.getItem('sb-supabase-auth-token');
+      console.log('Stored token exists:', !!storedToken);
+      
+      // Check all auth-related keys
+      const allKeys = await AsyncStorage.getAllKeys();
+      const authKeys = allKeys.filter(key => 
+        key.includes('auth') || 
+        key.includes('supabase') || 
+        key.includes('token')
+      );
+      console.log('Auth keys in storage:', authKeys);
+      
+    } catch (err) {
+      console.error('Debug error:', err);
+    }
+    
+    console.log('==================');
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.contentContainer}>
-        <Text style={styles.title}>Check your inbox</Text>
-        <Text style={styles.subtitle}>
-          We sent a confirmation email to:
-        </Text>
-        <Text style={styles.emailText}>{email}</Text>
-        <Text style={styles.description}>
-          Click the link to confirm your account.
-        </Text>
+        <View style={styles.emailConfirmationHeader}>
+          <Text style={styles.title}>Check your inbox</Text>
+          <Text style={styles.subtitle}>
+            We sent a confirmation email to:
+          </Text>
+          <View style={styles.emailContainer}>
+            <Text style={styles.emailText}>{email}</Text>
+          </View>
+          <Text style={styles.description}>
+            Click the link in the email to confirm your account, then click "I Confirmed My Email" below.
+          </Text>
+        </View>
 
         {error && (
           <View style={styles.errorContainer}>
@@ -214,15 +302,25 @@ export default function WaitForEmailConfirmationScreen({ email, preferences: ini
 
         <View style={styles.buttonContainer}>
           {isChecking || isResending ? (
-            <ActivityIndicator size="large" color="#D4DE95" />
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#D4DE95" />
+            </View>
           ) : (
             <>
               <TouchableOpacity
                 style={[styles.button, styles.primaryButton]}
+                onPress={handleSignInAfterConfirmation}
+                disabled={isChecking}
+              >
+                <Text style={styles.buttonText}>I Confirmed My Email - Sign In</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.button, styles.secondaryButton]}
                 onPress={handleResendEmail}
                 disabled={isResending}
               >
-                <Text style={styles.buttonText}>Resend Confirmation Email</Text>
+                <Text style={[styles.buttonText, styles.secondaryButtonText]}>Resend Confirmation Email</Text>
               </TouchableOpacity>
 
               <TouchableOpacity

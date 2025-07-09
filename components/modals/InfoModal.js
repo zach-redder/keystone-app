@@ -1,6 +1,6 @@
 import { View, Text, Modal, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import keysStyles from '../styles/keys';
+import keysStyles from '../../styles/keys';
 
 const InfoModal = ({ visible, onClose }) => {
   return (
