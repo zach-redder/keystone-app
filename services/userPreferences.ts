@@ -91,7 +91,7 @@ export const getPreferredAiPersona = async (): Promise<string> => {
   }
 };
 
-export const updatePreferredAiPersona = async (persona: string): Promise<boolean> => {
+export const setPreferredAiPersona = async (persona: string): Promise<boolean> => {
   try {
     return await updateUserPreferences({ preferred_ai_persona: persona });
   } catch (error) {

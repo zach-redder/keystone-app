@@ -7,7 +7,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/keystone.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/keystone.png",
@@ -35,6 +35,9 @@
       "eas": {
         "projectId": "8d662333-69a6-44eb-a191-21cb7666a62b"
       }
-    }
+    },
+    "plugins": [
+      "expo-mail-composer"
+    ]
   }
 }

@@ -10,6 +10,7 @@ import AlignModal from '../../components/modals/AlignModal';
 import AlignButton from '../../components/buttons//AlignButton';
 import { checkUserProStatus } from '../../services/auth';
 import { fetchRecentActionLog } from '../../services/actionLogs';
+import { shareHomePage } from '../../services/shareService';
 import * as Haptics from 'expo-haptics';
 
 export default function HomeScreen() {
@@ -139,6 +140,14 @@ export default function HomeScreen() {
     setAlignModalVisible(true);
   };
 
+  const handleSharePress = async () => {
+    try {
+      await shareHomePage();
+    } catch (error) {
+      console.error('Error sharing app:', error);
+    }
+  };
+
   const formatActionLogDate = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
@@ -161,7 +170,7 @@ export default function HomeScreen() {
             </TouchableOpacity>
             <TouchableOpacity style={keysStyles.shareButton} onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              // Share functionality to be implemented
+              handleSharePress();
             }}>
               <Ionicons name="share-outline" size={28} color="#CCCCCC" />
             </TouchableOpacity>

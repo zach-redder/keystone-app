@@ -1,8 +1,9 @@
-import { View, Text, SafeAreaView, TouchableOpacity, ScrollView, Linking, AppState } from 'react-native';
+import { View, Text, SafeAreaView, TouchableOpacity, ScrollView, Linking, AppState, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import * as Notifications from 'expo-notifications';
+import * as StoreReview from 'expo-store-review';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { signOutUser, checkUserProStatus } from '../../services/auth';
@@ -11,6 +12,12 @@ import { getPreferredAiPersona, updateNotificationOptIn, getUserEmail, getPrefer
 import profileStyles from '../../styles/profile';
 import ProUpgradeModal from '../../components/modals/ProUpgradeModal';
 import CommunityModal from '../../components/modals/CommunityModal';
+import ContactReportModal from '../../components/modals/ContactReportModal';
+import FAQModal from '../../components/modals/FAQModal';
+import AIPersonalityModal from '../../components/modals/AIPersonalityModal';
+import ReminderTimeModal from '../../components/modals/ReminderTimeModal';
+import EditProfileModal from '../../components/modals/EditProfileModal';
+import { shareProfilePage } from '../../services/shareService';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -19,6 +26,12 @@ export default function ProfileScreen() {
   const [badgeText, setBadgeText] = useState('PRO');
   const [proModalVisible, setProModalVisible] = useState(false);
   const [communityModalVisible, setCommunityModalVisible] = useState(false);
+  const [contactModalVisible, setContactModalVisible] = useState(false);
+  const [reportModalVisible, setReportModalVisible] = useState(false);
+  const [faqModalVisible, setFaqModalVisible] = useState(false);
+  const [aiPersonalityModalVisible, setAiPersonalityModalVisible] = useState(false);
+  const [reminderTimeModalVisible, setReminderTimeModalVisible] = useState(false);
+  const [editProfileModalVisible, setEditProfileModalVisible] = useState(false);
   const [keyCount, setKeyCount] = useState(0);
   const [isPro, setIsPro] = useState(false);
   const [aiPersona, setAiPersona] = useState('Default');
@@ -226,6 +239,65 @@ export default function ProfileScreen() {
     }
   };
 
+  const handleRateUs = async () => {
+    try {
+      // Check if store review is available on this platform
+      const isAvailable = await StoreReview.isAvailableAsync();
+      
+      if (isAvailable) {
+        // Request review using the native store review dialog
+        await StoreReview.requestReview();
+      } else {
+        // Fallback: open the app store page directly
+        const storeUrl = await StoreReview.storeUrl();
+        if (storeUrl) {
+          await Linking.openURL(storeUrl);
+        } else {
+          console.log('Store review not available and no store URL found');
+        }
+      }
+    } catch (error) {
+      console.error('Error opening store review:', error);
+    }
+  };
+
+  const handleContactUs = () => {
+    setContactModalVisible(true);
+  };
+
+  const handleReportProblem = () => {
+    setReportModalVisible(true);
+  };
+
+  const handleFAQ = () => {
+    setFaqModalVisible(true);
+  };
+
+  const handleAIPersonality = () => {
+    setAiPersonalityModalVisible(true);
+  };
+
+  const handleUpgradeFromAI = () => {
+    setAiPersonalityModalVisible(false);
+    setProModalVisible(true);
+  };
+
+  const handleReminderTime = () => {
+    setReminderTimeModalVisible(true);
+  };
+
+  const handleTimeUpdated = (newTime) => {
+    setReminderTime(newTime);
+  };
+
+  const handleSharePress = async () => {
+    try {
+      await shareProfilePage();
+    } catch (error) {
+      console.error('Error sharing app:', error);
+    }
+  };
+
   return (
     <SafeAreaView style={profileStyles.pageBg}>
       <View style={profileStyles.pageBg}>
@@ -237,7 +309,7 @@ export default function ProfileScreen() {
             </TouchableOpacity>
             <TouchableOpacity style={profileStyles.shareButton} onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              // Share functionality to be implemented
+              handleSharePress();
             }}>
               <Ionicons name="share-outline" size={28} color="#CCCCCC" />
             </TouchableOpacity>
@@ -275,7 +347,7 @@ export default function ProfileScreen() {
             
             <TouchableOpacity style={profileStyles.profileItem} onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              // Navigate to edit profile
+              setEditProfileModalVisible(true);
             }}>
               <Ionicons name="person-outline" size={20} color="#B9C096" style={profileStyles.profileItemIcon} />
               <Text style={profileStyles.profileItemText}>Edit Profile</Text>
@@ -285,7 +357,17 @@ export default function ProfileScreen() {
               </View>
             </TouchableOpacity>
 
-            <TouchableOpacity style={[profileStyles.profileItem, profileStyles.profileItemLast]} onPress={handleBadgePress}>
+            <TouchableOpacity style={[profileStyles.profileItem, profileStyles.profileItemLast]} onPress={async () => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              const url = Platform.OS === 'ios'
+                ? 'https://apps.apple.com/account/subscriptions'
+                : 'https://play.google.com/store/account/subscriptions';
+              try {
+                await Linking.openURL(url);
+              } catch (error) {
+                console.error('Error opening subscription management:', error);
+              }
+            }}>
               <Ionicons name="star-outline" size={20} color="#B9C096" style={profileStyles.profileItemIcon} />
               <Text style={profileStyles.profileItemText}>My Subscription</Text>
               <View style={profileStyles.profileItemRight}>
@@ -313,7 +395,7 @@ export default function ProfileScreen() {
             
             <TouchableOpacity style={profileStyles.profileItem} onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              // Navigate to reminder time settings
+              handleReminderTime();
             }}>
               <Ionicons name="time-outline" size={20} color="#B9C096" style={profileStyles.profileItemIcon} />
               <Text style={profileStyles.profileItemText}>Reminder Time</Text>
@@ -325,7 +407,7 @@ export default function ProfileScreen() {
             
             <TouchableOpacity style={[profileStyles.profileItem, profileStyles.profileItemLast]} onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              // Navigate to AI personality settings
+              handleAIPersonality();
             }}>
               <Ionicons name="sparkles-outline" size={20} color="#B9C096" style={profileStyles.profileItemIcon} />
               <Text style={profileStyles.profileItemText}>AI Personality</Text>
@@ -342,7 +424,7 @@ export default function ProfileScreen() {
             
             <TouchableOpacity style={profileStyles.profileItem} onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              // Navigate to report problem
+              handleReportProblem();
             }}>
               <Ionicons name="bug-outline" size={20} color="#B9C096" style={profileStyles.profileItemIcon} />
               <Text style={profileStyles.profileItemText}>Report a Problem</Text>
@@ -353,7 +435,7 @@ export default function ProfileScreen() {
 
             <TouchableOpacity style={profileStyles.profileItem} onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              // Navigate to FAQ
+              handleFAQ();
             }}>
               <Ionicons name="help-circle-outline" size={20} color="#B9C096" style={profileStyles.profileItemIcon} />
               <Text style={profileStyles.profileItemText}>FAQ</Text>
@@ -364,7 +446,7 @@ export default function ProfileScreen() {
 
             <TouchableOpacity style={[profileStyles.profileItem, profileStyles.profileItemLast]} onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              // Navigate to contact us
+              handleContactUs();
             }}>
               <Ionicons name="mail-outline" size={20} color="#B9C096" style={profileStyles.profileItemIcon} />
               <Text style={profileStyles.profileItemText}>Contact Us</Text>
@@ -406,7 +488,7 @@ export default function ProfileScreen() {
 
             <TouchableOpacity style={[profileStyles.profileItem, profileStyles.profileItemLast]} onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              // Navigate to rate us
+              handleRateUs();
             }}>
               <Ionicons name="heart-outline" size={20} color="#B9C096" style={profileStyles.profileItemIcon} />
               <Text style={profileStyles.profileItemText}>Rate Us</Text>
@@ -432,6 +514,36 @@ export default function ProfileScreen() {
       <CommunityModal
         visible={communityModalVisible}
         onClose={() => setCommunityModalVisible(false)}
+      />
+      <ContactReportModal
+        visible={contactModalVisible}
+        onClose={() => setContactModalVisible(false)}
+        type="contact"
+      />
+      <ContactReportModal
+        visible={reportModalVisible}
+        onClose={() => setReportModalVisible(false)}
+        type="report"
+      />
+      <FAQModal
+        visible={faqModalVisible}
+        onClose={() => setFaqModalVisible(false)}
+      />
+      <AIPersonalityModal
+        visible={aiPersonalityModalVisible}
+        onClose={() => setAiPersonalityModalVisible(false)}
+        onUpgradePress={handleUpgradeFromAI}
+      />
+      <ReminderTimeModal
+        visible={reminderTimeModalVisible}
+        onClose={() => setReminderTimeModalVisible(false)}
+        onTimeUpdated={handleTimeUpdated}
+      />
+      <EditProfileModal
+        visible={editProfileModalVisible}
+        onClose={() => setEditProfileModalVisible(false)}
+        userEmail={userEmail}
+        onSave={() => {}}
       />
     </SafeAreaView>
   );

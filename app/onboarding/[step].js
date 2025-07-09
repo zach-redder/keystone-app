@@ -142,8 +142,7 @@ export default function OnboardingStep() {
 
   const descriptions = {
     'Gentle Guide': "Kind and encouraging. Offers gentle support when you need it most.",
-    'Honest Mentor': "Direct but caring. Tells the truth with respect and helps you grow with clarity.",
-    'Accountability Partner': "Supportive and steady. Keeps you focused, reminds you what you said you'd do.",
+    'Supportive Friend': "Direct but caring truth-telling with steady accountability. Your honest friend who keeps you focused.",
     'Drill Sergeant': "No excuses. Sharp, intense, and built to push you beyond your limits.",
   };
 
@@ -679,7 +678,7 @@ export default function OnboardingStep() {
              <OnboardingHeader />
              <Text style={styles.secondaryHeader}>Choose your AI personality.</Text>
              <View style={styles.buttonContainer}>
-               {['Gentle Guide', 'Honest Mentor', 'Accountability Partner', 'Drill Sergeant'].map((option) => (
+               {['Gentle Guide', 'Supportive Friend', 'Drill Sergeant'].map((option) => (
                  <TouchableOpacity
                    key={option}
                    style={selectedOptions.includes(option) ? styles.selectedOptionButton : styles.optionButton}

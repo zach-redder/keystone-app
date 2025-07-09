@@ -14,6 +14,7 @@ import ProUpgradeModal from '../../components/modals/ProUpgradeModal';
 import CommunityModal from '../../components/modals/CommunityModal';
 import { fetchIdentityKeys, deleteIdentityKey, updateIdentityKey, addIdentityKey } from '../../services/userKeys';
 import { checkUserProStatus } from '../../services/auth';
+import { shareKeysPage } from '../../services/shareService';
 
 function AppButton({ title, onPress, style, icon, iconRight, plusMarginRight, animatedStyle }) {
   const pressScale = useRef(new Animated.Value(1)).current;
@@ -370,6 +371,14 @@ export default function Keys() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
+  const handleSharePress = async () => {
+    try {
+      await shareKeysPage();
+    } catch (error) {
+      console.error('Error sharing app:', error);
+    }
+  };
+
   return (
     <SafeAreaView style={keysStyles.pageBg}>
       <View style={keysStyles.pageBg}>
@@ -381,7 +390,7 @@ export default function Keys() {
             </TouchableOpacity>
             <TouchableOpacity style={keysStyles.shareButton} onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              // Share functionality to be implemented
+              handleSharePress();
             }}>
               <Ionicons name="share-outline" size={28} color="#CCCCCC" />
             </TouchableOpacity>
