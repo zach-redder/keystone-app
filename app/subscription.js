@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView, Dimensions } from 'react-nati
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as RNIap from 'react-native-iap';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -18,7 +19,7 @@ const features = [
     id: 2,
     icon: "sparkles",
     title: "Advanced AI",
-    subtitle: "Join our exclusive community of high achievers"
+    subtitle: "Unlock powerful AI feedback to align yourself better"
   },
   {
     id: 3,
@@ -28,17 +29,25 @@ const features = [
   },
   {
     id: 4,
+    icon: "person",
+    title: "AI Personalities",
+    subtitle: "Customize your AI experience with unique personalities"
+  },
+  {
+    id: 5,
     icon: "trending-up",
     title: "In-Depth Trends",
     subtitle: "Track your growth with detailed insights"
   },
   {
-    id: 5,
+    id: 6,
     icon: "people",
     title: "Community Perks",
     subtitle: "Join the community and unlock exclusive benefits"
   }
 ];
+
+const productIds = ['your_subscription_id'];
 
 export default function SubscriptionScreen() {
   const router = useRouter();
@@ -105,6 +114,14 @@ export default function SubscriptionScreen() {
       router.back();
     }
   };
+
+  const handleStartFreeTrial = async () => {
+    try {
+      await RNIap.requestSubscription(productIds[0]);
+    } catch (err) {
+      console.warn(err);
+    }
+  };  
 
   return (
     <>
@@ -219,7 +236,7 @@ export default function SubscriptionScreen() {
             </View>
 
             {/* Start Free Trial button */}
-            <TouchableOpacity style={styles.trialButton}>
+            <TouchableOpacity style={styles.trialButton} onPress={handleStartFreeTrial()}>
               <Text style={styles.trialButtonText}>Start Free Trial</Text>
             </TouchableOpacity>
 

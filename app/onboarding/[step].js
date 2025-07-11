@@ -31,8 +31,8 @@ export default function OnboardingStep() {
   const [preferences, setPreferences] = useState({
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     notification_opt_in: true,
-    preferred_reminder_time: '09:00:00',
-    preferred_ai_persona: 'gentle',
+    preferred_reminder_time: '12:00:00',
+    preferred_ai_persona: 'Gentle Guide',
   });
 
   const [customOptions, setCustomOptions] = useState([]);
@@ -142,7 +142,7 @@ export default function OnboardingStep() {
 
   const descriptions = {
     'Gentle Guide': "Kind and encouraging. Offers gentle support when you need it most.",
-    'Supportive Friend': "Direct but caring truth-telling with steady accountability. Your honest friend who keeps you focused.",
+    'Supportive Friend': "Direct but caring with steady accountability keeping you focused.",
     'Drill Sergeant': "No excuses. Sharp, intense, and built to push you beyond your limits.",
   };
 

@@ -169,9 +169,9 @@ export default function WaitForEmailConfirmationScreen({ email, preferences: ini
         'aipersonality_custom_options',
       ]);
       
-      console.log('Navigating to home...');
-      // Navigate to home
-      router.replace('/tabs/home');
+      console.log('Navigating to subscription...');
+      // Navigate to subscription
+      router.replace('/subscription');
     } catch (err) {
       console.error('Error in handleConfirmedEmail:', err);
       setError(err.message);

@@ -26,7 +26,7 @@ const EditProfileModal = ({ visible, onClose, userEmail, onSave }) => {
           <TouchableOpacity onPress={onClose} style={{ position: 'absolute', right: 18, top: 18, zIndex: 10 }}>
             <Ionicons name="close" size={28} color="#fff" />
           </TouchableOpacity>
-          <View style={[keysStyles.infoContent, { paddingTop: 10 }]}> 
+          <View style={[keysStyles.infoContent, { paddingTop: 10 }]}>
             <Text style={keysStyles.infoSectionTitle}>Edit Profile</Text>
             <View style={{ marginBottom: 24 }}>
               <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600', marginBottom: 8 }}>Email</Text>

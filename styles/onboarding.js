@@ -176,6 +176,7 @@ export const styles = StyleSheet.create({
     textShadowRadius: 5,
     textAlign: 'left',
     paddingHorizontal: 30,
+    marginBottom: 60,
   },
   buttonContainer: {
     marginTop: 10,
@@ -219,7 +220,7 @@ export const styles = StyleSheet.create({
     color: '#b3b3b3',
     fontSize: 18,
     textAlign: 'center',
-    marginBottom: 45,
+    marginBottom: 75,
     minHeight: 60,
     paddingHorizontal: 20,
   },
