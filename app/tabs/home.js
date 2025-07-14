@@ -23,6 +23,9 @@ export default function HomeScreen() {
   const [recentActionLog, setRecentActionLog] = useState(null);
   const [loadingActionLog, setLoadingActionLog] = useState(true);
 
+  const HIGH_VALUE = 0.65; // Threshold for high alignment
+  const LOW_VALUE = 0.35; // Threshold for low alignment
+
   const keyTypes = [
     'Core Values',
     'Future Identity',
@@ -36,10 +39,10 @@ export default function HomeScreen() {
   const goldenMeanData = {
     'Core Values': 0.7, // Slightly excessive
     'Future Identity': 0.5, // Perfect balance
-    'Life Goals': 0.3, // Deficient
+    'Life Goals': LOW_VALUE, // Deficient
     'Motivations': 0.6, // Slightly excessive
     'Avoidances': 0.4, // Slightly deficient
-    'Identity Traits': 0.8 // Excessive
+    'Identity Traits': 0.2 // Excessive
   };
 
   // Labels for each key type
@@ -186,9 +189,9 @@ export default function HomeScreen() {
 
           {/* Alignment Trends Section */}
           <View style={homeStyles.sectionContainer}>
-            <Text style={homeStyles.sectionTitle}>Alignment</Text>
+            <Text style={homeStyles.sectionTitle}>Current Alignment</Text>
             <View style={homeStyles.trendsContainer}>
-              <View style={homeStyles.timePeriodButtons}>
+              {/* <View style={homeStyles.timePeriodButtons}>
                 {['Week', 'Month', 'Year'].map((period) => (
                   <TouchableOpacity
                     key={period}
@@ -206,16 +209,30 @@ export default function HomeScreen() {
                     </Text>
                   </TouchableOpacity>
                 ))}
-              </View>
+              </View> */}
               <View style={homeStyles.trendsChart}>
                 {/* Golden Mean Alignment Chart */}
                 <View style={homeStyles.goldenMeanContainer}>
                   <View style={homeStyles.goldenMeanChart}>
                     {/* Scale Labels */}
                     <View style={homeStyles.scaleLabels}>
-                      <Text style={homeStyles.scaleLabelDeficient}>{getCurrentLabels().deficient}</Text>
-                      <Text style={homeStyles.scaleLabelIdeal}>{getCurrentLabels().ideal}</Text>
-                      <Text style={homeStyles.scaleLabelExcess}>{getCurrentLabels().excess}</Text>
+                      <Text style={[
+                        homeStyles.scaleLabelDeficient,
+                        getCurrentAlignment() < LOW_VALUE && { color: '#FF4C4C' },
+                        getCurrentAlignment() > HIGH_VALUE && { color: '#999' },
+                        getCurrentAlignment() >= LOW_VALUE && getCurrentAlignment() <= HIGH_VALUE && { color: '#999' },
+                      ]}>{getCurrentLabels().deficient}</Text>
+                      <Text style={[
+                        homeStyles.scaleLabelIdeal,
+                        getCurrentAlignment() >= LOW_VALUE && getCurrentAlignment() <= HIGH_VALUE && { color: '#D4DE95' },
+                        (getCurrentAlignment() < LOW_VALUE || getCurrentAlignment() > HIGH_VALUE) && { color: '#999' },
+                      ]}>{getCurrentLabels().ideal}</Text>
+                      <Text style={[
+                        homeStyles.scaleLabelExcess,
+                        getCurrentAlignment() > HIGH_VALUE && { color: '#FF4C4C' },
+                        getCurrentAlignment() < LOW_VALUE && { color: '#999' },
+                        getCurrentAlignment() >= LOW_VALUE && getCurrentAlignment() <= HIGH_VALUE && { color: '#999' },
+                      ]}>{getCurrentLabels().excess}</Text>
                     </View>
                     
                     {/* Progress Bar */}
@@ -229,7 +246,14 @@ export default function HomeScreen() {
                           homeStyles.userPosition,
                           { left: `${getCurrentAlignment() * 100}%` }
                         ]}>
-                          <View style={homeStyles.userDot} />
+                          <View style={[
+                            homeStyles.userDot,
+                            (getCurrentAlignment() < LOW_VALUE || getCurrentAlignment() > HIGH_VALUE) && {
+                              borderColor: '#FF4C4C',
+                              shadowColor: '#FF4C4C',
+                              backgroundColor: '#fff',
+                            },
+                          ]} />
 
                         </View>
                         
@@ -239,7 +263,14 @@ export default function HomeScreen() {
                           { 
                             left: `${Math.min(50, getCurrentAlignment() * 100)}%`,
                             width: `${Math.abs(getCurrentAlignment() * 100 - 50)}%`,
-                            backgroundColor: '#D4DE95' // Use app's primary accent color
+                            backgroundColor:
+                              (getCurrentAlignment() < LOW_VALUE || getCurrentAlignment() > HIGH_VALUE)
+                                ? '#FF4C4C'
+                                : '#D4DE95',
+                            shadowColor:
+                              (getCurrentAlignment() < LOW_VALUE || getCurrentAlignment() > HIGH_VALUE)
+                                ? '#FF4C4C'
+                                : '#D4DE95',
                           }
                         ]} />
                       </View>
@@ -247,9 +278,23 @@ export default function HomeScreen() {
                     
                     {/* Subtitle Labels Below */}
                     <View style={homeStyles.scaleSubtitles}>
-                      <Text style={homeStyles.scaleSubtitleDeficient}>Deficiency</Text>
-                      <Text style={homeStyles.scaleSubtitleIdeal}>Aligned</Text>
-                      <Text style={homeStyles.scaleSubtitleExcess}>Excess</Text>
+                      <Text style={[
+                        homeStyles.scaleSubtitleDeficient,
+                        getCurrentAlignment() < LOW_VALUE && { color: '#FF4C4C' },
+                        getCurrentAlignment() > HIGH_VALUE && { color: '#666' },
+                        getCurrentAlignment() >= LOW_VALUE && getCurrentAlignment() <= HIGH_VALUE && { color: '#666' },
+                      ]}>Deficient</Text>
+                      <Text style={[
+                        homeStyles.scaleSubtitleIdeal,
+                        getCurrentAlignment() >= LOW_VALUE && getCurrentAlignment() <= HIGH_VALUE && { color: '#A8B89E' },
+                        (getCurrentAlignment() < LOW_VALUE || getCurrentAlignment() > HIGH_VALUE) && { color: '#666' },
+                      ]}>Aligned</Text>
+                      <Text style={[
+                        homeStyles.scaleSubtitleExcess,
+                        getCurrentAlignment() > HIGH_VALUE && { color: '#FF4C4C' },
+                        getCurrentAlignment() < LOW_VALUE && { color: '#666' },
+                        getCurrentAlignment() >= LOW_VALUE && getCurrentAlignment() <= HIGH_VALUE && { color: '#666' },
+                      ]}>Excessive</Text>
                     </View>
                   </View>
                 </View>

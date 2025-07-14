@@ -110,7 +110,6 @@ const ProUpgradeModal = ({ visible, onClose, currentPage }) => {
         }),
       ]).start();
     }
-    // Note: We don't handle closing animation here anymore - closeModal handles it
   }, [visible]);
 
   const features = [

@@ -10,7 +10,7 @@ export default function TabLayout() {
         tabBarStyle: {
           left: 20,
           right: 20,
-          height: 80,
+          height: 70,
           backgroundColor: '#2b2b2b',
           borderTopWidth: 0,
         },
@@ -18,9 +18,6 @@ export default function TabLayout() {
         tabBarInactiveTintColor: '#888',
         tabBarShowLabel: false,
         headerShown: false,
-        tabBarItemStyle: {
-          paddingVertical: 8,
-        },
       })}
     >
       <Tabs.Screen name="keys" options={{
