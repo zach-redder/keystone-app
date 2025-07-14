@@ -127,15 +127,6 @@ export default function HomeScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
-  const handleDiscordPress = async () => {
-    try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      await Linking.openURL('https://discord.me/thealignedcore');
-    } catch (error) {
-      console.error('Error opening Discord link:', error);
-    }
-  };
-
   const handleAlignButtonPress = () => {
     setAlignModalVisible(true);
   };

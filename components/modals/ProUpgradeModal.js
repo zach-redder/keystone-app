@@ -54,11 +54,10 @@ const ProUpgradeModal = ({ visible, onClose, currentPage }) => {
     })
   ).current;
 
-  const closeModal = () => {
+  const closeModal = (callbackAfterClose) => {
     if (isClosing.current) return;
     isClosing.current = true;
-    
-    // Animate the modal off screen smoothly
+
     Animated.parallel([
       Animated.timing(slideAnim, {
         toValue: screenHeight,
@@ -71,21 +70,21 @@ const ProUpgradeModal = ({ visible, onClose, currentPage }) => {
         useNativeDriver: true,
       }),
     ]).start(() => {
-      // Reset values after animation completes
       dragOffset.setValue(0);
       isClosing.current = false;
       onClose();
+
+      // Safely run any action AFTER modal closes
+      if (callbackAfterClose) {
+        callbackAfterClose();
+      }
     });
   };
 
   const handleTryPress = () => {
-    // Close modal first
-    closeModal();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    // Navigate to subscription screen with current page info
-    router.push({
-      pathname: '/subscription',
-      params: { returnTo: currentPage || 'home' }
+    closeModal(() => {
+      router.push(`/subscription?returnTo=${currentPage || 'home'}`);
     });
   };
 

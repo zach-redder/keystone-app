@@ -236,7 +236,7 @@ export default function SubscriptionScreen() {
             </View>
 
             {/* Start Free Trial button */}
-            <TouchableOpacity style={styles.trialButton} onPress={handleStartFreeTrial()}>
+            <TouchableOpacity style={styles.trialButton} onPress={handleStartFreeTrial}>
               <Text style={styles.trialButtonText}>Start Free Trial</Text>
             </TouchableOpacity>
 
