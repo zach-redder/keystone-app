@@ -14,8 +14,6 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { fetchIdentityKeys } from '../../services/userKeys';
-import { generatePersonalizedResponse } from '../../services/aiService';
-// import { saveAffirmationEntry } from '../services/affirmationService';
 import keysStyles from '../../styles/keys';
 
 const { height: screenHeight } = Dimensions.get('window');
@@ -92,27 +90,6 @@ const AffirmIdentityModal = ({ visible, onClose }) => {
     setShowAiResponse(false);
     console.log('AffirmIdentityModal: Calling onClose');
     onClose();
-  };
-
-  const generateAiResponse = async () => {
-    if (!userResponse.trim()) {
-      Alert.alert('Please enter your response first');
-      return;
-    }
-
-    setIsGeneratingResponse(true);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
-    try {
-      const response = await generatePersonalizedResponse(userResponse, coreValues, currentQuestion);
-      setAiResponse(response);
-      setShowAiResponse(true);
-    } catch (error) {
-      console.error('Error generating AI response:', error);
-      Alert.alert('Error', 'Failed to generate response. Please try again.');
-    } finally {
-      setIsGeneratingResponse(false);
-    }
   };
 
   const handleNextQuestion = async () => {
@@ -249,7 +226,7 @@ const AffirmIdentityModal = ({ visible, onClose }) => {
             {!showAiResponse ? (
               <TouchableOpacity 
                 style={[styles.actionButton, isGeneratingResponse && styles.disabledButton]} 
-                onPress={generateAiResponse}
+                onPress={[]}
                 disabled={isGeneratingResponse}
               >
                 {isGeneratingResponse ? (
