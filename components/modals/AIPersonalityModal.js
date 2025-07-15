@@ -24,7 +24,7 @@ const AIPersonalityModal = ({ visible, onClose, onUpgradePress }) => {
       icon: 'people-outline',
     },
     {
-      name: 'Drill Sergeant',
+      name: 'Disciplined Mentor',
       description: 'No excuses. Sharp, intense, and built to push you beyond your limits.',
       icon: 'fitness-outline',
     },
@@ -104,18 +104,26 @@ const AIPersonalityModal = ({ visible, onClose, onUpgradePress }) => {
     }
   };
 
-  const handlePersonalitySelect = async (personality) => {
-    if (!isPro && !freePersonalities.find(p => p.name === personality)) {
-      // Pro personality selected by free user - show upgrade modal
+  const handlePersonalitySelect = async (personalityName) => {
+    const selected = aiPersonalities.find(p => p.name === personalityName);
+
+    if (!selected) {
+      console.warn("Selected personality not found.");
+      return;
+    }
+
+    if (!isPro && !freePersonalities.find(p => p.name === personalityName)) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       onUpgradePress();
       return;
     }
 
+    const fullPersona = `${selected.name}: ${selected.description}`;
+
     setIsLoading(true);
     try {
-      await setPreferredAiPersona(personality);
-      setSelectedPersonality(personality);
+      await setPreferredAiPersona(fullPersona); // Save full string
+      setSelectedPersonality(fullPersona); // If you're displaying it as-is
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } catch (error) {
       console.error('Error setting personality:', error);

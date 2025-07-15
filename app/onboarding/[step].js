@@ -143,7 +143,7 @@ export default function OnboardingStep() {
   const descriptions = {
     'Gentle Guide': "Kind and encouraging. Offers gentle support when you need it most.",
     'Supportive Friend': "Direct but caring with steady accountability keeping you focused.",
-    'Drill Sergeant': "No excuses. Sharp, intense, and built to push you beyond your limits.",
+    'Disciplined Mentor': "No excuses. Sharp, intense, and built to push you beyond your limits.",
   };
 
   const pulseValue = useRef(new Animated.Value(1)).current;
