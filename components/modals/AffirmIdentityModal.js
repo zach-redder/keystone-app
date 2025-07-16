@@ -14,7 +14,6 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { fetchIdentityKeys } from '../../services/userKeys';
-import keysStyles from '../../styles/keys';
 
 const { height: screenHeight } = Dimensions.get('window');
 
