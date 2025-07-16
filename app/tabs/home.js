@@ -1,4 +1,4 @@
-import { View, Text, SafeAreaView, TouchableOpacity, ScrollView, Linking } from 'react-native';
+import { View, Text, SafeAreaView, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect } from 'react';
 import globalStyles from '../../styles/global';
@@ -23,8 +23,8 @@ export default function HomeScreen() {
   const [recentActionLog, setRecentActionLog] = useState(null);
   const [loadingActionLog, setLoadingActionLog] = useState(true);
 
-  const HIGH_VALUE = 0.65; // Threshold for high alignment
-  const LOW_VALUE = 0.35; // Threshold for low alignment
+  const HIGH_VALUE = 0.7; // Threshold for high alignment
+  const LOW_VALUE = 0.3; // Threshold for low alignment
 
   const keyTypes = [
     'Core Values',

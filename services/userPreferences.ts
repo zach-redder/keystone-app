@@ -185,3 +185,74 @@ export const getUserDayStreak = async (): Promise<number> => {
     return 0;
   }
 };
+
+// ✅ Update User Name in public.users table
+export const updateUserName = async (name: string): Promise<boolean> => {
+  try {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) return false;
+
+    const { error } = await supabase
+      .from('users')
+      .update({ name })
+      .eq('id', user.id);
+
+    return !error;
+  } catch (error) {
+    console.error('Error updating user name:', error);
+    return false;
+  }
+};
+
+// ✅ Get User Name from public.users table
+export const getUserName = async (): Promise<string> => {
+  try {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) return '';
+
+    const { data, error } = await supabase
+      .from('users')
+      .select('name')
+      .eq('id', user.id)
+      .single();
+
+    if (error || !data?.name) return '';
+    return data.name;
+  } catch (error) {
+    console.error('Error getting user name:', error);
+    return '';
+  }
+};
+
+// ✅ Update Phone in Supabase Auth (not public.users)
+export const updateUserPhone = async (phone: string): Promise<boolean> => {
+  try {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) return false;
+
+    const { error } = await supabase.auth.updateUser({
+      phone
+    });
+
+    return !error;
+  } catch (error) {
+    console.error('Error updating user phone:', error);
+    return false;
+  }
+};
+
+// ✅ Get Phone from Supabase Auth
+export const getUserPhone = async (): Promise<string> => {
+  try {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      console.error('Error getting user for phone:', userError);
+      return '';
+    }
+
+    return user.phone ?? '';
+  } catch (error) {
+    console.error('Error in getUserPhone:', error);
+    return '';
+  }
+};

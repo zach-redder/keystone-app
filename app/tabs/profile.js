@@ -8,7 +8,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { signOutUser, checkUserProStatus } from '../../services/auth';
 import { fetchIdentityKeys } from '../../services/userKeys';
-import { getPreferredAiPersona, updateNotificationOptIn, getUserEmail, getPreferredReminderTime, getUserDayStreak } from '../../services/userPreferences';
+import { getPreferredAiPersona, updateNotificationOptIn, getUserEmail, getPreferredReminderTime, getUserDayStreak} from '../../services/userPreferences';
 import profileStyles from '../../styles/profile';
 import ProUpgradeModal from '../../components/modals/ProUpgradeModal';
 import CommunityModal from '../../components/modals/CommunityModal';
