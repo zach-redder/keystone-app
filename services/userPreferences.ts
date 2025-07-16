@@ -154,6 +154,49 @@ export const updatePreferredReminderTime = async (time: string): Promise<boolean
   }
 };
 
+/**
+ * Updates the user's day streak in the users table by checking the action_logs table for consecutive days with logs (ending yesterday).
+ * @returns {Promise<number>} The updated day streak.
+ */
+export const updateUserDayStreak = async (): Promise<number> => {
+  try {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) return 0;
+
+    // Get all action logs for the user, ordered by created_at descending
+    const { data: logs, error: logsError } = await supabase
+      .from('action_logs')
+      .select('created_at')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+    if (logsError || !logs) return 0;
+
+    // Build a set of unique days (YYYY-MM-DD) with at least one log
+    const daysWithLogs = new Set(logs.map(log => log.created_at.slice(0, 10)));
+
+    // Start from yesterday and count consecutive days with logs
+    let streak = 0;
+    let current = new Date();
+    current.setHours(0, 0, 0, 0);
+    current.setDate(current.getDate() - 1); // Start from yesterday
+    while (daysWithLogs.has(current.toISOString().slice(0, 10))) {
+      streak++;
+      current.setDate(current.getDate() - 1);
+    }
+
+    // Update the users table
+    await supabase
+      .from('users')
+      .update({ day_streak: streak })
+      .eq('id', user.id);
+
+    return streak;
+  } catch (error) {
+    console.error('Error updating user day streak:', error);
+    return 0;
+  }
+};
+
 export const getUserDayStreak = async (): Promise<number> => {
   try {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -163,23 +206,8 @@ export const getUserDayStreak = async (): Promise<number> => {
       return 0;
     }
 
-    const { data, error } = await supabase
-      .from('users')
-      .select('day_streak')
-      .eq('id', user.id)
-      .maybeSingle(); // Use maybeSingle instead of single
-
-    if (error) {
-      console.error('Error fetching user day streak:', error);
-      return 0;
-    }
-
-    if (!data) {
-      console.log('User record not found, returning 0 for day streak');
-      return 0;
-    }
-
-    return data?.day_streak || 0;
+    // Always update the streak before returning
+    return await updateUserDayStreak();
   } catch (error) {
     console.error('Error in getUserDayStreak:', error);
     return 0;
@@ -224,35 +252,35 @@ export const getUserName = async (): Promise<string> => {
   }
 };
 
-// ✅ Update Phone in Supabase Auth (not public.users)
-export const updateUserPhone = async (phone: string): Promise<boolean> => {
-  try {
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) return false;
+// // ✅ Update Phone in Supabase Auth (not public.users)
+// export const updateUserPhone = async (phone: string): Promise<boolean> => {
+//   try {
+//     const { data: { user }, error: userError } = await supabase.auth.getUser();
+//     if (userError || !user) return false;
 
-    const { error } = await supabase.auth.updateUser({
-      phone
-    });
+//     const { error } = await supabase.auth.updateUser({
+//       phone
+//     });
 
-    return !error;
-  } catch (error) {
-    console.error('Error updating user phone:', error);
-    return false;
-  }
-};
+//     return !error;
+//   } catch (error) {
+//     console.error('Error updating user phone:', error);
+//     return false;
+//   }
+// };
 
-// ✅ Get Phone from Supabase Auth
-export const getUserPhone = async (): Promise<string> => {
-  try {
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      console.error('Error getting user for phone:', userError);
-      return '';
-    }
+// // ✅ Get Phone from Supabase Auth
+// export const getUserPhone = async (): Promise<string> => {
+//   try {
+//     const { data: { user }, error: userError } = await supabase.auth.getUser();
+//     if (userError || !user) {
+//       console.error('Error getting user for phone:', userError);
+//       return '';
+//     }
 
-    return user.phone ?? '';
-  } catch (error) {
-    console.error('Error in getUserPhone:', error);
-    return '';
-  }
-};
+//     return user.phone ?? '';
+//   } catch (error) {
+//     console.error('Error in getUserPhone:', error);
+//     return '';
+//   }
+// };

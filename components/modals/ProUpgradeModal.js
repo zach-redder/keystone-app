@@ -128,7 +128,7 @@ const ProUpgradeModal = ({ visible, onClose, currentPage }) => {
       onRequestClose={onClose}
     >
       <Animated.View style={[styles.overlay, { opacity: overlayOpacity }]}>
-        <TouchableOpacity style={styles.overlayTouchable} activeOpacity={1} onPress={closeModal} />
+        <TouchableOpacity style={styles.overlayTouchable} activeOpacity={1} onPress={() => closeModal()} />
         <Animated.View 
           style={[
             styles.modalContainer,

@@ -88,7 +88,11 @@ const AIPersonalityModal = ({ visible, onClose, onUpgradePress }) => {
 
   const loadCurrentPersonality = async () => {
     try {
-      const personality = await getPreferredAiPersona();
+      let personality = await getPreferredAiPersona();
+      // If the stored value is 'Name: Description', extract just the name
+      if (personality && personality.includes(':')) {
+        personality = personality.split(':')[0].trim();
+      }
       setSelectedPersonality(personality);
     } catch (error) {
       console.error('Error loading personality:', error);
@@ -105,7 +109,9 @@ const AIPersonalityModal = ({ visible, onClose, onUpgradePress }) => {
   };
 
   const handlePersonalitySelect = async (personalityName) => {
-    const selected = aiPersonalities.find(p => p.name === personalityName);
+    const personalities = isPro ? proPersonalities : freePersonalities;
+
+    const selected = personalities.find(p => p.name === personalityName);
 
     if (!selected) {
       console.warn("Selected personality not found.");
@@ -122,8 +128,8 @@ const AIPersonalityModal = ({ visible, onClose, onUpgradePress }) => {
 
     setIsLoading(true);
     try {
-      await setPreferredAiPersona(fullPersona); // Save full string
-      setSelectedPersonality(fullPersona); // If you're displaying it as-is
+      await setPreferredAiPersona(fullPersona);
+      setSelectedPersonality(selected.name);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } catch (error) {
       console.error('Error setting personality:', error);

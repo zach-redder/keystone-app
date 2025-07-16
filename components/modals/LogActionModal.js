@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, Modal, TouchableOpacity, TextInput, ScrollView, Dimensions } from 'react-native';
+import { View, Text, Modal, TouchableOpacity, TextInput, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-
-const { height: screenHeight } = Dimensions.get('window');
 
 const LogActionModal = ({ visible, onClose, onSubmit }) => {
   const [action, setAction] = useState('');

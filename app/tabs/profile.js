@@ -96,7 +96,10 @@ export default function ProfileScreen() {
 
   const loadAiPersona = async () => {
     try {
-      const persona = await getPreferredAiPersona();
+      let persona = await getPreferredAiPersona();
+      if (persona && persona.includes(':')) {
+        persona = persona.split(':')[0].trim();
+      }
       setAiPersona(persona);
     } catch (error) {
       console.error('Error loading AI persona:', error);
@@ -371,7 +374,7 @@ export default function ProfileScreen() {
               <Ionicons name="star-outline" size={20} color="#B9C096" style={profileStyles.profileItemIcon} />
               <Text style={profileStyles.profileItemText}>My Subscription</Text>
               <View style={profileStyles.profileItemRight}>
-                <Text style={profileStyles.profileItemValue}>{isPro ? 'Pro' : 'Free'}</Text>
+                <Text style={profileStyles.profileItemValue}>{isPro ? 'Pro' : 'Free'} Plan</Text>
                 <Ionicons name="chevron-forward" size={16} color="#fff" />
               </View>
             </TouchableOpacity>

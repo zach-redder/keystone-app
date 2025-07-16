@@ -1,21 +1,55 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
+import {
+  Modal,
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import keysStyles from '../../styles/keys';
-import { updateUserName, updateUserPhone, getUserProfileInfo } from '../../services/userPreferences';
+import {
+  updateUserName,
+  getUserName,
+} from '../../services/userPreferences';
 
-const EditProfileModal = ({ visible, onClose, userEmail, userName, userPhone }) => {
+const EditProfileModal = ({ visible, onClose, userEmail }) => {
   const [email, setEmail] = useState(userEmail || '');
   const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
   const [initialName, setInitialName] = useState('');
-  const [initialPhone, setInitialPhone] = useState('');
 
+  // Fetch fresh name + phone every time modal opens
   useEffect(() => {
-    setEmail(userEmail || '');
-    setName(userName || '');
-    setPhone(userPhone || '');
-  }, [userEmail, userName, userPhone, visible]);
+    const loadProfile = async () => {
+      const fetchedName = await getUserName();
+      setName(fetchedName);
+      setInitialName(fetchedName);
+    };
+
+    if (visible) {
+      setEmail(userEmail || '');
+      loadProfile();
+    }
+  }, [visible, userEmail]);
+
+  const handleSave = async () => {
+    let updated = false;
+
+    if (name !== initialName) {
+      await updateUserName(name);
+      updated = true;
+    }
+
+    if (updated) {
+      const fetchedName = await getUserName();
+      setName(fetchedName);
+      setInitialName(fetchedName);
+    }
+
+    onClose();
+  };
 
   return (
     <Modal
@@ -30,13 +64,20 @@ const EditProfileModal = ({ visible, onClose, userEmail, userName, userPhone }) 
       >
         <View style={keysStyles.infoModalContainer}>
           <View style={keysStyles.horizontalBar} />
-          <TouchableOpacity onPress={onClose} style={{ position: 'absolute', right: 18, top: 18, zIndex: 10 }}>
+          <TouchableOpacity
+            onPress={onClose}
+            style={{ position: 'absolute', right: 18, top: 18, zIndex: 10 }}
+          >
             <Ionicons name="close" size={28} color="#fff" />
           </TouchableOpacity>
           <View style={[keysStyles.infoContent, { paddingTop: 10 }]}>
             <Text style={keysStyles.infoSectionTitle}>Edit Profile</Text>
+
+            {/* Email (non-editable) */}
             <View style={{ marginBottom: 24 }}>
-              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600', marginBottom: 8 }}>Email</Text>
+              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600', marginBottom: 8 }}>
+                Email
+              </Text>
               <TextInput
                 style={{
                   backgroundColor: '#3a3a3a',
@@ -48,15 +89,15 @@ const EditProfileModal = ({ visible, onClose, userEmail, userName, userPhone }) 
                   borderColor: '#555',
                 }}
                 value={email}
-                onChangeText={setEmail}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                placeholder="Email"
-                placeholderTextColor="#888"
+                editable={false}
               />
             </View>
+
+            {/* Name */}
             <View style={{ marginBottom: 24 }}>
-              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600', marginBottom: 8 }}>Name</Text>
+              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600', marginBottom: 8 }}>
+                Name
+              </Text>
               <TextInput
                 style={{
                   backgroundColor: '#3a3a3a',
@@ -74,26 +115,8 @@ const EditProfileModal = ({ visible, onClose, userEmail, userName, userPhone }) 
                 placeholderTextColor="#888"
               />
             </View>
-            <View style={{ marginBottom: 24 }}>
-              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600', marginBottom: 8 }}>Phone Number</Text>
-              <TextInput
-                style={{
-                  backgroundColor: '#3a3a3a',
-                  borderRadius: 12,
-                  padding: 16,
-                  fontSize: 16,
-                  color: '#fff',
-                  borderWidth: 1,
-                  borderColor: '#555',
-                }}
-                value={phone}
-                onChangeText={setPhone}
-                keyboardType="phone-pad"
-                placeholder="Phone Number"
-                placeholderTextColor="#888"
-                maxLength={20}
-              />
-            </View>
+
+            {/* Actions */}
             <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 8 }}>
               <TouchableOpacity
                 style={{
@@ -114,32 +137,7 @@ const EditProfileModal = ({ visible, onClose, userEmail, userName, userPhone }) 
                   borderRadius: 12,
                   backgroundColor: '#B9C096',
                 }}
-                onPress={async () => {
-                  let updated = false;
-                  if (name !== initialName) {
-                    await updateUserName(name);
-                    updated = true;
-                  }
-                  if (phone !== initialPhone) {
-                    await updateUserPhone(phone);
-                    updated = true;
-                  }
-                  if (updated) {
-                    // Re-fetch profile info and update state before closing
-                    const profile = await getUserProfileInfo();
-                    if (profile) {
-                      if (profile.name) {
-                        setName(profile.name);
-                        setInitialName(profile.name);
-                      }
-                      if (profile.phone) {
-                        setPhone(profile.phone);
-                        setInitialPhone(profile.phone);
-                      }
-                    }
-                  }
-                  onClose();
-                }}
+                onPress={handleSave}
               >
                 <Text style={{ color: '#232323', fontWeight: 'bold' }}>Save</Text>
               </TouchableOpacity>
