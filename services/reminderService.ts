@@ -1,0 +1,110 @@
+import { supabase } from '../lib/supabase';
+import * as Notifications from 'expo-notifications';
+import { Platform } from 'react-native';
+
+// Hardcoded reminders for inactive users
+const DEFAULT_REMINDERS = [
+  "Missing you! Time to realign your actions with your values.",
+  "Your journey towards authenticity continues. Come back and track your progress!",
+  "Haven't seen you in a while. Your goals are waiting for you!",
+  "Ready to get back on track? Your alignment journey misses you.",
+  "Take a moment today to reflect on your path. We're here to help!",
+];
+
+export const fetchTodayReminder = async () => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const { data, error } = await supabase
+      .from('user_daily_reminders')
+      .select('message, created_at')
+      .gte('created_at', today.toISOString())
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (error) throw error;
+
+    if (data && data.length > 0) {
+      return data[0].message;
+    } else {
+      // Return a random default reminder if no reminder exists for today
+      return DEFAULT_REMINDERS[Math.floor(Math.random() * DEFAULT_REMINDERS.length)];
+    }
+  } catch (error) {
+    console.error('Error fetching daily reminder:', error);
+    return DEFAULT_REMINDERS[0]; // Fallback to first default reminder
+  }
+};
+
+export const setupReminderNotifications = async () => {
+  try {
+    // Request notification permissions
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
+    
+    if (existingStatus !== 'granted') {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+    
+    if (finalStatus !== 'granted') {
+      throw new Error('Permission not granted for notifications');
+    }
+
+    // Get user's preferred reminder time
+    const { data: preferences, error: preferencesError } = await supabase
+      .from('user_preferences')
+      .select('preferred_reminder_time')
+      .single();
+
+    if (preferencesError) throw preferencesError;
+
+    // If no preferred time is set, default to 9:00 AM
+    const preferredTime = preferences?.preferred_reminder_time || '09:00';
+    const [hours, minutes] = preferredTime.split(':').map(Number);
+
+    // Calculate next notification time
+    const now = new Date();
+    const nextNotification = new Date(now);
+    nextNotification.setHours(hours, minutes, 0, 0);
+
+    // If the time has already passed today, schedule for tomorrow
+    if (nextNotification <= now) {
+      nextNotification.setDate(nextNotification.getDate() + 1);
+    }
+
+    // Cancel any existing scheduled notifications
+    await Notifications.cancelAllScheduledNotificationsAsync();
+
+    // Schedule the daily notification
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: "Keystone",
+        body: await fetchTodayReminder(),
+        sound: true,
+        priority: Notifications.AndroidNotificationPriority.HIGH,
+      },
+      trigger: {
+        hour: hours,
+        minute: minutes,
+        repeats: true,
+        type: 'calendar',
+      },
+    });
+
+  } catch (error) {
+    console.error('Error setting up notifications:', error);
+  }
+};
+
+// Configure notification handler
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+}); 

@@ -11,6 +11,7 @@ import AlignButton from '../../components/buttons//AlignButton';
 import { checkUserProStatus } from '../../services/auth';
 import { fetchRecentActionLog } from '../../services/actionLogs';
 import { shareHomePage } from '../../services/shareService';
+import { fetchTodayReminder, setupReminderNotifications } from '../../services/reminderService';
 import * as Haptics from 'expo-haptics';
 
 export default function HomeScreen() {
@@ -22,6 +23,8 @@ export default function HomeScreen() {
   const [selectedKeyTypeIndex, setSelectedKeyTypeIndex] = useState(0);
   const [recentActionLog, setRecentActionLog] = useState(null);
   const [loadingActionLog, setLoadingActionLog] = useState(true);
+  const [dailyReminder, setDailyReminder] = useState('');
+  const [loadingReminder, setLoadingReminder] = useState(true);
 
   const HIGH_VALUE = 0.65; // Threshold for high alignment
   const LOW_VALUE = 0.35; // Threshold for low alignment
@@ -68,6 +71,8 @@ export default function HomeScreen() {
   useEffect(() => {
     checkProStatus();
     loadRecentActionLog();
+    loadDailyReminder();
+    setupReminderNotifications().catch(console.error);
   }, []);
 
   const loadRecentActionLog = async () => {
@@ -80,6 +85,18 @@ export default function HomeScreen() {
       setRecentActionLog(null);
     } finally {
       setLoadingActionLog(false);
+    }
+  };
+
+  const loadDailyReminder = async () => {
+    try {
+      setLoadingReminder(true);
+      const reminder = await fetchTodayReminder();
+      setDailyReminder(reminder);
+    } catch (error) {
+      console.error('Error loading daily reminder:', error);
+    } finally {
+      setLoadingReminder(false);
     }
   };
 
@@ -180,10 +197,11 @@ export default function HomeScreen() {
           <View style={homeStyles.sectionContainer}>
             <Text style={homeStyles.sectionTitle}>Daily Reminder</Text>
             <TouchableOpacity style={homeStyles.reminderCard}>
-              <Text style={homeStyles.reminderText}>
-                "The actions you take should be aligned with your goals."
-              </Text>
-              <Text style={homeStyles.arrow}>›</Text>
+              {loadingReminder ? (
+                <Text style={homeStyles.reminderText}>Loading...</Text>
+              ) : (
+                <Text style={homeStyles.reminderText}>"{dailyReminder}"</Text>
+              )}
             </TouchableOpacity>
           </View>
 

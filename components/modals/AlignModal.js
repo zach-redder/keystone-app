@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, Modal, Animated, Dimensions, PanResponder } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import AffirmIdentityModal from './AffirmIdentityModal';
+import LogActionModal from './LogActionModal';
 
 const { height: screenHeight } = Dimensions.get('window');
 
@@ -11,6 +12,7 @@ const AlignModal = ({ visible, onClose }) => {
   const dragOffset = useRef(new Animated.Value(0)).current;
   const isClosing = useRef(false);
   const [showAffirmIdentityModal, setShowAffirmIdentityModal] = useState(false);
+  const [showLogActionModal, setShowLogActionModal] = useState(false);
 
   // Pan responder for drag gestures - applies only to draggable content area
   const panResponder = useRef(
@@ -86,8 +88,18 @@ const AlignModal = ({ visible, onClose }) => {
 
   const handleLogAction = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    // TODO: Add log action functionality
-    console.log('Log Action pressed');
+    setShowLogActionModal(true);
+  };
+
+  const handleLogActionSubmit = (action) => {
+    // TODO: Handle the submitted action
+    console.log('Action logged:', action);
+  };
+
+  const handleLogActionClose = () => {
+    setShowLogActionModal(false);
+    // Close the entire modal flow after logging action
+    onClose();
   };
 
   const handleCancel = () => {
@@ -130,7 +142,7 @@ const AlignModal = ({ visible, onClose }) => {
   return (
     <>
       <Modal
-        visible={visible && !showAffirmIdentityModal}
+        visible={visible && !showAffirmIdentityModal && !showLogActionModal}
         transparent
         animationType="none"
         onRequestClose={onClose}
@@ -184,6 +196,12 @@ const AlignModal = ({ visible, onClose }) => {
       <AffirmIdentityModal
         visible={showAffirmIdentityModal}
         onClose={handleAffirmIdentityClose}
+      />
+
+      <LogActionModal
+        visible={showLogActionModal}
+        onClose={handleLogActionClose}
+        onSubmit={handleLogActionSubmit}
       />
     </>
   );
