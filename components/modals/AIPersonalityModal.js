@@ -150,7 +150,14 @@ const AIPersonalityModal = ({ visible, onClose, onUpgradePress }) => {
         selectedPersonality === personality.name && styles.selectedCard,
         isLocked && styles.lockedCard,
       ]}
-      onPress={() => handlePersonalitySelect(personality.name)}
+      onPress={() => {
+        if (isLocked) {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          onUpgradePress && onUpgradePress();
+        } else {
+          handlePersonalitySelect(personality.name);
+        }
+      }}
       disabled={isLoading}
       activeOpacity={0.7}
     >

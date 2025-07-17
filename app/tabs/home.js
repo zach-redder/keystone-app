@@ -34,8 +34,8 @@ export default function HomeScreen() {
   const [loadingScoreChange, setLoadingScoreChange] = useState(true);
   const [logActionModalVisible, setLogActionModalVisible] = useState(false);
   const [recentActionLogs, setRecentActionLogs] = useState([]);
-  const [selectedActionLog, setSelectedActionLog] = useState(null);
-  const [actionLogModalVisible, setActionLogModalVisible] = useState(false);
+  const [resultModalVisible, setResultModalVisible] = useState(false);
+  const [resultLog, setResultLog] = useState(null);
 
   const HIGH_VALUE = 0.7; // Threshold for high alignment
   const LOW_VALUE = 0.3; // Threshold for low alignment
@@ -403,8 +403,8 @@ export default function HomeScreen() {
                     key={log.id || idx}
                     style={homeStyles.actionLogCardSingle}
                     onPress={() => {
-                      setSelectedActionLog(log);
-                      setActionLogModalVisible(true);
+                      setResultLog(log);
+                      setResultModalVisible(true);
                     }}
                     activeOpacity={0.85}
                   >
@@ -502,6 +502,10 @@ export default function HomeScreen() {
         <AlignModal
           visible={alignModalVisible}
           onClose={() => setAlignModalVisible(false)}
+          onUpgradePress={() => {
+            setAlignModalVisible(false);
+            setProModalVisible(true);
+          }}
         />
         
         <ProUpgradeModal
@@ -518,11 +522,15 @@ export default function HomeScreen() {
         <LogActionModal
           visible={logActionModalVisible}
           onClose={() => setLogActionModalVisible(false)}
+          onSubmit={log => {
+            setResultLog(log);
+            setResultModalVisible(true);
+          }}
         />
         <ActionLogResultModal
-          visible={actionLogModalVisible}
-          onClose={() => setActionLogModalVisible(false)}
-          log={selectedActionLog}
+          visible={resultModalVisible}
+          onClose={() => setResultModalVisible(false)}
+          log={resultLog}
         />
       </View>
     </SafeAreaView>

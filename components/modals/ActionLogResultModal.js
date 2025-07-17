@@ -29,7 +29,9 @@ const ActionLogResultModal = ({ visible, onClose, log }) => {
               </View>
             ))}
           </View>
-          <Text style={styles.sectionLabel}>AI Response</Text>
+          <Text style={styles.sectionLabel}>
+            AI Response - {log.ai_persona ? `${log.ai_persona}` : ''}
+          </Text>
           <View style={styles.resultBox}>
             {log.ai_response ? (
               <Markdown style={markdownStyles}>
@@ -127,8 +129,8 @@ const styles = {
     borderRadius: 16,
     paddingVertical: 8,
     paddingHorizontal: 16,
-    marginBottom: 8,
-    marginRight: 8,
+    marginBottom: 4,
+    marginRight: 4,
     borderWidth: 1,
     borderColor: '#444',
   },

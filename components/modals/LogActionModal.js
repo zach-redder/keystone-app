@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Modal, TouchableOpacity, TextInput, ScrollView } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View, Text, Modal, TouchableOpacity, TextInput, ScrollView, ActivityIndicator, StyleSheet } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { fetchIdentityKeys } from '../../services/userKeys';
 import { submitActionLogWithAI } from '../../services/actionLogs';
 import { checkUserProStatus } from '../../services/auth';
-import ActionLogResultModal from './ActionLogResultModal';
 
 const LogActionModal = ({ visible, onClose, onSubmit }) => {
   const [action, setAction] = useState('');
@@ -13,8 +11,7 @@ const LogActionModal = ({ visible, onClose, onSubmit }) => {
   const [selectedKeys, setSelectedKeys] = useState([]);
   const [keyTypes, setKeyTypes] = useState([]);
   const [selectedKeyType, setSelectedKeyType] = useState('');
-  const [resultModalVisible, setResultModalVisible] = useState(false);
-  const [resultLog, setResultLog] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (visible) {
@@ -48,17 +45,21 @@ const LogActionModal = ({ visible, onClose, onSubmit }) => {
   const handleSubmit = async () => {
     if (action.trim() && selectedKeys.length > 0) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setLoading(true);
       try {
         const isPro = await checkUserProStatus();
         const savedLog = await submitActionLogWithAI(action, selectedKeys, isPro);
         setAction('');
         setSelectedKeys([]);
+        setLoading(false);
         onClose(); // Close the LogActionModal first
-        setTimeout(() => {
-          setResultLog(savedLog);
-          setResultModalVisible(true);
-        }, 350); // Wait for modal close animation
+        if (typeof onSubmit === 'function') {
+          setTimeout(() => {
+            onSubmit(savedLog);
+          }, 350); // Wait for modal close animation
+        }
       } catch (err) {
+        setLoading(false);
         // Optionally show error
       }
     }
@@ -87,13 +88,6 @@ const LogActionModal = ({ visible, onClose, onSubmit }) => {
     });
   };
 
-  const handleResultClose = () => {
-    setResultModalVisible(false);
-    setAction('');
-    setSelectedKeys([]);
-    onClose();
-  };
-
   return (
     <Modal
       visible={visible}
@@ -102,6 +96,11 @@ const LogActionModal = ({ visible, onClose, onSubmit }) => {
       onRequestClose={handleClose}
     >
       <View style={styles.modalContainer}>
+        {loading && (
+          <View style={styles.loadingOverlay}>
+            <ActivityIndicator size="large" color="#fff" />
+          </View>
+        )}
         <View style={styles.horizontalBarOuter}>
           <View style={styles.horizontalBar} />
         </View>
@@ -186,9 +185,9 @@ const LogActionModal = ({ visible, onClose, onSubmit }) => {
         {/* Action Buttons Fixed at Bottom */}
         <View style={styles.buttonContainerFixed}>
           <TouchableOpacity 
-            style={styles.actionButton} 
+            style={[styles.actionButton, (!action.trim() || selectedKeys.length === 0 || loading) && { opacity: 0.5 }]} 
             onPress={handleSubmit}
-            disabled={!action.trim() || selectedKeys.length === 0}
+            disabled={!action.trim() || selectedKeys.length === 0 || loading}
           >
             <Text style={styles.actionButtonText}>Submit Action</Text>
           </TouchableOpacity>
@@ -200,12 +199,6 @@ const LogActionModal = ({ visible, onClose, onSubmit }) => {
           </TouchableOpacity>
         </View>
       </View>
-      {/* Action Log Result Modal */}
-      <ActionLogResultModal
-        visible={resultModalVisible}
-        onClose={handleResultClose}
-        log={resultLog}
-      />
     </Modal>
   );
 };
@@ -316,10 +309,10 @@ const styles = {
   },
   keyPillSelected: {
     shadowColor: '#B9C096',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.5,
-    shadowRadius: 5,
-    elevation: 5,
+    shadowRadius: 2,
+    elevation: 2,
     borderColor: '#B9C096',
   },
   keyPillText: {
@@ -452,6 +445,13 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 8,
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(43,43,43,0.7)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 100,
   },
 };
 

@@ -3,16 +3,19 @@ import { View, Text, TouchableOpacity, Modal, Animated, Dimensions, PanResponder
 import * as Haptics from 'expo-haptics';
 import AffirmIdentityModal from './AffirmIdentityModal';
 import LogActionModal from './LogActionModal';
+import { checkUserProStatus } from '../../services/auth';
+import { fetchTodaysActionLogCount } from '../../services/actionLogs';
 
 const { height: screenHeight } = Dimensions.get('window');
 
-const AlignModal = ({ visible, onClose }) => {
+const AlignModal = ({ visible, onClose, onUpgradePress }) => {
   const slideAnim = useRef(new Animated.Value(screenHeight)).current;
   const overlayOpacity = useRef(new Animated.Value(0)).current;
   const dragOffset = useRef(new Animated.Value(0)).current;
   const isClosing = useRef(false);
   const [showAffirmIdentityModal, setShowAffirmIdentityModal] = useState(false);
   const [showLogActionModal, setShowLogActionModal] = useState(false);
+  const [checkingLimit, setCheckingLimit] = useState(false);
 
   // Pan responder for drag gestures - applies only to draggable content area
   const panResponder = useRef(
@@ -86,14 +89,26 @@ const AlignModal = ({ visible, onClose }) => {
     console.log('AlignModal: showAffirmIdentityModal set to true');
   };
 
-  const handleLogAction = () => {
+  const handleLogAction = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setShowLogActionModal(true);
-  };
-
-  const handleLogActionSubmit = (action) => {
-    // TODO: Handle the submitted action
-    console.log('Action logged:', action);
+    setCheckingLimit(true);
+    try {
+      const isPro = await checkUserProStatus();
+      if (!isPro) {
+        const count = await fetchTodaysActionLogCount();
+        if (count >= 2) {
+          setCheckingLimit(false);
+          if (onUpgradePress) onUpgradePress();
+          return;
+        }
+      }
+      setShowLogActionModal(true);
+    } catch (e) {
+      // fallback: open upgrade modal if error
+      if (onUpgradePress) onUpgradePress();
+    } finally {
+      setCheckingLimit(false);
+    }
   };
 
   const handleLogActionClose = () => {
@@ -201,7 +216,7 @@ const AlignModal = ({ visible, onClose }) => {
       <LogActionModal
         visible={showLogActionModal}
         onClose={handleLogActionClose}
-        onSubmit={handleLogActionSubmit}
+        onUpgradePress={onUpgradePress}
       />
     </>
   );

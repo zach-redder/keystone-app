@@ -508,6 +508,10 @@ export default function Keys() {
       <AlignModal
         visible={alignModalVisible}
         onClose={() => setAlignModalVisible(false)}
+        onUpgradePress={() => {
+          setAlignModalVisible(false);
+          setProModalVisible(true);
+        }}
       />
     </SafeAreaView>
   );

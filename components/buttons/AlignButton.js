@@ -3,6 +3,7 @@ import { Pressable, View, Text, Image, Animated, Easing, StyleSheet } from 'reac
 import * as Haptics from 'expo-haptics';
 import alignButtonStyles from '../../styles/AlignButton';
 
+
 export default function AlignButton({ onPress }) {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const opacityAnim = useRef(new Animated.Value(1)).current;

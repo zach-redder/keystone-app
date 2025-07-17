@@ -103,7 +103,9 @@ export const submitActionLogWithAI = async (actionDescription, selectedKeys, isP
 
     // Get preferred AI persona
     const preferences = await fetchUserPreferences();
-    const persona = preferences?.preferred_ai_persona;
+    let persona = preferences?.preferred_ai_persona || '';
+    // Remove anything after and including the colon
+    persona = persona.replace(/:.*$/, '');
 
     // Prepare payload
     const keyTags = selectedKeys.map(k => k.description);
@@ -134,6 +136,7 @@ export const submitActionLogWithAI = async (actionDescription, selectedKeys, isP
           action_description: actionDescription,
           key_tags: keyTags,
           ai_response,
+          ai_persona: persona,
         },
       ])
       .select('*')
@@ -143,5 +146,29 @@ export const submitActionLogWithAI = async (actionDescription, selectedKeys, isP
   } catch (error) {
     console.error('Error in submitActionLogWithAI:', error);
     throw error;
+  }
+};
+
+// Returns the number of action logs the current user has created today (UTC)
+export const fetchTodaysActionLogCount = async (): Promise<number> => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return 0;
+    const today = new Date();
+    const yyyy = today.getUTCFullYear();
+    const mm = String(today.getUTCMonth() + 1).padStart(2, '0');
+    const dd = String(today.getUTCDate()).padStart(2, '0');
+    const start = `${yyyy}-${mm}-${dd}T00:00:00+00:00`;
+    const end = `${yyyy}-${mm}-${dd}T23:59:59+00:00`;
+    const { count, error } = await supabase
+      .from('action_logs')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .gte('created_at', start)
+      .lte('created_at', end);
+    if (error) return 0;
+    return count || 0;
+  } catch (e) {
+    return 0;
   }
 };
