@@ -113,45 +113,6 @@ const homeStyles = StyleSheet.create({
     justifyContent: 'flex-end',
     paddingBottom: 20,
   },
-  communityCard: {
-    backgroundColor: '#3C3C3C',
-    borderRadius: 16,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.10,
-    shadowRadius: 8,
-    elevation: 3,
-    marginBottom: 75,
-  },
-  communityMainText: {
-    fontSize: 16,
-    color: '#fff',
-    fontWeight: '400',
-    lineHeight: 24,
-    marginBottom: 24,
-  },
-  communityHighlight: {
-    color: '#D4DE95',
-    fontWeight: '600',
-  },
-  joinDiscordButton: {
-    backgroundColor: '#B9C096',
-    borderRadius: 25,
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    alignItems: 'center',
-    shadowColor: '#B9C096',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  joinDiscordButtonText: {
-    color: '#2B2B2B',
-    fontSize: 16,
-    fontWeight: '700',
-  },
   alignmentGraph: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -378,7 +339,6 @@ const homeStyles = StyleSheet.create({
     shadowOpacity: 0.10,
     shadowRadius: 8,
     elevation: 3,
-    marginBottom: 55,
   },
   actionLogLoading: {
     fontSize: 16,
@@ -404,6 +364,7 @@ const homeStyles = StyleSheet.create({
     fontWeight: '500',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+    marginBottom: 4,
   },
   noActionLogContainer: {
     alignItems: 'center',
@@ -446,6 +407,7 @@ const homeStyles = StyleSheet.create({
     marginTop: 6,
     minHeight: 220,
     position: 'relative',
+    marginBottom: 55,
   },
   weekRangeBadge: {
     alignSelf: 'flex-start',
@@ -553,6 +515,17 @@ const homeStyles = StyleSheet.create({
     shadowOpacity: 0.10,
     shadowRadius: 2,
     elevation: 1,
+  },
+  actionLogCardSingle: {
+    backgroundColor: '#1e1e1e',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 14,
+    shadowColor: '#d4de95',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 2,
   },
 });
 

@@ -10,11 +10,12 @@ import AlignModal from '../../components/modals/AlignModal';
 import AlignButton from '../../components/buttons//AlignButton';
 import LogActionModal from '../../components/modals/LogActionModal';
 import { checkUserProStatus } from '../../services/auth';
-import { fetchRecentActionLog } from '../../services/actionLogs';
+import { fetchRecentActionLog, fetchActionLogs } from '../../services/actionLogs';
 import { shareHomePage } from '../../services/shareService';
 import { fetchTodayReminder, setupReminderNotifications } from '../../services/reminderService';
 import { fetchAlignmentValue, fetchLatestWeeklySnapshot, fetchAlignmentScoreChange } from '../../services/alignmentService';
 import * as Haptics from 'expo-haptics';
+import ActionLogResultModal from '../../components/modals/ActionLogResultModal';
 
 export default function HomeScreen() {
   const [proModalVisible, setProModalVisible] = useState(false);
@@ -32,6 +33,9 @@ export default function HomeScreen() {
   const [alignmentScoreChange, setAlignmentScoreChange] = useState(null);
   const [loadingScoreChange, setLoadingScoreChange] = useState(true);
   const [logActionModalVisible, setLogActionModalVisible] = useState(false);
+  const [recentActionLogs, setRecentActionLogs] = useState([]);
+  const [selectedActionLog, setSelectedActionLog] = useState(null);
+  const [actionLogModalVisible, setActionLogModalVisible] = useState(false);
 
   const HIGH_VALUE = 0.7; // Threshold for high alignment
   const LOW_VALUE = 0.3; // Threshold for low alignment
@@ -72,6 +76,7 @@ export default function HomeScreen() {
     loadWeeklySnapshot();
     loadAlignmentScoreChange();
     setupReminderNotifications().catch(console.error);
+    loadRecentActionLogs();
   }, []);
 
   useEffect(() => {
@@ -129,6 +134,15 @@ export default function HomeScreen() {
       setAlignmentScoreChange(null);
     } finally {
       setLoadingScoreChange(false);
+    }
+  };
+
+  const loadRecentActionLogs = async () => {
+    try {
+      const logs = await fetchActionLogs(3);
+      setRecentActionLogs(logs);
+    } catch (error) {
+      setRecentActionLogs([]);
     }
   };
 
@@ -258,98 +272,100 @@ export default function HomeScreen() {
           <View style={homeStyles.sectionContainer}>
             <Text style={homeStyles.sectionTitle}>Current Alignment</Text>
             <View style={homeStyles.trendsContainer}>
-              {alignmentValue === null ? (
-                <View style={{ alignItems: 'center', paddingVertical: 24 }}>
-                  <Text style={{ color: '#888', fontSize: 16, textAlign: 'center', marginBottom: 16 }}>
-                    No alignment data yet for this key. Align now to see your progress!
-                  </Text>
-                </View>
-              ) : (
-                <View style={homeStyles.trendsChart}>
-                  {/* Golden Mean Alignment Chart */}
-                  <View style={homeStyles.goldenMeanContainer}>
-                    <View style={homeStyles.goldenMeanChart}>
-                      {/* Scale Labels */}
-                      <View style={homeStyles.scaleLabels}>
-                        <Text style={[
-                          homeStyles.scaleLabelDeficient,
-                          getCurrentAlignment() < LOW_VALUE && { color: '#FF4C4C' },
-                          getCurrentAlignment() > HIGH_VALUE && { color: '#999' },
-                          getCurrentAlignment() >= LOW_VALUE && getCurrentAlignment() <= HIGH_VALUE && { color: '#999' },
-                        ]}>{getCurrentLabels().deficient}</Text>
-                        <Text style={[
-                          homeStyles.scaleLabelIdeal,
-                          getCurrentAlignment() >= LOW_VALUE && getCurrentAlignment() <= HIGH_VALUE && { color: '#D4DE95' },
-                          (getCurrentAlignment() < LOW_VALUE || getCurrentAlignment() > HIGH_VALUE) && { color: '#999' },
-                        ]}>{getCurrentLabels().ideal}</Text>
-                        <Text style={[
-                          homeStyles.scaleLabelExcess,
-                          getCurrentAlignment() > HIGH_VALUE && { color: '#FF4C4C' },
-                          getCurrentAlignment() < LOW_VALUE && { color: '#999' },
-                          getCurrentAlignment() >= LOW_VALUE && getCurrentAlignment() <= HIGH_VALUE && { color: '#999' },
-                        ]}>{getCurrentLabels().excess}</Text>
-                      </View>
-                      {/* Progress Bar */}
-                      <View style={homeStyles.progressContainer}>
-                        <View style={homeStyles.progressBar}>
-                          {/* Golden Mean Indicator */}
-                          <View style={homeStyles.goldenMeanIndicator} />
-                          {/* User Position */}
-                          <View style={[
-                            homeStyles.userPosition,
-                            { left: `${getCurrentAlignment() * 100}%` }
-                          ]}>
+              <View style={{ minHeight: 130, height: 130, justifyContent: 'center' }}>
+                {alignmentValue === null ? (
+                  <View style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }}>
+                    <Text style={{ color: '#888', fontSize: 16, textAlign: 'center', marginBottom: 16 }}>
+                      No alignment data yet for this key. Align now to see your progress!
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={homeStyles.trendsChart}>
+                    {/* Golden Mean Alignment Chart */}
+                    <View style={homeStyles.goldenMeanContainer}>
+                      <View style={homeStyles.goldenMeanChart}>
+                        {/* Scale Labels */}
+                        <View style={homeStyles.scaleLabels}>
+                          <Text style={[
+                            homeStyles.scaleLabelDeficient,
+                            getCurrentAlignment() < LOW_VALUE && { color: '#FF4C4C' },
+                            getCurrentAlignment() > HIGH_VALUE && { color: '#999' },
+                            getCurrentAlignment() >= LOW_VALUE && getCurrentAlignment() <= HIGH_VALUE && { color: '#999' },
+                          ]}>{getCurrentLabels().deficient}</Text>
+                          <Text style={[
+                            homeStyles.scaleLabelIdeal,
+                            getCurrentAlignment() >= LOW_VALUE && getCurrentAlignment() <= HIGH_VALUE && { color: '#D4DE95' },
+                            (getCurrentAlignment() < LOW_VALUE || getCurrentAlignment() > HIGH_VALUE) && { color: '#999' },
+                          ]}>{getCurrentLabels().ideal}</Text>
+                          <Text style={[
+                            homeStyles.scaleLabelExcess,
+                            getCurrentAlignment() > HIGH_VALUE && { color: '#FF4C4C' },
+                            getCurrentAlignment() < LOW_VALUE && { color: '#999' },
+                            getCurrentAlignment() >= LOW_VALUE && getCurrentAlignment() <= HIGH_VALUE && { color: '#999' },
+                          ]}>{getCurrentLabels().excess}</Text>
+                        </View>
+                        {/* Progress Bar */}
+                        <View style={homeStyles.progressContainer}>
+                          <View style={homeStyles.progressBar}>
+                            {/* Golden Mean Indicator */}
+                            <View style={homeStyles.goldenMeanIndicator} />
+                            {/* User Position */}
                             <View style={[
-                              homeStyles.userDot,
-                              (getCurrentAlignment() < LOW_VALUE || getCurrentAlignment() > HIGH_VALUE) && {
-                                borderColor: '#FF4C4C',
-                                shadowColor: '#FF4C4C',
-                                backgroundColor: '#fff',
-                              },
+                              homeStyles.userPosition,
+                              { left: `${getCurrentAlignment() * 100}%` }
+                            ]}>
+                              <View style={[
+                                homeStyles.userDot,
+                                (getCurrentAlignment() < LOW_VALUE || getCurrentAlignment() > HIGH_VALUE) && {
+                                  borderColor: '#FF4C4C',
+                                  shadowColor: '#FF4C4C',
+                                  backgroundColor: '#fff',
+                                },
+                              ]} />
+                            </View>
+                            {/* Progress Fill */}
+                            <View style={[
+                              homeStyles.progressFill,
+                              { 
+                                left: `${Math.min(50, getCurrentAlignment() * 100)}%`,
+                                width: `${Math.abs(getCurrentAlignment() * 100 - 50)}%`,
+                                backgroundColor:
+                                  (getCurrentAlignment() < LOW_VALUE || getCurrentAlignment() > HIGH_VALUE)
+                                    ? '#FF4C4C'
+                                    : '#D4DE95',
+                                shadowColor:
+                                  (getCurrentAlignment() < LOW_VALUE || getCurrentAlignment() > HIGH_VALUE)
+                                    ? '#FF4C4C'
+                                    : '#D4DE95',
+                              }
                             ]} />
                           </View>
-                          {/* Progress Fill */}
-                          <View style={[
-                            homeStyles.progressFill,
-                            { 
-                              left: `${Math.min(50, getCurrentAlignment() * 100)}%`,
-                              width: `${Math.abs(getCurrentAlignment() * 100 - 50)}%`,
-                              backgroundColor:
-                                (getCurrentAlignment() < LOW_VALUE || getCurrentAlignment() > HIGH_VALUE)
-                                  ? '#FF4C4C'
-                                  : '#D4DE95',
-                              shadowColor:
-                                (getCurrentAlignment() < LOW_VALUE || getCurrentAlignment() > HIGH_VALUE)
-                                  ? '#FF4C4C'
-                                  : '#D4DE95',
-                            }
-                          ]} />
                         </View>
-                      </View>
-                      {/* Subtitle Labels Below */}
-                      <View style={homeStyles.scaleSubtitles}>
-                        <Text style={[
-                          homeStyles.scaleSubtitleDeficient,
-                          getCurrentAlignment() < LOW_VALUE && { color: '#FF4C4C' },
-                          getCurrentAlignment() > HIGH_VALUE && { color: '#666' },
-                          getCurrentAlignment() >= LOW_VALUE && getCurrentAlignment() <= HIGH_VALUE && { color: '#666' },
-                        ]}>Deficient</Text>
-                        <Text style={[
-                          homeStyles.scaleSubtitleIdeal,
-                          getCurrentAlignment() >= LOW_VALUE && getCurrentAlignment() <= HIGH_VALUE && { color: '#A8B89E' },
-                          (getCurrentAlignment() < LOW_VALUE || getCurrentAlignment() > HIGH_VALUE) && { color: '#666' },
-                        ]}>Aligned</Text>
-                        <Text style={[
-                          homeStyles.scaleSubtitleExcess,
-                          getCurrentAlignment() > HIGH_VALUE && { color: '#FF4C4C' },
-                          getCurrentAlignment() < LOW_VALUE && { color: '#666' },
-                          getCurrentAlignment() >= LOW_VALUE && getCurrentAlignment() <= HIGH_VALUE && { color: '#666' },
-                        ]}>Excessive</Text>
+                        {/* Subtitle Labels Below */}
+                        <View style={homeStyles.scaleSubtitles}>
+                          <Text style={[
+                            homeStyles.scaleSubtitleDeficient,
+                            getCurrentAlignment() < LOW_VALUE && { color: '#FF4C4C' },
+                            getCurrentAlignment() > HIGH_VALUE && { color: '#666' },
+                            getCurrentAlignment() >= LOW_VALUE && getCurrentAlignment() <= HIGH_VALUE && { color: '#666' },
+                          ]}>Deficient</Text>
+                          <Text style={[
+                            homeStyles.scaleSubtitleIdeal,
+                            getCurrentAlignment() >= LOW_VALUE && getCurrentAlignment() <= HIGH_VALUE && { color: '#A8B89E' },
+                            (getCurrentAlignment() < LOW_VALUE || getCurrentAlignment() > HIGH_VALUE) && { color: '#666' },
+                          ]}>Aligned</Text>
+                          <Text style={[
+                            homeStyles.scaleSubtitleExcess,
+                            getCurrentAlignment() > HIGH_VALUE && { color: '#FF4C4C' },
+                            getCurrentAlignment() < LOW_VALUE && { color: '#666' },
+                            getCurrentAlignment() >= LOW_VALUE && getCurrentAlignment() <= HIGH_VALUE && { color: '#666' },
+                          ]}>Excessive</Text>
+                        </View>
                       </View>
                     </View>
                   </View>
-                </View>
-              )}
+                )}
+              </View>
               {/* Key Type Selector */}
               <View style={homeStyles.keyTypeSelector}>
                 <TouchableOpacity onPress={() => handleKeyTypeNavigation('left')}>
@@ -362,6 +378,50 @@ export default function HomeScreen() {
                   <Text style={homeStyles.keyTypeArrow}>›</Text>
                 </TouchableOpacity>
               </View>
+            </View>
+          </View>
+
+          {/* Previous Action Log Section */}
+          <View style={homeStyles.sectionContainer}>
+            <Text style={homeStyles.sectionTitle}>Previous Action Logs</Text>
+            <View style={homeStyles.actionLogCard}>
+              {recentActionLogs.length === 0 ? (
+                <View style={homeStyles.noActionLogContainer}>
+                  <Text style={homeStyles.noActionLogText}>
+                    No actions logged yet. Start tracking your alignment journey!
+                  </Text>
+                  <TouchableOpacity 
+                    style={homeStyles.firstActionButton}
+                    onPress={handleLogFirstActionPress}
+                  >
+                    <Text style={homeStyles.firstActionButtonText}>Log Your First Action</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                recentActionLogs.map((log, idx) => (
+                  <TouchableOpacity
+                    key={log.id || idx}
+                    style={homeStyles.actionLogCardSingle}
+                    onPress={() => {
+                      setSelectedActionLog(log);
+                      setActionLogModalVisible(true);
+                    }}
+                    activeOpacity={0.85}
+                  >
+                    <Text style={homeStyles.actionLogAction} numberOfLines={1}>
+                      {log.action_description || 'No description'}
+                    </Text>
+                    {Array.isArray(log.key_tags) && log.key_tags.length > 0 && (
+                      <Text style={homeStyles.actionLogKeyType} numberOfLines={1}>
+                        {log.key_tags.join(', ')}
+                      </Text>
+                    )}
+                    <Text style={homeStyles.actionLogDate}>
+                      {formatActionLogDate(log.created_at)}
+                    </Text>                   
+                  </TouchableOpacity>
+                ))
+              )}
             </View>
           </View>
 
@@ -435,57 +495,6 @@ export default function HomeScreen() {
               )}
             </TouchableOpacity>
           </View>
-
-          {/* Previous Action Log Section */}
-          <View style={homeStyles.sectionContainer}>
-            <Text style={homeStyles.sectionTitle}>Previous Action Logs</Text>
-            <View style={homeStyles.actionLogCard}>
-              {loadingActionLog ? (
-                <Text style={homeStyles.actionLogLoading}>Loading...</Text>
-              ) : recentActionLog ? (
-                <View>
-                  <Text style={homeStyles.actionLogAction}>{recentActionLog.action}</Text>
-                  <Text style={homeStyles.actionLogDate}>
-                    {formatActionLogDate(recentActionLog.created_at)}
-                  </Text>
-                  {recentActionLog.key_type && (
-                    <Text style={homeStyles.actionLogKeyType}>
-                      {recentActionLog.key_type}
-                    </Text>
-                  )}
-                </View>
-              ) : (
-                <View style={homeStyles.noActionLogContainer}>
-                  <Text style={homeStyles.noActionLogText}>
-                    No actions logged yet. Start tracking your alignment journey!
-                  </Text>
-                  <TouchableOpacity 
-                    style={homeStyles.firstActionButton}
-                    onPress={handleLogFirstActionPress}
-                  >
-                    <Text style={homeStyles.firstActionButtonText}>Log Your First Action</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            </View>
-          </View>
-
-          {/* Community Section
-          <View style={homeStyles.sectionContainer}>
-            <Text style={homeStyles.sectionTitle}>Community</Text>
-            <View style={homeStyles.communityCard}>
-              <Text style={homeStyles.communityMainText}>
-                <Text style={homeStyles.communityHighlight}>You are 12% more aligned than your peers.</Text>
-                {'\n\n'}Keep using Keystone to improve & join the discord community to be supported.
-              </Text>
-              <TouchableOpacity 
-                style={homeStyles.joinDiscordButton}
-                onPress={handleDiscordPress}
-              >
-                <Text style={homeStyles.joinDiscordButtonText}>Join Discord</Text>
-              </TouchableOpacity>
-            </View>
-          </View> */}
         </ScrollView>
 
         <AlignButton onPress={handleAlignButtonPress} />
@@ -509,6 +518,11 @@ export default function HomeScreen() {
         <LogActionModal
           visible={logActionModalVisible}
           onClose={() => setLogActionModalVisible(false)}
+        />
+        <ActionLogResultModal
+          visible={actionLogModalVisible}
+          onClose={() => setActionLogModalVisible(false)}
+          log={selectedActionLog}
         />
       </View>
     </SafeAreaView>

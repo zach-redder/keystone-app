@@ -1,4 +1,6 @@
 import { supabase } from '../lib/supabase';
+import { BASE_URL } from '../lib/apiConfig';
+import { fetchUserPreferences } from './userPreferences';
 
 export interface ActionLog {
   id: string;
@@ -90,5 +92,56 @@ export const createActionLog = async (action: string, keyType?: string): Promise
   } catch (error) {
     console.error('Error in createActionLog:', error);
     return false;
+  }
+};
+
+export const submitActionLogWithAI = async (actionDescription, selectedKeys, isPro) => {
+  try {
+    // Get user
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) throw new Error('User not authenticated');
+
+    // Get preferred AI persona
+    const preferences = await fetchUserPreferences();
+    const persona = preferences?.preferred_ai_persona;
+
+    // Prepare payload
+    const keyTags = selectedKeys.map(k => k.description);
+    const payload = {
+      description: actionDescription,
+      keys: keyTags,
+      pro: isPro,
+      persona,
+    };
+
+    console.log('payload', payload);
+
+    // Send to AI backend
+    const response = await fetch(`${BASE_URL}/action-log-response`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) throw new Error('AI backend error');
+    const { ai_response } = await response.json();
+
+    // Save to Supabase action_logs
+    const { data, error } = await supabase
+      .from('action_logs')
+      .insert([
+        {
+          user_id: user.id,
+          action_description: actionDescription,
+          key_tags: keyTags,
+          ai_response,
+        },
+      ])
+      .select('*')
+      .single();
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error in submitActionLogWithAI:', error);
+    throw error;
   }
 };
