@@ -8,12 +8,11 @@ import { fetchTodaysActionLogCount } from '../../services/actionLogs';
 
 const { height: screenHeight } = Dimensions.get('window');
 
-const AlignModal = ({ visible, onClose, onUpgradePress }) => {
+const AlignModal = ({ visible, onClose, onUpgradePress, onAffirmIdentity }) => {
   const slideAnim = useRef(new Animated.Value(screenHeight)).current;
   const overlayOpacity = useRef(new Animated.Value(0)).current;
   const dragOffset = useRef(new Animated.Value(0)).current;
   const isClosing = useRef(false);
-  const [showAffirmIdentityModal, setShowAffirmIdentityModal] = useState(false);
   const [showLogActionModal, setShowLogActionModal] = useState(false);
   const [checkingLimit, setCheckingLimit] = useState(false);
 
@@ -85,7 +84,7 @@ const AlignModal = ({ visible, onClose, onUpgradePress }) => {
   const handleAffirmIdentity = () => {
     console.log('AlignModal: Affirm Identity clicked');
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setShowAffirmIdentityModal(true);
+    if (onAffirmIdentity) onAffirmIdentity();
   };
 
   const handleLogAction = async () => {
@@ -122,14 +121,6 @@ const AlignModal = ({ visible, onClose, onUpgradePress }) => {
     closeModal();
   };
 
-  const handleAffirmIdentityClose = () => {
-    console.log('AlignModal: AffirmIdentityModal is closing');
-    setShowAffirmIdentityModal(false);
-    // Close the entire modal flow after affirmation
-    console.log('AlignModal: Closing parent modal');
-    onClose();
-  };
-
   useEffect(() => {
     if (visible) {
       // Reset values and closing flag
@@ -157,7 +148,7 @@ const AlignModal = ({ visible, onClose, onUpgradePress }) => {
   return (
     <>
       <Modal
-        visible={visible && !showAffirmIdentityModal && !showLogActionModal}
+        visible={visible && !showLogActionModal}
         transparent
         animationType="none"
         onRequestClose={onClose}
@@ -207,11 +198,6 @@ const AlignModal = ({ visible, onClose, onUpgradePress }) => {
           </Animated.View>
         </Animated.View>
       </Modal>
-
-      <AffirmIdentityModal
-        visible={showAffirmIdentityModal}
-        onClose={handleAffirmIdentityClose}
-      />
 
       <LogActionModal
         visible={showLogActionModal}

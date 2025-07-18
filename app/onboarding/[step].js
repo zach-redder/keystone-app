@@ -292,12 +292,10 @@ export default function OnboardingStep() {
                 style={[styles.customInput, { width: Math.max(100, customInputValue.length * 8 + 20) }]}
                 value={customInputValue}
                 onChangeText={setCustomInputValue}
-                placeholder="Type here..."
+                placeholder="Enter..."
                 placeholderTextColor="#808080"
                 onSubmitEditing={handleCustomInputSubmit}
                 autoFocus
-                returnKeyType="done"
-                keyboardType="web-search"
                 inputAccessoryViewID={null}
                 autoComplete="off"
                 autoCorrect={false}

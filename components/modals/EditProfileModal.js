@@ -74,8 +74,8 @@ const EditProfileModal = ({ visible, onClose, userEmail }) => {
           </View>
 
           <View style={styles.content}>
-            <View style={[keysStyles.infoContent, { paddingTop: 10 }]}>
-              {/* Email (non-editable) */}
+            <View style={[keysStyles.infoContent, { paddingTop: 10 }]}> 
+              {/* Email */}
               <View style={{ marginBottom: 24 }}>
                 <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600', marginBottom: 8 }}>
                   Email
@@ -91,7 +91,11 @@ const EditProfileModal = ({ visible, onClose, userEmail }) => {
                     borderColor: '#555',
                   }}
                   value={email}
-                  editable={false}
+                  onChangeText={setEmail}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  placeholder="Email"
+                  placeholderTextColor="#888"
                 />
               </View>
 

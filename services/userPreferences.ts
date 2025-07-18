@@ -169,20 +169,46 @@ export const updateUserDayStreak = async (): Promise<number> => {
       .select('created_at')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false });
-    if (logsError || !logs) return 0;
+    if (logsError) return 0;
 
-    // Build a set of unique days (YYYY-MM-DD) with at least one log
-    const daysWithLogs = new Set(logs.map(log => log.created_at.slice(0, 10)));
+    // Get all ai_chat_logs for the user
+    const { data: aiLogs, error: aiLogsError } = await supabase
+      .from('ai_chat_logs')
+      .select('created_at')
+      .eq('user_id', user.id);
+    if (aiLogsError) return 0;
 
-    // Start from yesterday and count consecutive days with logs
+    // Build a set of unique days (YYYY-MM-DD) with at least one log from either table
+    const daysWithLogs = new Set();
+    if (Array.isArray(logs)) {
+      logs.forEach(log => daysWithLogs.add(log.created_at.slice(0, 10)));
+    }
+    if (Array.isArray(aiLogs)) {
+      aiLogs.forEach(log => daysWithLogs.add(log.created_at.slice(0, 10)));
+    }
+
+    // Start from today
     let streak = 0;
     let current = new Date();
     current.setHours(0, 0, 0, 0);
-    current.setDate(current.getDate() - 1); // Start from yesterday
-    while (daysWithLogs.has(current.toISOString().slice(0, 10))) {
-      streak++;
+    let missedDays = 0;
+    while (true) {
+      const dayStr = current.toISOString().slice(0, 10);
+      if (daysWithLogs.has(dayStr)) {
+        streak++;
+        missedDays = 0;
+      } else {
+        missedDays++;
+        if (missedDays >= 2) {
+          break;
+        }
+      }
       current.setDate(current.getDate() - 1);
     }
+
+    // If the user hasn't logged today but did yesterday, keep the streak (don't increment for today)
+    // But if they missed two days in a row, streak is 0
+    // The above loop already handles this logic
 
     // Update the users table
     await supabase

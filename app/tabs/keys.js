@@ -12,6 +12,7 @@ import EditKeyModal from '../../components/modals/EditKeyModal';
 import CreateKeyModal from '../../components/modals/CreateKeyModal';
 import ProUpgradeModal from '../../components/modals/ProUpgradeModal';
 import CommunityModal from '../../components/modals/CommunityModal';
+import AffirmIdentityModal from '../../components/modals/AffirmIdentityModal';
 import { fetchIdentityKeys, deleteIdentityKey, updateIdentityKey, addIdentityKey } from '../../services/userKeys';
 import { checkUserProStatus } from '../../services/auth';
 import { shareKeysPage } from '../../services/shareService';
@@ -144,6 +145,7 @@ export default function Keys() {
   const [badgeText, setBadgeText] = useState('PRO');
   const menuBtnRef = useRef(null);
   const [alignModalVisible, setAlignModalVisible] = useState(false);
+  const [affirmIdentityModalVisible, setAffirmIdentityModalVisible] = useState(false);
 
   // Load user keys when component mounts or selected item changes
   useEffect(() => {
@@ -380,6 +382,18 @@ export default function Keys() {
     }
   };
 
+  // Handler to open Pro modal from AffirmIdentityModal
+  const handleRequestProUpgrade = () => {
+    setAffirmIdentityModalVisible(false);
+    setProModalVisible(true);
+  };
+
+  // Handler for Affirm Identity from AlignModal
+  const handleAffirmIdentity = () => {
+    setAlignModalVisible(false);
+    setAffirmIdentityModalVisible(true);
+  };
+
   return (
     <SafeAreaView style={keysStyles.pageBg}>
       <View style={keysStyles.pageBg}>
@@ -513,6 +527,12 @@ export default function Keys() {
           setAlignModalVisible(false);
           setProModalVisible(true);
         }}
+        onAffirmIdentity={handleAffirmIdentity}
+      />
+      <AffirmIdentityModal
+        visible={affirmIdentityModalVisible}
+        onClose={() => setAffirmIdentityModalVisible(false)}
+        onRequestProUpgrade={handleRequestProUpgrade}
       />
     </SafeAreaView>
   );

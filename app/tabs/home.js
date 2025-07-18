@@ -17,6 +17,7 @@ import { fetchTodayReminder, setupReminderNotifications } from '../../services/r
 import { fetchAlignmentValue, fetchLatestWeeklySnapshot, fetchAlignmentScoreChange } from '../../services/alignmentService';
 import * as Haptics from 'expo-haptics';
 import ActionLogResultModal from '../../components/modals/ActionLogResultModal';
+import AffirmIdentityModal from '../../components/modals/AffirmIdentityModal';
 
 export default function HomeScreen() {
   const [proModalVisible, setProModalVisible] = useState(false);
@@ -37,6 +38,7 @@ export default function HomeScreen() {
   const [recentActionLogs, setRecentActionLogs] = useState([]);
   const [resultModalVisible, setResultModalVisible] = useState(false);
   const [resultLog, setResultLog] = useState(null);
+  const [affirmIdentityModalVisible, setAffirmIdentityModalVisible] = useState(false);
 
   const HIGH_VALUE = 0.7; // Threshold for high alignment
   const LOW_VALUE = 0.3; // Threshold for low alignment
@@ -230,6 +232,18 @@ export default function HomeScreen() {
     const startDate = new Date(start);
     const endDate = new Date(end);
     return `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+  };
+
+  // Handler to open Pro modal from AffirmIdentityModal
+  const handleRequestProUpgrade = () => {
+    setAffirmIdentityModalVisible(false);
+    setProModalVisible(true); // Add delay to ensure modal sequencing
+  };
+
+  // Handler for Affirm Identity from AlignModal
+  const handleAffirmIdentity = () => {
+    setAlignModalVisible(false);
+    setAffirmIdentityModalVisible(true);
   };
 
   return (
@@ -505,6 +519,7 @@ export default function HomeScreen() {
             setAlignModalVisible(false);
             setProModalVisible(true);
           }}
+          onAffirmIdentity={handleAffirmIdentity}
         />
         
         <ProUpgradeModal
@@ -530,6 +545,11 @@ export default function HomeScreen() {
           visible={resultModalVisible}
           onClose={() => setResultModalVisible(false)}
           log={resultLog}
+        />
+        <AffirmIdentityModal
+          visible={affirmIdentityModalVisible}
+          onClose={() => setAffirmIdentityModalVisible(false)}
+          onRequestProUpgrade={handleRequestProUpgrade}
         />
       </View>
     </SafeAreaView>
