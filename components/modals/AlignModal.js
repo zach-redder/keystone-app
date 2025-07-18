@@ -86,7 +86,6 @@ const AlignModal = ({ visible, onClose, onUpgradePress }) => {
     console.log('AlignModal: Affirm Identity clicked');
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setShowAffirmIdentityModal(true);
-    console.log('AlignModal: showAffirmIdentityModal set to true');
   };
 
   const handleLogAction = async () => {
@@ -96,6 +95,7 @@ const AlignModal = ({ visible, onClose, onUpgradePress }) => {
       const isPro = await checkUserProStatus();
       if (!isPro) {
         const count = await fetchTodaysActionLogCount();
+        console.log('AlignModal: count', count);
         if (count >= 2) {
           setCheckingLimit(false);
           if (onUpgradePress) onUpgradePress();

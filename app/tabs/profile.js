@@ -208,6 +208,7 @@ export default function ProfileScreen() {
   };
 
   const handleBadgePress = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     try {
       const proStatus = await checkUserProStatus();
       if (proStatus) {

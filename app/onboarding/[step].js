@@ -678,7 +678,7 @@ export default function OnboardingStep() {
              <OnboardingHeader />
              <Text style={styles.secondaryHeader}>Choose your AI personality.</Text>
              <View style={styles.buttonContainer}>
-               {['Gentle Guide', 'Supportive Friend', 'Drill Sergeant'].map((option) => (
+               {['Gentle Guide', 'Supportive Friend', 'Disciplined Mentor'].map((option) => (
                  <TouchableOpacity
                    key={option}
                    style={selectedOptions.includes(option) ? styles.selectedOptionButton : styles.optionButton}

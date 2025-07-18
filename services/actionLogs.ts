@@ -149,26 +149,39 @@ export const submitActionLogWithAI = async (actionDescription, selectedKeys, isP
   }
 };
 
-// Returns the number of action logs the current user has created today (UTC)
+// Returns the number of action logs the current user has created today (local time)
 export const fetchTodaysActionLogCount = async (): Promise<number> => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return 0;
+
+    // Get today's date in local time
     const today = new Date();
-    const yyyy = today.getUTCFullYear();
-    const mm = String(today.getUTCMonth() + 1).padStart(2, '0');
-    const dd = String(today.getUTCDate()).padStart(2, '0');
-    const start = `${yyyy}-${mm}-${dd}T00:00:00+00:00`;
-    const end = `${yyyy}-${mm}-${dd}T23:59:59+00:00`;
+    const yyyy = today.getFullYear();
+
+    // Create start and end timestamps for today in local timezone
+    const startDate = new Date(yyyy, today.getMonth(), today.getDate());
+    const endDate = new Date(yyyy, today.getMonth(), today.getDate(), 23, 59, 59, 999);
+
+    // Convert to ISO strings
+    const start = startDate.toISOString();
+    const end = endDate.toISOString();
+
     const { count, error } = await supabase
       .from('action_logs')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', user.id)
       .gte('created_at', start)
       .lte('created_at', end);
-    if (error) return 0;
+
+    if (error) {
+      console.error('Error fetching today\'s action log count:', error);
+      return 0;
+    }
+
     return count || 0;
   } catch (e) {
+    console.error('Error in fetchTodaysActionLogCount:', e);
     return 0;
   }
 };

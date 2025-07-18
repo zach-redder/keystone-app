@@ -354,6 +354,7 @@ export default function Keys() {
   };
 
   const handleBadgePress = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     try {
       const isPro = await checkUserProStatus();
       if (isPro) {

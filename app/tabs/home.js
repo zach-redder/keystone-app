@@ -1,13 +1,14 @@
+import React, { useState, useEffect } from 'react';
 import { View, Text, SafeAreaView, TouchableOpacity, ScrollView } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useState, useEffect } from 'react';
 import globalStyles from '../../styles/global';
 import keysStyles from '../../styles/keys';
 import homeStyles from '../../styles/home';
 import ProUpgradeModal from '../../components/modals/ProUpgradeModal';
 import CommunityModal from '../../components/modals/CommunityModal';
 import AlignModal from '../../components/modals/AlignModal';
-import AlignButton from '../../components/buttons//AlignButton';
+import AlignButton from '../../components/buttons/AlignButton';
 import LogActionModal from '../../components/modals/LogActionModal';
 import { checkUserProStatus } from '../../services/auth';
 import { fetchRecentActionLog, fetchActionLogs } from '../../services/actionLogs';
@@ -44,20 +45,10 @@ export default function HomeScreen() {
     'Core Values',
     'Future Identity',
     'Life Goals',
+    'Identity Traits',
     'Motivations',
     'Avoidances',
-    'Identity Traits'
   ];
-
-  // Mock Golden Mean alignment data (0.5 is the golden mean/ideal)
-  const goldenMeanData = {
-    'Core Values': 0.7, // Slightly excessive
-    'Future Identity': 0.5, // Perfect balance
-    'Life Goals': 0.3, // Deficient
-    'Motivations': 0.6, // Slightly excessive
-    'Avoidances': 0.4, // Slightly deficient
-    'Identity Traits': 0.2 // Excessive
-  };
 
   // Labels for each key type
   const keyTypeLabels = {
@@ -69,15 +60,22 @@ export default function HomeScreen() {
     'Life Goals': { deficient: 'Aimlessness', ideal: 'Vision', excess: 'Overreach' }
   };
 
-  useEffect(() => {
-    checkProStatus();
-    loadRecentActionLog();
-    loadDailyReminder();
-    loadWeeklySnapshot();
-    loadAlignmentScoreChange();
-    setupReminderNotifications().catch(console.error);
-    loadRecentActionLogs();
-  }, []);
+  // Load data whenever the screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log('Home screen focused - reloading data');
+      checkProStatus();
+      loadRecentActionLog();
+      loadDailyReminder();
+      loadWeeklySnapshot();
+      loadAlignmentScoreChange();
+      setupReminderNotifications().catch(console.error);
+      loadRecentActionLogs();
+      return () => {
+        // Optional cleanup if needed
+      };
+    }, [])
+  );
 
   useEffect(() => {
     const loadAlignment = async () => {
@@ -158,6 +156,7 @@ export default function HomeScreen() {
   };
 
   const handleBadgePress = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     try {
       const isPro = await checkUserProStatus();
       if (isPro) {
