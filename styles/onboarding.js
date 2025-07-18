@@ -277,6 +277,15 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 30,
     bottom: 260,
   },
+  reminderTimeSubtitle: {
+    color: '#b3b3b3',
+    fontSize: 18,
+    textAlign: 'left',
+    bottom: 225,
+    fontStyle: 'italic',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 30,
+  },
   multiSelectButton: {
     backgroundColor: '#3c3c3c',
     borderRadius: 25,
@@ -394,4 +403,5 @@ export const styles = StyleSheet.create({
     flexWrap: 'wrap',
     paddingHorizontal: 5,
   },
+  
 });

@@ -308,14 +308,6 @@ export default function WaitForEmailConfirmationScreen({ email, preferences: ini
           ) : (
             <>
               <TouchableOpacity
-                style={[styles.button, styles.primaryButton]}
-                onPress={handleSignInAfterConfirmation}
-                disabled={isChecking}
-              >
-                <Text style={styles.buttonText}>I Confirmed My Email - Sign In</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
                 style={[styles.button, styles.secondaryButton]}
                 onPress={handleResendEmail}
                 disabled={isResending}

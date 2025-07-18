@@ -34,14 +34,14 @@ const features = [
     title: "AI Personalities",
     subtitle: "Customize your AI experience with unique personalities"
   },
+  // {
+  //   id: 5,
+  //   icon: "trending-up",
+  //   title: "In-Depth Trends",
+  //   subtitle: "Track your growth with detailed insights"
+  // },
   {
     id: 5,
-    icon: "trending-up",
-    title: "In-Depth Trends",
-    subtitle: "Track your growth with detailed insights"
-  },
-  {
-    id: 6,
     icon: "people",
     title: "Community Perks",
     subtitle: "Join the community and unlock exclusive benefits"

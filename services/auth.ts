@@ -20,8 +20,19 @@ export const signUpUser = async (email: string, password: string) => {
     });
 
     if (error) {
-      console.error('Signup error:', error);
-      throw error;
+      // Only log unexpected errors
+      const msg = error?.message?.toLowerCase() || '';
+      if (
+        msg.includes('password should be at least 8 characters') ||
+        msg.includes('anonymous sign-ins are disabled') ||
+        msg.includes('invalid')
+      ) {
+        // Do not log known user input errors
+        throw error;
+      } else {
+        console.error('Signup error:', error);
+        throw error;
+      }
     }
     
     console.log('Signup response:', {
@@ -39,8 +50,19 @@ export const signUpUser = async (email: string, password: string) => {
     console.log('Signup successful - user created, waiting for email confirmation');
     return data.user;
   } catch (error) {
-    console.error('Error in signUpUser:', error);
-    throw error;
+    // Only log unexpected errors
+    const msg = error?.message?.toLowerCase() || '';
+    if (
+      msg.includes('password should be at least 8 characters') ||
+      msg.includes('anonymous sign-ins are disabled') ||
+      msg.includes('invalid')
+    ) {
+      // Do not log known user input errors
+      throw error;
+    } else {
+      console.error('Error in signUpUser:', error);
+      throw error;
+    }
   }
 };
 
@@ -51,11 +73,15 @@ export const signInUser = async (email: string, password: string) => {
       password,
     });
 
-    console.log('Sign-in response:', { data, error });
-
     if (error) {
-      console.error('Sign-in error:', error);
-      throw error;
+      const msg = error?.message?.toLowerCase() || '';
+      if (msg.includes('missing email or phone')) {
+        // Do not log known user input errors
+        throw error;
+      } else {
+        console.error('Sign-in error:', error);
+        throw error;
+      }
     }
 
     const user = data.user;
@@ -66,15 +92,19 @@ export const signInUser = async (email: string, password: string) => {
     console.log('Sign-in successful for user:', user.id);
     return user;
   } catch (error) {
-    console.error('Error in signInUser:', error);
-    throw error;
+    const msg = error?.message?.toLowerCase() || '';
+    if (msg.includes('missing email or phone')) {
+      // Do not log known user input errors
+      throw error;
+    } else {
+      console.error('Error in signInUser:', error);
+      throw error;
+    }
   }
 };
 
 export const resetPassword = async (email: string) => {
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: 'keystone-app://reset-password', // Deep link for password reset
-  });
+  const { error } = await supabase.auth.resetPasswordForEmail(email);
 
   if (error) throw error;
   return true;
@@ -535,6 +565,32 @@ export const checkUserProfileExists = async (): Promise<boolean> => {
   }
 };
 
+export const checkEmailExists = async (email: string): Promise<boolean> => {
+  // Check in public.users table
+  const { data: userData, error: userError } = await supabase
+    .from('users')
+    .select('id')
+    .eq('email', email)
+    .maybeSingle();
+  if (userError) {
+    console.error('Error checking if email exists in users table:', userError);
+  }
+  if (userData) return true;
+
+  // Check in auth.users table using an RPC if available, or via the auth API
+  // Supabase does not allow direct access to auth.users from client, so try to sign in with a dummy password to check existence
+  const { error: authError } = await supabase.auth.signInWithPassword({ email, password: 'dummy-password' });
+  if (authError && authError.message && !authError.message.toLowerCase().includes('invalid login credentials')) {
+    // If error is not invalid credentials, treat as not found
+    return false;
+  }
+  // If we get 'Invalid login credentials', the email exists in auth.users
+  if (authError && authError.message && authError.message.toLowerCase().includes('invalid login credentials')) {
+    return true;
+  }
+  return false;
+};
+
 export const clearOnboardingData = async () => {
   try {
     console.log('Clearing onboarding data from AsyncStorage...');
@@ -555,5 +611,19 @@ export const clearOnboardingData = async () => {
     console.log('Onboarding data cleared successfully');
   } catch (error) {
     console.error('Error clearing onboarding data:', error);
+  }
+};
+
+export const updateUserPassword = async (newPassword: string) => {
+  try {
+    const { data, error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) {
+      console.error('Error updating password:', error);
+      throw error;
+    }
+    return data;
+  } catch (error) {
+    console.error('Error in updateUserPassword:', error);
+    throw error;
   }
 };

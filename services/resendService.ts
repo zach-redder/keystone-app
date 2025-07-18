@@ -87,7 +87,7 @@ export const sendWelcomeEmail = async (email: string) => {
   try {
     const result = await resend.emails.send({
       to: email,
-      from: '"Keystone" <zach@thekeystoneapp.com>',
+      from: '"Zach from Keystone" <zach@thekeystoneapp.com>',
       subject: 'Welcome to Keystone',
       html: `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333;">

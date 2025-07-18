@@ -710,7 +710,7 @@ export default function OnboardingStep() {
         return (
           <View style={styles.container}>
             <OnboardingHeader />
-            <Text style={styles.reminderTimeHeader}>What time do you want to be reminded?</Text>
+            <Text style={styles.reminderTimeHeader}>When should your AI send a reminder?</Text>
             <CustomTimePicker selectedTime={time} onTimeChange={onTimeChange} />
             <Animated.View style={{ transform: [{ scale: pulseValue }] }}>
               <TouchableOpacity style={styles.glowingButton} onPress={handleNext}>

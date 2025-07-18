@@ -24,7 +24,16 @@ export default function SignInForm() {
       await signInUser(email, password);
       router.replace('/tabs/home');
     } catch (err) {
-      setError(err.message || 'Something went wrong.');
+      const msg = err?.message?.toLowerCase() || '';
+      if (msg.includes('missing email or phone')) {
+        setError('Please enter your email and password.');
+      } else {
+        setError(err.message || 'Something went wrong.');
+        // Only log unexpected errors
+        if (!msg.includes('missing email or phone')) {
+          console.error('Unexpected sign-in error:', err);
+        }
+      }
     } finally {
       setLoading(false);
     }
@@ -99,7 +108,7 @@ export default function SignInForm() {
         <Text style={styles.buttonText}>Log In</Text>
       </TouchableOpacity>
 
-      <View style={styles.dividerContainer}>
+      {/* <View style={styles.dividerContainer}>
         <View style={styles.divider} />
         <Text style={styles.orText}>OR</Text>
         <View style={styles.divider} />
@@ -115,7 +124,7 @@ export default function SignInForm() {
         <TouchableOpacity style={styles.socialButton}>
           <Image source={require('../../assets/x.png')} style={styles.socialIcon} />
         </TouchableOpacity>
-      </View>
+      </View> */}
     </View>
   );
 }

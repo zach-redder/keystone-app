@@ -115,9 +115,9 @@ const ProUpgradeModal = ({ visible, onClose, currentPage }) => {
   const features = [
     'No daily limits',
     'Unlimited identity storage',
-    'Advanced AI features',
+    'Extra powerful AI',
     'Custom AI personalities',
-    'Special discord community perks',
+    'Discord community perks',
   ];
 
   return (
