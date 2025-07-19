@@ -2,6 +2,7 @@ import { supabase } from '../lib/supabase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { addIdentityKeysBatch, IdentityKey } from './userKeys';
 import { handleNewUserEmailList } from './emailListService';
+import { createFirstReminder } from './reminderService';
 
 interface Preferences {
   timezone?: string;
@@ -184,6 +185,15 @@ export const insertUserProfileAfterConfirmation = async (
   if (prefInsertError) {
     console.error('Error inserting user preferences:', prefInsertError);
     throw prefInsertError;
+  }
+
+  // Create first reminder
+  try {
+    console.log('Creating first reminder for user...');
+    await createFirstReminder();
+  } catch (reminderError) {
+    console.error('Error creating first reminder:', reminderError);
+    // Don't throw - non-critical error
   }
 
   // Get identity keys from AsyncStorage
@@ -577,17 +587,6 @@ export const checkEmailExists = async (email: string): Promise<boolean> => {
   }
   if (userData) return true;
 
-  // Check in auth.users table using an RPC if available, or via the auth API
-  // Supabase does not allow direct access to auth.users from client, so try to sign in with a dummy password to check existence
-  const { error: authError } = await supabase.auth.signInWithPassword({ email, password: 'dummy-password' });
-  if (authError && authError.message && !authError.message.toLowerCase().includes('invalid login credentials')) {
-    // If error is not invalid credentials, treat as not found
-    return false;
-  }
-  // If we get 'Invalid login credentials', the email exists in auth.users
-  if (authError && authError.message && authError.message.toLowerCase().includes('invalid login credentials')) {
-    return true;
-  }
   return false;
 };
 
