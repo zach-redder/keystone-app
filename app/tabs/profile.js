@@ -466,6 +466,17 @@ export default function ProfileScreen() {
             
             <TouchableOpacity style={profileStyles.profileItem} onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              handleRateUs();
+            }}>
+              <Ionicons name="heart-outline" size={20} color="#B9C096" style={profileStyles.profileItemIcon} />
+              <Text style={profileStyles.profileItemText}>Rate Us</Text>
+              <View style={profileStyles.profileItemRight}>
+                <Ionicons name="chevron-forward" size={16} color="#fff" />
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={profileStyles.profileItem} onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               setCommunityModalVisible(true);
             }}>
               <Ionicons name="people-outline" size={20} color="#B9C096" style={profileStyles.profileItemIcon} />
@@ -490,12 +501,16 @@ export default function ProfileScreen() {
               </View>
             </TouchableOpacity>
 
-            <TouchableOpacity style={[profileStyles.profileItem, profileStyles.profileItemLast]} onPress={() => {
+            <TouchableOpacity style={[profileStyles.profileItem, profileStyles.profileItemLast]} onPress={async () => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              handleRateUs();
+              try {
+                await Linking.openURL('https://reddermedia.com');
+              } catch (error) {
+                console.error('Error opening Redder Media website:', error);
+              }
             }}>
-              <Ionicons name="heart-outline" size={20} color="#B9C096" style={profileStyles.profileItemIcon} />
-              <Text style={profileStyles.profileItemText}>Rate Us</Text>
+              <Ionicons name="business-outline" size={20} color="#B9C096" style={profileStyles.profileItemIcon} />
+              <Text style={profileStyles.profileItemText}>Redder Media Company</Text>
               <View style={profileStyles.profileItemRight}>
                 <Ionicons name="chevron-forward" size={16} color="#fff" />
               </View>

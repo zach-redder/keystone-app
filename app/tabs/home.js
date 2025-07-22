@@ -173,7 +173,7 @@ export default function HomeScreen() {
       // Show Pro modal on error to be safe
       setProModalVisible(true);
     }
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
   };
 
   const handleKeyTypeNavigation = (direction) => {
@@ -416,6 +416,7 @@ export default function HomeScreen() {
                     key={log.id || idx}
                     style={homeStyles.actionLogCardSingle}
                     onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                       setResultLog(log);
                       setResultModalVisible(true);
                     }}

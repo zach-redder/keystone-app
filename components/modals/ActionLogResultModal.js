@@ -23,11 +23,26 @@ const ActionLogResultModal = ({ visible, onClose, log }) => {
           </View>
           <Text style={styles.sectionLabel}>Related Keys</Text>
           <View style={styles.keyList}>
-            {(log.key_tags || []).map((key, idx) => (
-              <View key={idx} style={styles.keyPill}>
-                <Text style={styles.keyPillText}>{key}</Text>
-              </View>
-            ))}
+            {(() => {
+              const keys = log.key_tags || [];
+              const maxDisplay = 6;
+              const displayKeys = keys.slice(0, maxDisplay);
+              const extraCount = keys.length - maxDisplay;
+              return (
+                <>
+                  {displayKeys.map((key, idx) => (
+                    <View key={idx} style={styles.keyPill}>
+                      <Text style={styles.keyPillText}>{key}</Text>
+                    </View>
+                  ))}
+                  {extraCount > 0 && (
+                    <View style={styles.keyPill}>
+                      <Text style={styles.keyPillText}>+{extraCount} more</Text>
+                    </View>
+                  )}
+                </>
+              );
+            })()}
           </View>
           <Text style={styles.sectionLabel}>
             AI Response - {log.ai_persona ? `${log.ai_persona}` : ''}
