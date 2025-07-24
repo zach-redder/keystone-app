@@ -145,7 +145,7 @@ export const fetchRecentActionLog = async () => {
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.error('Error fetching recent action log:', error);
