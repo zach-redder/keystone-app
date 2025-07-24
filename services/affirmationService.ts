@@ -3,6 +3,32 @@ import { BASE_URL } from '../lib/apiConfig';
 import { fetchIdentityKeys } from './userKeys';
 import { getPreferredAiPersona } from './userPreferences';
 import { checkUserProStatus } from './auth';
+import { AlignmentKeys, AlignmentScores } from './alignmentService';
+
+interface Message {
+  role: string;
+  content: string;
+}
+
+interface AIResponse {
+  ai_response: string;
+  alignment_scores?: AlignmentScores;
+}
+
+// Helper to organize keys by category
+const organizeKeysByCategory = (keys: Array<{ category: string; description: string }>): AlignmentKeys => {
+  const organized: AlignmentKeys = {};
+  
+  keys.forEach(key => {
+    const category = key.category.toLowerCase().replace(/\s+/g, '_');
+    if (!organized[category]) {
+      organized[category] = [];
+    }
+    organized[category].push(key.description);
+  });
+  
+  return organized;
+};
 
 /**
  * Calls the /generate-ai-message endpoint with the user's message, all keys, persona, and chat history.
@@ -10,7 +36,7 @@ import { checkUserProStatus } from './auth';
  * @param {Array} messages - The chat history
  * @returns {Promise<string>} The AI's response
  */
-export const generateAIMessage = async (message: string, messages: { role: string, content: string }[]): Promise<string> => {
+export const generateAIMessage = async (message: string, messages: Message[]): Promise<string> => {
   // Only send the last 4 message pairs (8 messages), not including the current user message
   let limitedMessages = messages;
   if (messages.length > 0) {
@@ -18,20 +44,78 @@ export const generateAIMessage = async (message: string, messages: { role: strin
     limitedMessages = messages.slice(-6);
   }
 
-  // Fetch all keys, persona, and pro status
-  const keys = await fetchIdentityKeys();
-  const keyDescriptions = Array.isArray(keys) ? keys.map(k => k.description) : [];
-  const persona = await getPreferredAiPersona();
-  const isPro = await checkUserProStatus();
-  const payload = { message, keyDescriptions, persona, messages: limitedMessages, isPro };
-  const response = await fetch(`${BASE_URL}/generate-ai-message`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  if (!response.ok) throw new Error('AI backend error');
-  const { ai_response } = await response.json();
-  return ai_response;
+  try {
+    // Get current user
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) throw new Error('User not authenticated');
+
+    // Fetch all keys and organize them by category
+    const keys = await fetchIdentityKeys();
+    const organizedKeys = organizeKeysByCategory(keys || []);
+
+    // Get other required data
+    const persona = await getPreferredAiPersona();
+    const isPro = await checkUserProStatus();
+
+    // Prepare the request payload
+    const payload = {
+      message,
+      keys: organizedKeys,
+      persona,
+      isPro,
+      user_id: user.id,
+      messages: limitedMessages
+    };
+
+    // Make the API request
+    const response = await fetch(`${BASE_URL}/generate-ai-message`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) throw new Error('AI backend error');
+
+    const data: AIResponse = await response.json();
+
+    // Handle alignment scores if present
+    if (data.alignment_scores) {
+      try {
+        // Store the new alignment scores
+        const scoreEntries = Object.entries(data.alignment_scores).map(([keyType, scores]) => ({
+          user_id: user.id,
+          key_type: keyType,
+          scores,
+          created_at: new Date().toISOString()
+        }));
+
+        try {
+          await supabase.from('user_alignment_scores').insert(scoreEntries);
+        } catch (tableError) {
+          // If table doesn't exist, try to store in legacy format
+          const legacyUpdates = Object.entries(data.alignment_scores).reduce((acc, [keyType, scores]) => {
+            // Calculate average score for legacy format
+            const avgScore = Object.values(scores).reduce((sum, score) => sum + score, 0) / Object.values(scores).length;
+            acc[keyType] = avgScore;
+            return acc;
+          }, {});
+
+          await supabase
+            .from('users')
+            .update(legacyUpdates)
+            .eq('id', user.id);
+        }
+      } catch (scoreError) {
+        console.error('Error storing alignment scores:', scoreError);
+        // Don't throw - this is non-critical
+      }
+    }
+
+    return data.ai_response;
+  } catch (error) {
+    console.error('Error in generateAIMessage:', error);
+    throw error;
+  }
 };
 
 // Fetch all chat log rows for the user, ordered by 'order', and flatten to message array

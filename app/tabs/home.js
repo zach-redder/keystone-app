@@ -14,7 +14,14 @@ import { checkUserProStatus } from '../../services/auth';
 import { fetchRecentActionLog, fetchActionLogs } from '../../services/actionLogs';
 import { shareHomePage } from '../../services/shareService';
 import { fetchTodayReminder, setupReminderNotifications } from '../../services/reminderService';
-import { fetchAlignmentValue, fetchLatestWeeklySnapshot, fetchAlignmentScoreChange } from '../../services/alignmentService';
+import { 
+  fetchAlignmentValue, 
+  fetchLatestWeeklySnapshot, 
+  fetchAlignmentScoreChange,
+  KEY_TYPE_LABELS,
+  getScoreLabel,
+  getScoreColor
+} from '../../services/alignmentService';
 import * as Haptics from 'expo-haptics';
 import ActionLogResultModal from '../../components/modals/ActionLogResultModal';
 import AffirmIdentityModal from '../../components/modals/AffirmIdentityModal';
@@ -40,27 +47,31 @@ export default function HomeScreen() {
   const [resultLog, setResultLog] = useState(null);
   const [affirmIdentityModalVisible, setAffirmIdentityModalVisible] = useState(false);
 
-  const HIGH_VALUE = 0.7; // Threshold for high alignment
-  const LOW_VALUE = 0.3; // Threshold for low alignment
+  const HIGH_VALUE = 0.6; // Threshold for excessive alignment
+  const LOW_VALUE = 0.4; // Threshold for deficient alignment
 
+  // Map UI key types to backend key types
   const keyTypes = [
-    'Core Values',
-    'Future Identity',
-    'Life Goals',
-    'Identity Traits',
-    'Motivations',
-    'Avoidances',
+    'core_values',
+    'future_self_vision',
+    'life_goals',
+    'identity_traits',
+    'motivations',
+    'avoidances',
   ];
 
-  // Labels for each key type
-  const keyTypeLabels = {
-    'Core Values': { deficient: 'Conformity', ideal: 'Integrity', excess: 'Dogmatism' },
-    'Identity Traits': { deficient: 'Suppression', ideal: 'Authenticity', excess: 'Egotism' },
-    'Future Identity': { deficient: 'Drift', ideal: 'Purpose', excess: 'Obsession' },
-    'Avoidances': { deficient: 'Denial', ideal: 'Discernment', excess: 'Paranoia' },
-    'Motivations': { deficient: 'Apathy', ideal: 'Drive', excess: 'Fixation' },
-    'Life Goals': { deficient: 'Aimlessness', ideal: 'Vision', excess: 'Overreach' }
+  // Map for display names
+  const keyTypeDisplayNames = {
+    core_values: 'Core Values',
+    future_self_vision: 'Future Identity',
+    life_goals: 'Life Goals',
+    identity_traits: 'Identity Traits',
+    motivations: 'Motivations',
+    avoidances: 'Avoidances',
   };
+
+  // Use the new KEY_TYPE_LABELS from alignmentService
+  const keyTypeLabels = KEY_TYPE_LABELS;
 
   // Load data whenever the screen comes into focus
   useFocusEffect(
@@ -226,6 +237,22 @@ export default function HomeScreen() {
     return keyTypeLabels[currentKey] || { deficient: 'Deficient', ideal: 'Aligned', excess: 'Excessive' };
   };
 
+  // Helper to get the current key type's display name
+  const getCurrentKeyTypeDisplay = () => {
+    const currentKey = keyTypes[selectedKeyTypeIndex];
+    return keyTypeDisplayNames[currentKey] || currentKey;
+  };
+
+  // Helper to get the current alignment state
+  const getCurrentAlignmentState = () => {
+    const score = getCurrentAlignment();
+    const currentKey = keyTypes[selectedKeyTypeIndex];
+    return {
+      label: getScoreLabel(currentKey, score),
+      color: getScoreColor(score)
+    };
+  };
+
   // Helper to format week range
   const formatWeekRange = (start, end) => {
     if (!start || !end) return '';
@@ -385,7 +412,7 @@ export default function HomeScreen() {
                   <Text style={homeStyles.keyTypeArrow}>‹</Text>
                 </TouchableOpacity>
                 <Text style={homeStyles.keyTypeText}>
-                  {keyTypes[selectedKeyTypeIndex]}
+                  {getCurrentKeyTypeDisplay()}
                 </Text>
                 <TouchableOpacity onPress={() => handleKeyTypeNavigation('right')}>
                   <Text style={homeStyles.keyTypeArrow}>›</Text>

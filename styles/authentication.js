@@ -248,5 +248,6 @@ export const styles = StyleSheet.create({
     },
     backButton: {
       padding: 8,
+      marginTop: 10,
     },
   });

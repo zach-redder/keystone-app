@@ -1,101 +1,29 @@
 import { supabase } from '../lib/supabase';
 import { BASE_URL } from '../lib/apiConfig';
 import { fetchUserPreferences } from './userPreferences';
+import { AlignmentKeys, AlignmentScores } from './alignmentService';
 
-export interface ActionLog {
-  id: string;
-  user_id: string;
-  action: string;
-  key_type?: string;
-  created_at: string;
+interface ActionLogResponse {
+  ai_response: string;
+  alignment_scores?: AlignmentScores;
 }
 
-export const fetchRecentActionLog = async (): Promise<ActionLog | null> => {
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      console.error('No user found');
-      return null;
+// Helper to organize keys by category
+const organizeKeysByCategory = (keys: Array<{ description: string; category: string }>): AlignmentKeys => {
+  const organized: AlignmentKeys = {};
+  
+  keys.forEach(key => {
+    const category = key.category.toLowerCase().replace(/\s+/g, '_');
+    if (!organized[category]) {
+      organized[category] = [];
     }
-
-    const { data, error } = await supabase
-      .from('action_logs')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(1);
-    
-    if (error) {
-      console.error('Error fetching action log:', error);
-      return null;
-    }
-
-    return data.length > 0 ? data[0] : null;
-  } catch (error) {
-    console.error('Error in fetchRecentActionLog:', error);
-    return null;
-  }
+    organized[category].push(key.description);
+  });
+  
+  return organized;
 };
 
-export const fetchActionLogs = async (limit: number = 10): Promise<ActionLog[]> => {
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      console.error('No user found');
-      return [];
-    }
-
-    const { data, error } = await supabase
-      .from('action_logs')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(limit);
-    
-    if (error) {
-      console.error('Error fetching action logs:', error);
-      return [];
-    }
-
-    return data || [];
-  } catch (error) {
-    console.error('Error in fetchActionLogs:', error);
-    return [];
-  }
-};
-
-export const createActionLog = async (action: string, keyType?: string): Promise<boolean> => {
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      console.error('No user found');
-      return false;
-    }
-
-    const { error } = await supabase
-      .from('action_logs')
-      .insert({
-        user_id: user.id,
-        action,
-        key_type: keyType,
-      });
-    
-    if (error) {
-      console.error('Error creating action log:', error);
-      return false;
-    }
-
-    return true;
-  } catch (error) {
-    console.error('Error in createActionLog:', error);
-    return false;
-  }
-};
-
-export const submitActionLogWithAI = async (actionDescription, selectedKeys, isPro) => {
+export const submitActionLogWithAI = async (actionDescription: string, selectedKeys: Array<{ description: string; category: string }>, isPro: boolean) => {
   try {
     // Get user
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -107,16 +35,17 @@ export const submitActionLogWithAI = async (actionDescription, selectedKeys, isP
     // Remove anything after and including the colon
     persona = persona.replace(/:.*$/, '');
 
+    // Organize keys by category
+    const organizedKeys = organizeKeysByCategory(selectedKeys);
+
     // Prepare payload
-    const keyTags = selectedKeys.map(k => k.description);
     const payload = {
       description: actionDescription,
-      keys: keyTags,
+      keys: organizedKeys,
       pro: isPro,
       persona,
+      user_id: user.id
     };
-
-    console.log('payload', payload);
 
     // Send to AI backend
     const response = await fetch(`${BASE_URL}/action-log-response`, {
@@ -124,25 +53,44 @@ export const submitActionLogWithAI = async (actionDescription, selectedKeys, isP
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
+
     if (!response.ok) throw new Error('AI backend error');
-    const { ai_response } = await response.json();
+    const data: ActionLogResponse = await response.json();
 
     // Save to Supabase action_logs
-    const { data, error } = await supabase
+    const { data: logData, error: logError } = await supabase
       .from('action_logs')
-      .insert([
-        {
-          user_id: user.id,
-          action_description: actionDescription,
-          key_tags: keyTags,
-          ai_response,
-          ai_persona: persona,
-        },
-      ])
+      .insert([{
+        user_id: user.id,
+        action_description: actionDescription,
+        key_tags: selectedKeys.map(k => k.description),
+        ai_response: data.ai_response,
+        ai_persona: persona,
+      }])
       .select('*')
       .single();
-    if (error) throw error;
-    return data;
+
+    if (logError) throw logError;
+
+    // Handle alignment scores if present
+    if (data.alignment_scores) {
+      try {
+        // Store the new alignment scores
+        const scoreEntries = Object.entries(data.alignment_scores).map(([keyType, scores]) => ({
+          user_id: user.id,
+          key_type: keyType,
+          scores,
+          created_at: new Date().toISOString()
+        }));
+
+        await supabase.from('user_alignment_scores').insert(scoreEntries);
+      } catch (scoreError) {
+        console.error('Error storing alignment scores:', scoreError);
+        // Don't throw - this is non-critical
+      }
+    }
+
+    return logData;
   } catch (error) {
     console.error('Error in submitActionLogWithAI:', error);
     throw error;
@@ -183,5 +131,54 @@ export const fetchTodaysActionLogCount = async (): Promise<number> => {
   } catch (e) {
     console.error('Error in fetchTodaysActionLogCount:', e);
     return 0;
+  }
+};
+
+export const fetchRecentActionLog = async () => {
+  try {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) return null;
+
+    const { data, error } = await supabase
+      .from('action_logs')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (error) {
+      console.error('Error fetching recent action log:', error);
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error in fetchRecentActionLog:', error);
+    return null;
+  }
+};
+
+export const fetchActionLogs = async (limit = 10) => {
+  try {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) return [];
+
+    const { data, error } = await supabase
+      .from('action_logs')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      console.error('Error fetching action logs:', error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error in fetchActionLogs:', error);
+    return [];
   }
 };
