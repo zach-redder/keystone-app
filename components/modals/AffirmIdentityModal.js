@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, Modal, ScrollView, TextInput, KeyboardAvoidingView, Platform, TouchableOpacity } from 'react-native';
+import { View, Text, Modal, ScrollView, TextInput, KeyboardAvoidingView, Platform, TouchableOpacity, Alert } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { getPreferredAiPersona } from '../../services/userPreferences';
-import { generateAIMessage, fetchAIChatMessages, insertAIChatMessagePair, fetchTodaysAIChatMessagePairCount } from '../../services/affirmationService';
+import { generateAIMessage, fetchAIChatMessages, insertAIChatMessagePair, fetchTodaysAIChatMessagePairCount, deleteAllAIChatMessages } from '../../services/affirmationService';
 import { checkUserProStatus } from '../../services/auth';
 import Markdown from 'react-native-markdown-display';
 
@@ -88,6 +88,22 @@ const AffirmIdentityModal = ({ visible, onClose, onRequestProUpgrade }) => {
     }
   };
 
+  const handleResetChat = async () => {
+    Alert.alert(
+      'Reset Chat',
+      'Are you sure you want to delete all your affirmation chat history?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset', style: 'destructive', onPress: async () => {
+            await deleteAllAIChatMessages();
+            setMessages([]);
+          }
+        }
+      ]
+    );
+  };
+
   const showWelcome = messages.length === 0;
 
   return (
@@ -109,6 +125,9 @@ const AffirmIdentityModal = ({ visible, onClose, onRequestProUpgrade }) => {
             </View>
             <View style={styles.titleRow}>
               <Text style={styles.title}>Affirm Identity</Text>
+              <TouchableOpacity onPress={handleResetChat} style={{ padding: 8 }}>
+                <MaterialCommunityIcons name="restore" size={26} color="#B9C096" />
+              </TouchableOpacity>
             </View>
             <ScrollView
               style={styles.content}
@@ -228,7 +247,6 @@ const styles = {
     color: '#fff',
     fontSize: 28,
     fontWeight: '700',
-    marginBottom: 20,
     textAlign: 'center',
   },
   content: {

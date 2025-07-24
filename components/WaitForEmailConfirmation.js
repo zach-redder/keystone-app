@@ -277,7 +277,7 @@ export default function WaitForEmailConfirmationScreen({ email, preferences: ini
       <View style={styles.contentContainer}>
         <View style={styles.emailConfirmationHeader}>
           <Text style={styles.title}>Check your inbox</Text>
-          <Text style={styles.subtitle}>
+          <Text style={[styles.subtitle, { marginBottom: 0 }]}>
             We sent a confirmation email to:
           </Text>
           <View style={styles.emailContainer}>

@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as RNIap from 'react-native-iap';
 import * as Haptics from 'expo-haptics';
+import { upgradeUserToPro, downgradeUserToFree } from '../services/auth';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -59,6 +60,39 @@ export default function SubscriptionScreen() {
   const [selectedSubscription, setSelectedSubscription] = useState('yearly'); // Default to yearly
 
   const insets = useSafeAreaInsets();
+
+  const checkSubscriptionStatus = async () => {
+    try {
+      const purchases = await RNIap.getAvailablePurchases();
+      // Replace 'your_subscription_id' with your actual product id(s)
+      const hasActivePro = purchases.some(
+        (purchase) => purchase.productId === productIds[0] && !purchase.isExpired
+      );
+      if (hasActivePro) {
+        await upgradeUserToPro();
+      } else {
+        await downgradeUserToFree();
+      }
+    } catch (err) {
+      console.warn('Error checking subscription status:', err);
+    }
+  };
+
+  useEffect(() => {
+    checkSubscriptionStatus();
+  }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      checkSubscriptionStatus();
+    }, [])
+  );
+
+  const handlePurchase = async (purchase) => {
+    // You should validate the purchase with your backend for security
+    // For demo, we just upgrade immediately
+    await upgradeUserToPro();
+  };
 
   // Auto-slide functionality
   useEffect(() => {
@@ -118,7 +152,8 @@ export default function SubscriptionScreen() {
 
   const handleStartFreeTrial = async () => {
     try {
-      await RNIap.requestSubscription(productIds[0]);
+      const purchase = await RNIap.requestSubscription(productIds[0]);
+      await handlePurchase(purchase);
     } catch (err) {
       console.warn(err);
     }

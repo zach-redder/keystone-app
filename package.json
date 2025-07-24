@@ -29,9 +29,9 @@
     "expo-status-bar": "~2.2.3",
     "expo-store-review": "~8.1.5",
     "prop-types": "^15.8.1",
-    "react": "19.0.0",
-    "react-dom": "19.0.0",
-    "react-native": "0.79.2",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-native": "^0.79.5",
     "react-native-confetti-cannon": "^1.5.2",
     "react-native-gesture-handler": "^2.26.0",
     "react-native-haptic-feedback": "^2.3.3",
@@ -43,7 +43,6 @@
     "react-native-screens": "^4.11.1",
     "react-native-url-polyfill": "^2.0.0",
     "react-native-web": "^0.20.0",
-    "resend": "^4.6.0",
     "supabase": "^2.31.4"
   },
   "devDependencies": {

@@ -548,6 +548,37 @@ export const upgradeUserToPro = async (userId?: string) => {
   }
 };
 
+export const downgradeUserToFree = async (userId?: string) => {
+  try {
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+      throw new Error('User not authenticated');
+    }
+
+    const targetUserId = userId || user.id;
+
+    // Update user to free status in database
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({ is_pro: false })
+      .eq('id', targetUserId);
+
+    if (updateError) {
+      throw updateError;
+    }
+
+    console.log('Successfully downgraded user to free:', targetUserId);
+    return true;
+  } catch (error) {
+    console.error('Error downgrading user to free:', error);
+    throw error;
+  }
+};
+
 export const checkUserProfileExists = async (): Promise<boolean> => {
   try {
     const { data: { user }, error: userError } = await supabase.auth.getUser();

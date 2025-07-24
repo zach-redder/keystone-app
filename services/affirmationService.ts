@@ -199,3 +199,14 @@ export const fetchTodaysAIChatMessagePairCount = async (): Promise<number> => {
     return 0;
   }
 };
+
+// Delete all AI chat logs for the current user
+export const deleteAllAIChatMessages = async () => {
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) return false;
+  const { error } = await supabase
+    .from('ai_chat_logs')
+    .delete()
+    .eq('user_id', user.id);
+  return !error;
+};

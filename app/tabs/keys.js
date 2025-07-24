@@ -275,12 +275,14 @@ export default function Keys() {
   };
 
   const handleDeletePress = (key) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setKeyToDelete(key);
     setDeleteModalVisible(true);
   };
 
   const handleDeleteConfirm = async () => {
     if (!keyToDelete) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     try {
       await deleteIdentityKey(keyToDelete.id);
@@ -295,12 +297,14 @@ export default function Keys() {
   };
 
   const handleEditPress = (key) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setKeyToEdit(key);
     setEditModalVisible(true);
   };
 
   const handleEditSave = async (newValue) => {
     if (!keyToEdit) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     try {
       await updateIdentityKey(keyToEdit.id, { description: newValue });
@@ -344,6 +348,7 @@ export default function Keys() {
   };
 
   const handleCreateSave = async (value) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     try {
       await addIdentityKey(selectedItem.category, value);
       // Reload keys to get the complete data with ID
