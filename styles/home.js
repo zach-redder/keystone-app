@@ -339,6 +339,7 @@ const homeStyles = StyleSheet.create({
     shadowOpacity: 0.10,
     shadowRadius: 8,
     elevation: 3,
+    marginBottom: 55,
   },
   actionLogLoading: {
     fontSize: 16,

@@ -1,0 +1,40 @@
+name: EAS Build and Submit to TestFlight
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build_and_submit_ios:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
+
+      - name: Authenticate with Expo
+        run: eas whoami || eas login --token ${{ secrets.EXPO_TOKEN }}
+
+      - name: Build iOS App with EAS
+        run: eas build --platform ios --profile production --non-interactive
+
+      - name: Download latest build artifact
+        run: |
+          BUILD_ID=$(eas build:list --platform ios --limit 1 --status finished --json | jq -r '.[0].id')
+          eas build:download --platform ios --build-id $BUILD_ID --output ./app.ipa
+
+      - name: Set up App Store Connect API Key
+        run: |
+          echo "${{ secrets.EAS_APPLE_APP_STORE_CONNECT_API_KEY }}" > ./asc_api_key.json
+
+      - name: Submit to TestFlight
+        run: eas submit -p ios --latest --non-interactive --asc-api-key-path ./asc_api_key.json
+

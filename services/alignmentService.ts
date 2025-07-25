@@ -107,10 +107,10 @@ export const fetchAlignmentValue = async (keyType: string): Promise<number | nul
       return legacyData[legacyColumn];
     }
 
-    return 0.5; // Default to 0.5 if no score exists
+    return null;
   } catch (error) {
     console.error('Error in fetchAlignmentValue:', error);
-    return 0.5; // Default to 0.5 on error
+    return null;
   }
 };
 

@@ -37,27 +37,17 @@ const organizeKeysByCategory = (keys: Array<{ category: string; description: str
  * @returns {Promise<string>} The AI's response
  */
 export const generateAIMessage = async (message: string, messages: Message[]): Promise<string> => {
-  // Only send the last 4 message pairs (8 messages), not including the current user message
-  let limitedMessages = messages;
-  if (messages.length > 0) {
-    // Only keep the last 6 messages (3 pairs)
-    limitedMessages = messages.slice(-6);
-  }
+  let limitedMessages = messages.length > 0 ? messages.slice(-10) : messages;
 
   try {
-    // Get current user
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) throw new Error('User not authenticated');
 
-    // Fetch all keys and organize them by category
     const keys = await fetchIdentityKeys();
     const organizedKeys = organizeKeysByCategory(keys || []);
-
-    // Get other required data
     const persona = await getPreferredAiPersona();
     const isPro = await checkUserProStatus();
 
-    // Prepare the request payload
     const payload = {
       message,
       keys: organizedKeys,
@@ -67,7 +57,6 @@ export const generateAIMessage = async (message: string, messages: Message[]): P
       messages: limitedMessages
     };
 
-    // Make the API request
     const response = await fetch(`${BASE_URL}/generate-ai-message`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -75,41 +64,10 @@ export const generateAIMessage = async (message: string, messages: Message[]): P
     });
 
     if (!response.ok) throw new Error('AI backend error');
-
     const data: AIResponse = await response.json();
 
-    // Handle alignment scores if present
-    if (data.alignment_scores) {
-      try {
-        // Store the new alignment scores
-        const scoreEntries = Object.entries(data.alignment_scores).map(([keyType, scores]) => ({
-          user_id: user.id,
-          key_type: keyType,
-          scores,
-          created_at: new Date().toISOString()
-        }));
-
-        try {
-          await supabase.from('user_alignment_scores').insert(scoreEntries);
-        } catch (tableError) {
-          // If table doesn't exist, try to store in legacy format
-          const legacyUpdates = Object.entries(data.alignment_scores).reduce((acc, [keyType, scores]) => {
-            // Calculate average score for legacy format
-            const avgScore = Object.values(scores).reduce((sum, score) => sum + score, 0) / Object.values(scores).length;
-            acc[keyType] = avgScore;
-            return acc;
-          }, {});
-
-          await supabase
-            .from('users')
-            .update(legacyUpdates)
-            .eq('id', user.id);
-        }
-      } catch (scoreError) {
-        console.error('Error storing alignment scores:', scoreError);
-        // Don't throw - this is non-critical
-      }
-    }
+    // NO attempt to store alignment scores here!
+    // You can optionally use data.alignment_scores to display updated info in the UI
 
     return data.ai_response;
   } catch (error) {
@@ -117,6 +75,7 @@ export const generateAIMessage = async (message: string, messages: Message[]): P
     throw error;
   }
 };
+
 
 // Fetch all chat log rows for the user, ordered by 'order', and flatten to message array
 export const fetchAIChatMessages = async () => {

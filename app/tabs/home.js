@@ -47,8 +47,8 @@ export default function HomeScreen() {
   const [resultLog, setResultLog] = useState(null);
   const [affirmIdentityModalVisible, setAffirmIdentityModalVisible] = useState(false);
 
-  const HIGH_VALUE = 0.6; // Threshold for excessive alignment
-  const LOW_VALUE = 0.4; // Threshold for deficient alignment
+  const HIGH_VALUE = 0.7; // Threshold for excessive alignment
+  const LOW_VALUE = 0.3; // Threshold for deficient alignment
 
   // Map UI key types to backend key types
   const keyTypes = [
@@ -205,6 +205,7 @@ export default function HomeScreen() {
   };
 
   const handleLogFirstActionPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setLogActionModalVisible(true);
   };
 
@@ -228,7 +229,7 @@ export default function HomeScreen() {
   };
 
   const getCurrentAlignment = () => {
-    if (alignmentValue === null) return 0.5;
+    if (alignmentValue === null) return null;
     return alignmentValue;
   };
 
@@ -316,7 +317,7 @@ export default function HomeScreen() {
                 {alignmentValue === null ? (
                   <View style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }}>
                     <Text style={{ color: '#888', fontSize: 16, textAlign: 'center', marginBottom: 16 }}>
-                      No alignment data yet for this key. Align now to see your progress!
+                      No alignment data yet for this key. Add a key or align now to see your progress!
                     </Text>
                   </View>
                 ) : (
@@ -467,7 +468,7 @@ export default function HomeScreen() {
           </View>
 
           {/* Weekly Overview Section */}
-          <View style={homeStyles.sectionContainer}>
+          {/* <View style={homeStyles.sectionContainer}>
             <Text style={homeStyles.sectionTitle}>Weekly Overview</Text>
             <TouchableOpacity style={homeStyles.weeklyOverviewCard} activeOpacity={0.85}>
               {loadingWeeklySnapshot ? (
@@ -535,7 +536,7 @@ export default function HomeScreen() {
                 </View>
               )}
             </TouchableOpacity>
-          </View>
+          </View> */}
         </ScrollView>
 
         <AlignButton onPress={handleAlignButtonPress} />

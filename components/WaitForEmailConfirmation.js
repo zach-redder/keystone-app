@@ -284,7 +284,7 @@ export default function WaitForEmailConfirmationScreen({ email, preferences: ini
             <Text style={styles.emailText}>{email}</Text>
           </View>
           <Text style={styles.description}>
-            Click the link in the email to confirm your account, then click "I Confirmed My Email" below.
+            Click the link in the email to confirm your account, then you're all set!
           </Text>
         </View>
 

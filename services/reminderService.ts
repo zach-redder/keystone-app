@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
+import { SchedulableTriggerInputTypes } from 'expo-notifications';
 
 // Welcome reminder for new users
 const WELCOME_REMINDER = "Welcome to Keystone! You just chose to overcome internal tension and achieve your dreams.";
@@ -105,20 +106,18 @@ export const setupReminderNotifications = async () => {
     // Cancel any existing scheduled notifications
     await Notifications.cancelAllScheduledNotificationsAsync();
 
-    // Schedule the daily notification
+    // Fetch the latest reminder for today (or tomorrow if after the time)
+    const message = await fetchTodayReminder();
+
+    // Schedule a one-time notification for the next occurrence
     await Notifications.scheduleNotificationAsync({
       content: {
         title: "Keystone",
-        body: await fetchTodayReminder(),
+        body: message,
         sound: true,
         priority: Notifications.AndroidNotificationPriority.HIGH,
       },
-      trigger: {
-        hour: hours,
-        minute: minutes,
-        repeats: true,
-        type: 'calendar',
-      },
+      trigger: { type: SchedulableTriggerInputTypes.DATE, date: nextNotification },
     });
 
   } catch (error) {

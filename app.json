@@ -7,7 +7,7 @@
     "orientation": "portrait",
     "icon": "./assets/keystone.png",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "splash": {
       "image": "./assets/keystone.png",
       "resizeMode": "contain",
@@ -15,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "keystone-ios",
+      "bundleIdentifier": "com.thekeystoneapp.keystone",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -34,9 +34,6 @@
       "eas": {
         "projectId": "8d662333-69a6-44eb-a191-21cb7666a62b"
       }
-    },
-    "plugins": [
-      "expo-mail-composer"
-    ]
+    }
   }
 }

@@ -146,6 +146,22 @@ export default function OnboardingStep() {
     'Disciplined Mentor': "No excuses. Sharp, intense, and built to push you beyond your limits.",
   };
 
+  // Add a mapping for display labels
+  const personaOptions = [
+    {
+      value: 'Gentle Guide',
+      label: 'Gentle Guide: Kind and encouraging. Offers gentle support when you need it most.'
+    },
+    {
+      value: 'Supportive Friend',
+      label: 'Supportive Friend: Direct but caring with steady accountability keeping you focused.'
+    },
+    {
+      value: 'Disciplined Mentor',
+      label: 'Disciplined Mentor: No excuses. Sharp, intense, and built to push you beyond your limits.'
+    }
+  ];
+
   const pulseValue = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -231,18 +247,24 @@ export default function OnboardingStep() {
   };
 
   const handlePersonalitySelect = (personality) => {
-    console.log('Personality selected:', personality);
+    let saveValue = personality;
+    if (personality === 'Disciplined Mentor') {
+      saveValue = 'Disciplined Mentor: No excuses. Sharp, intense, and built to push you beyond your limits.';
+    }
+    if (personality === 'Gentle Guide') {
+      saveValue = 'Gentle Guide: Kind and encouraging. Offers gentle support when you need it most.';
+    }
+    if (personality === 'Supportive Friend') {
+      saveValue = 'Supportive Friend: Direct but caring with steady accountability keeping you focused.';
+    }
     setPreferences(prev => ({
       ...prev,
-      preferred_ai_persona: personality,
+      preferred_ai_persona: saveValue,
     }));
     setSelectedOptions([personality]);
-    console.log('Updated selectedOptions for personality:', [personality]);
-    
-    // Save immediately to AsyncStorage
     try {
-      AsyncStorage.setItem('ai_personality', JSON.stringify([personality]));
-      console.log('Saved AI personality to AsyncStorage:', [personality]);
+      AsyncStorage.setItem('ai_personality', JSON.stringify([saveValue]));
+      console.log('Saved AI personality to AsyncStorage:', [saveValue]);
     } catch (error) {
       console.error('Error saving AI personality:', error);
     }
@@ -676,13 +698,13 @@ export default function OnboardingStep() {
              <OnboardingHeader />
              <Text style={styles.secondaryHeader}>Choose your AI personality.</Text>
              <View style={styles.buttonContainer}>
-               {['Gentle Guide', 'Supportive Friend', 'Disciplined Mentor'].map((option) => (
+               {personaOptions.map((option) => (
                  <TouchableOpacity
-                   key={option}
-                   style={selectedOptions.includes(option) ? styles.selectedOptionButton : styles.optionButton}
-                   onPress={() => handlePersonalitySelect(option)}
+                   key={option.value}
+                   style={selectedOptions.includes(option.value) ? styles.selectedOptionButton : styles.optionButton}
+                   onPress={() => handlePersonalitySelect(option.value)}
                  >
-                   <Text style={styles.optionText}>{option}</Text>
+                   <Text style={styles.optionText}>{option.value}</Text>
                  </TouchableOpacity>
                ))}
              </View>
