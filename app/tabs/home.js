@@ -10,6 +10,8 @@ import CommunityModal from '../../components/modals/CommunityModal';
 import AlignModal from '../../components/modals/AlignModal';
 import AlignButton from '../../components/buttons/AlignButton';
 import LogActionModal from '../../components/modals/LogActionModal';
+import ShareProgressModal from '../../components/modals/ShareProgressModal';
+import ReferralModal from '../../components/modals/ReferralModal';
 import { checkUserProStatus } from '../../services/auth';
 import { fetchRecentActionLog, fetchActionLogs } from '../../services/actionLogs';
 import { shareHomePage } from '../../services/shareService';
@@ -46,6 +48,8 @@ export default function HomeScreen() {
   const [resultModalVisible, setResultModalVisible] = useState(false);
   const [resultLog, setResultLog] = useState(null);
   const [affirmIdentityModalVisible, setAffirmIdentityModalVisible] = useState(false);
+  const [shareProgressModalVisible, setShareProgressModalVisible] = useState(false);
+  const [referralModalVisible, setReferralModalVisible] = useState(false);
 
   const HIGH_VALUE = 0.7; // Threshold for excessive alignment
   const LOW_VALUE = 0.3; // Threshold for deficient alignment
@@ -209,12 +213,9 @@ export default function HomeScreen() {
     setLogActionModalVisible(true);
   };
 
-  const handleSharePress = async () => {
-    try {
-      await shareHomePage();
-    } catch (error) {
-      console.error('Error sharing app:', error);
-    }
+  const handleSharePress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setReferralModalVisible(true);
   };
 
   const formatActionLogDate = (dateString) => {
@@ -579,6 +580,14 @@ export default function HomeScreen() {
           visible={affirmIdentityModalVisible}
           onClose={() => setAffirmIdentityModalVisible(false)}
           onRequestProUpgrade={handleRequestProUpgrade}
+        />
+        <ShareProgressModal
+          visible={shareProgressModalVisible}
+          onClose={() => setShareProgressModalVisible(false)}
+        />
+        <ReferralModal
+          visible={referralModalVisible}
+          onClose={() => setReferralModalVisible(false)}
         />
       </View>
     </SafeAreaView>

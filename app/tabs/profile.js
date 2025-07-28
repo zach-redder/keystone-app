@@ -17,6 +17,7 @@ import FAQModal from '../../components/modals/FAQModal';
 import AIPersonalityModal from '../../components/modals/AIPersonalityModal';
 import ReminderTimeModal from '../../components/modals/ReminderTimeModal';
 import EditProfileModal from '../../components/modals/EditProfileModal';
+import ReferralModal from '../../components/modals/ReferralModal';
 import { shareProfilePage } from '../../services/shareService';
 
 export default function ProfileScreen() {
@@ -32,6 +33,7 @@ export default function ProfileScreen() {
   const [aiPersonalityModalVisible, setAiPersonalityModalVisible] = useState(false);
   const [reminderTimeModalVisible, setReminderTimeModalVisible] = useState(false);
   const [editProfileModalVisible, setEditProfileModalVisible] = useState(false);
+  const [referralModalVisible, setReferralModalVisible] = useState(false);
   const [keyCount, setKeyCount] = useState(0);
   const [isPro, setIsPro] = useState(false);
   const [aiPersona, setAiPersona] = useState('Default');
@@ -294,12 +296,9 @@ export default function ProfileScreen() {
     setReminderTime(newTime);
   };
 
-  const handleSharePress = async () => {
-    try {
-      await shareProfilePage();
-    } catch (error) {
-      console.error('Error sharing app:', error);
-    }
+  const handleSharePress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setReferralModalVisible(true);
   };
 
   return (
@@ -563,6 +562,10 @@ export default function ProfileScreen() {
         onClose={() => setEditProfileModalVisible(false)}
         userEmail={userEmail}
         onSave={() => {}}
+      />
+      <ReferralModal
+        visible={referralModalVisible}
+        onClose={() => setReferralModalVisible(false)}
       />
     </SafeAreaView>
   );

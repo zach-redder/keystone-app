@@ -13,6 +13,8 @@ import CreateKeyModal from '../../components/modals/CreateKeyModal';
 import ProUpgradeModal from '../../components/modals/ProUpgradeModal';
 import CommunityModal from '../../components/modals/CommunityModal';
 import AffirmIdentityModal from '../../components/modals/AffirmIdentityModal';
+import ShareProgressModal from '../../components/modals/ShareProgressModal';
+import ReferralModal from '../../components/modals/ReferralModal';
 import { fetchIdentityKeys, deleteIdentityKey, updateIdentityKey, addIdentityKey } from '../../services/userKeys';
 import { checkUserProStatus } from '../../services/auth';
 import { shareKeysPage } from '../../services/shareService';
@@ -146,6 +148,8 @@ export default function Keys() {
   const menuBtnRef = useRef(null);
   const [alignModalVisible, setAlignModalVisible] = useState(false);
   const [affirmIdentityModalVisible, setAffirmIdentityModalVisible] = useState(false);
+  const [shareProgressModalVisible, setShareProgressModalVisible] = useState(false);
+  const [referralModalVisible, setReferralModalVisible] = useState(false);
 
   // Load user keys when component mounts or selected item changes
   useEffect(() => {
@@ -379,12 +383,9 @@ export default function Keys() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
-  const handleSharePress = async () => {
-    try {
-      await shareKeysPage();
-    } catch (error) {
-      console.error('Error sharing app:', error);
-    }
+  const handleSharePress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setReferralModalVisible(true);
   };
 
   // Handler to open Pro modal from AffirmIdentityModal
@@ -539,6 +540,14 @@ export default function Keys() {
         onClose={() => setAffirmIdentityModalVisible(false)}
         onRequestProUpgrade={handleRequestProUpgrade}
       />
+              <ShareProgressModal
+          visible={shareProgressModalVisible}
+          onClose={() => setShareProgressModalVisible(false)}
+        />
+        <ReferralModal
+          visible={referralModalVisible}
+          onClose={() => setReferralModalVisible(false)}
+        />
     </SafeAreaView>
   );
 }
