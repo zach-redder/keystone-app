@@ -25,8 +25,13 @@ jobs:
       - name: Verify EAS Auth
         run: eas whoami
 
+      - name: Clean and install fresh dependencies
+        run: |
+          rm -rf node_modules package-lock.json
+          npm install
+
       - name: Build iOS App with EAS
-        run: eas build --platform ios --profile production --non-interactive
+        run: eas build --platform ios --profile production --non-interactive --clear-cache
 
       - name: Download latest build artifact
         run: |
