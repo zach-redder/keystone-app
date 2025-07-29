@@ -3,6 +3,8 @@ import { View, Text, TouchableOpacity, Modal, Animated, Dimensions, PanResponder
 import * as Haptics from 'expo-haptics';
 import AffirmIdentityModal from './AffirmIdentityModal';
 import LogActionModal from './LogActionModal';
+import ActionLogResultModal from './ActionLogResultModal';
+import ShareProgressModal from './ShareProgressModal';
 import { checkUserProStatus } from '../../services/auth';
 import { fetchTodaysActionLogCount } from '../../services/actionLogs';
 
@@ -15,6 +17,7 @@ const AlignModal = ({ visible, onClose, onUpgradePress, onAffirmIdentity }) => {
   const isClosing = useRef(false);
   const [showLogActionModal, setShowLogActionModal] = useState(false);
   const [checkingLimit, setCheckingLimit] = useState(false);
+  const [showShareProgressModal, setShowShareProgressModal] = useState(false);
 
   // Pan responder for drag gestures - applies only to draggable content area
   const panResponder = useRef(
@@ -116,6 +119,16 @@ const AlignModal = ({ visible, onClose, onUpgradePress, onAffirmIdentity }) => {
     onClose();
   };
 
+  const handleShareProgress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setShowShareProgressModal(true);
+  };
+
+  const handleShareProgressClose = () => {
+    setShowShareProgressModal(false);
+    onClose();
+  };
+
   const handleCancel = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     closeModal();
@@ -148,7 +161,7 @@ const AlignModal = ({ visible, onClose, onUpgradePress, onAffirmIdentity }) => {
   return (
     <>
       <Modal
-        visible={visible && !showLogActionModal}
+        visible={visible && !showLogActionModal && !showShareProgressModal}
         transparent
         animationType="none"
         onRequestClose={onClose}
@@ -190,6 +203,10 @@ const AlignModal = ({ visible, onClose, onUpgradePress, onAffirmIdentity }) => {
               <TouchableOpacity style={styles.actionButton} onPress={handleLogAction}>
                 <Text style={styles.actionButtonText}>Log Action</Text>
               </TouchableOpacity>
+
+              <TouchableOpacity style={styles.actionButton} onPress={handleShareProgress}>
+                <Text style={styles.actionButtonText}>Share Progress</Text>
+              </TouchableOpacity>
               
               <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
                 <Text style={styles.cancelButtonText}>Cancel</Text>
@@ -203,6 +220,11 @@ const AlignModal = ({ visible, onClose, onUpgradePress, onAffirmIdentity }) => {
         visible={showLogActionModal}
         onClose={handleLogActionClose}
         onUpgradePress={onUpgradePress}
+      />
+
+      <ShareProgressModal
+        visible={showShareProgressModal}
+        onClose={handleShareProgressClose}
       />
     </>
   );
