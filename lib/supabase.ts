@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import 'react-native-url-polyfill/auto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SupabaseClientOptions } from '@supabase/supabase-js';
+import Constants from 'expo-constants';
 
 const options: SupabaseClientOptions<'public'> = {
   auth: {
@@ -10,12 +11,16 @@ const options: SupabaseClientOptions<'public'> = {
     persistSession: true,
     detectSessionInUrl: false,
     flowType: 'pkce',
-    storageKey: 'sb-supabase-auth-token', // Explicit storage key
+    storageKey: 'sb-supabase-auth-token',
   },
 };
 
+if (!Constants.expoConfig?.extra?.supabaseUrl || !Constants.expoConfig?.extra?.supabaseAnonKey) {
+  throw new Error('Missing Supabase configuration. Please check your app.config.js');
+}
+
 export const supabase = createClient(
-  process.env.EXPO_PUBLIC_SUPABASE_URL!,
-  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!,
+  Constants.expoConfig.extra.supabaseUrl,
+  Constants.expoConfig.extra.supabaseAnonKey,
   options
 );

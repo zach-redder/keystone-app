@@ -15,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.thekeystoneapp.keystone",
+      "bundleIdentifier": "com.reddermedia.keystone",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -32,8 +32,9 @@
     },
     "extra": {
       "eas": {
-        "projectId": "8d662333-69a6-44eb-a191-21cb7666a62b"
+        "projectId": "dcae90a0-8eb4-4fe0-b8d0-e50c0989c2e3"
       }
-    }
+    },
+    "owner": "zach_redder"
   }
 }
