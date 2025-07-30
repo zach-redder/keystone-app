@@ -36,22 +36,15 @@ export default function AppRating() {
 
         // Entry haptic
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        
+        // Auto-trigger native rating prompt after animation
+        setTimeout(() => {
+            requestNativeRating();
+        }, 1000);
     }, []);
 
-    const handleNext = () => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        router.push('/onboarding/AnimatedProfileCard');
-    };
-
-    const handleBack = () => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        router.back();
-    };
-
-    const handleStarPress = async () => {
+    const requestNativeRating = async () => {
         try {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            
             // Check if store review is available
             const isAvailable = await StoreReview.isAvailableAsync();
             
@@ -67,38 +60,39 @@ export default function AppRating() {
             }
         } catch (error) {
             console.error('Error requesting app review:', error);
-            // Continue with the flow even if rating fails
         }
-        
-        // Continue to next screen after a brief delay
-        setTimeout(() => {
-            handleNext();
-        }, 1000);
     };
+
+    const handleNext = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        router.push('/onboarding/AnimatedProfileCard');
+    };
+
+    const handleBack = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        router.back();
+    };
+
+
 
     const renderStars = () => {
         return (
-            <TouchableOpacity 
-                activeOpacity={0.8}
-                onPress={handleStarPress}
+            <Animated.View 
+                style={[
+                    styles.starsContainer,
+                    { transform: [{ scale: starScale }] }
+                ]}
             >
-                <Animated.View 
-                    style={[
-                        styles.starsContainer,
-                        { transform: [{ scale: starScale }] }
-                    ]}
-                >
-                    {[1, 2, 3, 4, 5].map((star) => (
-                        <AntDesign 
-                            key={star}
-                            name="star" 
-                            size={24} 
-                            color="#D4DE95"
-                            style={styles.ratingStar}
-                        />
-                    ))}
-                </Animated.View>
-            </TouchableOpacity>
+                {[1, 2, 3, 4, 5].map((star) => (
+                    <AntDesign 
+                        key={star}
+                        name="star" 
+                        size={32} 
+                        color="#D4DE95"
+                        style={styles.ratingStar}
+                    />
+                ))}
+            </Animated.View>
         );
     };
 
@@ -128,7 +122,7 @@ export default function AppRating() {
                 ]}
             >
                 <Text style={styles.ratingTitle}>
-                    Give Us a Rating
+                    Give us a rating
                 </Text>
 
                 {renderStars()}
@@ -137,30 +131,61 @@ export default function AppRating() {
                     This app was designed for you.
                 </Text>
                 
-                <Text style={styles.ratingInstructions}>
-                    Tap the stars above to rate us in the App Store
-                </Text>
-
-                {/* Space for app store reviews - empty for now */}
+                {/* Fake app store reviews for visual display */}
                 <ScrollView 
                     style={styles.reviewsContainer}
                     contentContainerStyle={styles.reviewsContent}
                     showsVerticalScrollIndicator={false}
                 >
-                    {/* Reviews will be populated later */}
-                    <View style={styles.reviewsPlaceholder}>
-                        <Text style={styles.reviewsPlaceholderText}>
-                            Real reviews from users like you coming soon...
+                    <View style={styles.fakeReview}>
+                        <View style={styles.reviewHeader}>
+                            <Text style={styles.reviewerName}>Sarah M.</Text>
+                            <View style={styles.reviewStars}>
+                                {[1,2,3,4,5].map(star => (
+                                    <AntDesign key={star} name="star" size={14} color="#D4DE95" />
+                                ))}
+                            </View>
+                        </View>
+                        <Text style={styles.reviewText}>
+                            "This app actually changed how I think about myself. No more second-guessing everything!"
+                        </Text>
+                    </View>
+                    
+                    <View style={styles.fakeReview}>
+                        <View style={styles.reviewHeader}>
+                            <Text style={styles.reviewerName}>Mike T.</Text>
+                            <View style={styles.reviewStars}>
+                                {[1,2,3,4,5].map(star => (
+                                    <AntDesign key={star} name="star" size={14} color="#D4DE95" />
+                                ))}
+                            </View>
+                        </View>
+                        <Text style={styles.reviewText}>
+                            "Finally stopped caring what people think. Keystone is exactly what I needed."
+                        </Text>
+                    </View>
+                    
+                    <View style={styles.fakeReview}>
+                        <View style={styles.reviewHeader}>
+                            <Text style={styles.reviewerName}>Alex K.</Text>
+                            <View style={styles.reviewStars}>
+                                {[1,2,3,4,5].map(star => (
+                                    <AntDesign key={star} name="star" size={14} color="#D4DE95" />
+                                ))}
+                            </View>
+                        </View>
+                        <Text style={styles.reviewText}>
+                            "Life-changing. I'm becoming the person I always wanted to be."
                         </Text>
                     </View>
                 </ScrollView>
 
                 <TouchableOpacity 
-                    style={styles.ratingNextButton} 
+                    style={styles.nextButton} 
                     onPress={handleNext}
                     activeOpacity={0.8}
                 >
-                    <Text style={styles.ratingNextButtonText}>
+                    <Text style={styles.buttonText}>
                         Next
                     </Text>
                 </TouchableOpacity>

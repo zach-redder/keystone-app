@@ -74,7 +74,7 @@ export default function Welcome() {
 
   return (
     <LinearGradient
-              colors={['#2B2B2B', '#2F2F2C', '#2B2B2B']}
+      colors={['#2B2B2B', '#2F2F2C', '#2B2B2B']}
       style={styles.gradientContainer}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}

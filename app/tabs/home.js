@@ -24,6 +24,7 @@ import {
   getScoreLabel,
   getScoreColor
 } from '../../services/alignmentService';
+import { getUserDayStreak } from '../../services/userPreferences';
 import * as Haptics from 'expo-haptics';
 import ActionLogResultModal from '../../components/modals/ActionLogResultModal';
 import AffirmIdentityModal from '../../components/modals/AffirmIdentityModal';
@@ -32,7 +33,7 @@ export default function HomeScreen() {
   const [proModalVisible, setProModalVisible] = useState(false);
   const [communityModalVisible, setCommunityModalVisible] = useState(false);
   const [alignModalVisible, setAlignModalVisible] = useState(false);
-  const [badgeText, setBadgeText] = useState('PRO');
+  const [dayStreak, setDayStreak] = useState(0);
   const [selectedKeyTypeIndex, setSelectedKeyTypeIndex] = useState(0);
   const [recentActionLog, setRecentActionLog] = useState(null);
   const [loadingActionLog, setLoadingActionLog] = useState(true);
@@ -81,7 +82,7 @@ export default function HomeScreen() {
   useFocusEffect(
     React.useCallback(() => {
       console.log('Home screen focused - reloading data');
-      checkProStatus();
+      loadDayStreak();
       loadRecentActionLog();
       loadDailyReminder();
       loadWeeklySnapshot();
@@ -161,35 +162,17 @@ export default function HomeScreen() {
     }
   };
 
-  const checkProStatus = async () => {
+  const loadDayStreak = async () => {
     try {
-      const isPro = await checkUserProStatus();
-      setBadgeText(isPro ? 'COMMUNITY' : 'PRO');
+      const streak = await getUserDayStreak();
+      setDayStreak(streak);
     } catch (error) {
-      console.error('Error checking Pro status:', error);
-      // Default to non-Pro if error
-      setBadgeText('PRO');
+      console.error('Error loading day streak:', error);
+      setDayStreak(0);
     }
   };
 
-  const handleBadgePress = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    try {
-      const isPro = await checkUserProStatus();
-      if (isPro) {
-        // Show Community modal for Pro users
-        setCommunityModalVisible(true);
-      } else {
-        // Show Pro upgrade modal for non-Pro users
-        setProModalVisible(true);
-      }
-    } catch (error) {
-      console.error('Error checking Pro status:', error);
-      // Show Pro modal on error to be safe
-      setProModalVisible(true);
-    }
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-  };
+  // Removed handleBadgePress - no longer needed with streak UI
 
   const handleKeyTypeNavigation = (direction) => {
     if (direction === 'left') {
@@ -281,9 +264,10 @@ export default function HomeScreen() {
         <View style={globalStyles.headerRow}>
           <Text style={globalStyles.header}>Keystone</Text>
           <View style={globalStyles.headerButtons}>
-            <TouchableOpacity style={keysStyles.proBadgeWrap} onPress={handleBadgePress}>
-              <Text style={keysStyles.proBadge}>{badgeText}</Text>
-            </TouchableOpacity>
+            <View style={homeStyles.streakBadgeWrap}>
+              <Ionicons name="flame" size={16} color="#D4DE95" />
+              <Text style={homeStyles.streakBadge}>{dayStreak}</Text>
+            </View>
             <TouchableOpacity style={keysStyles.shareButton} onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               handleSharePress();

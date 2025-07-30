@@ -6,6 +6,8 @@ import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle } from 'react-native-svg';
 
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+
 export default function Progress() {
     const router = useRouter();
     const progressValue = useRef(new Animated.Value(0)).current;
@@ -18,9 +20,8 @@ export default function Progress() {
     
     const analysisTexts = [
         "Syncing your potential...",
-        "Building the version of you who follows through...", 
         "Constructing your identity framework...",
-        "Calculating your breakthrough score..."
+        "Calculating your score..."
     ];
 
     useEffect(() => {
@@ -52,54 +53,111 @@ export default function Progress() {
             }, 800);
         });
 
-        // Update display progress and add precise haptic feedback
+        // Update display progress and add escalating haptic feedback
         const progressListener = progressValue.addListener(({ value }) => {
             const roundedValue = Math.round(value);
             
-            // Precise haptic feedback at exact milestones (prevent duplicates)
+            // Enhanced progressive haptic feedback pattern - starts slow, builds intensity
             if (roundedValue !== displayProgress) {
-                // Haptic at 0% (start)
-                if (roundedValue === 0 && !hapticMilestones.has(0)) {
-                    hapticMilestones.add(0);
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                }
-                // Enhanced haptic at quarter milestones with escalating intensity
-                else if ((roundedValue === 25 || roundedValue === 50 || roundedValue === 75 || roundedValue === 100) && 
-                    !hapticMilestones.has(roundedValue)) {
-                    hapticMilestones.add(roundedValue);
+                // Progressive haptic system based on progress ranges
+                const createHapticPattern = (progress) => {
+                    if (progress <= 0) return;
                     
-                    // Escalating haptic intensity
-                    let intensity;
-                    if (roundedValue === 25) {
-                        intensity = Haptics.ImpactFeedbackStyle.Light;
-                    } else if (roundedValue === 50) {
-                        intensity = Haptics.ImpactFeedbackStyle.Medium;
-                        // Double tap for 50%
-                        setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light), 100);
-                    } else if (roundedValue === 75) {
-                        intensity = Haptics.ImpactFeedbackStyle.Medium;
-                        // Triple tap for 75%
-                        setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light), 100);
-                        setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light), 200);
-                    } else if (roundedValue === 100) {
-                        intensity = Haptics.ImpactFeedbackStyle.Heavy;
-                        // Celebration sequence for 100%
-                        setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 150);
-                        setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium), 300);
+                    // Stage 1: 1-20% - Very subtle, sparse feedback
+                    if (progress >= 1 && progress <= 20) {
+                        if (progress % 15 === 0 && !hapticMilestones.has(`stage1_${progress}`)) {
+                            hapticMilestones.add(`stage1_${progress}`);
+                            Haptics.selectionAsync(); // Very subtle
+                        }
                     }
                     
-                    Haptics.impactAsync(intensity);
+                    // Stage 2: 21-40% - Light taps, every 10%
+                    else if (progress >= 21 && progress <= 40) {
+                        if (progress % 10 === 0 && !hapticMilestones.has(`stage2_${progress}`)) {
+                            hapticMilestones.add(`stage2_${progress}`);
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        }
+                    }
                     
-                    // Scale animation for milestone feedback
+                    // Stage 3: 41-60% - Medium intensity, every 8%
+                    else if (progress >= 41 && progress <= 60) {
+                        if (progress % 8 === 0 && !hapticMilestones.has(`stage3_${progress}`)) {
+                            hapticMilestones.add(`stage3_${progress}`);
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                            // Add subtle follow-up
+                            setTimeout(() => Haptics.selectionAsync(), 80);
+                        }
+                    }
+                    
+                    // Stage 4: 61-80% - Increasing tempo, every 5%
+                    else if (progress >= 61 && progress <= 80) {
+                        if (progress % 5 === 0 && !hapticMilestones.has(`stage4_${progress}`)) {
+                            hapticMilestones.add(`stage4_${progress}`);
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                            // Double tap pattern
+                            setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light), 100);
+                        }
+                    }
+                    
+                    // Stage 5: 81-95% - High intensity, rapid fire
+                    else if (progress >= 81 && progress <= 95) {
+                        if (progress % 3 === 0 && !hapticMilestones.has(`stage5_${progress}`)) {
+                            hapticMilestones.add(`stage5_${progress}`);
+                            // Triple tap escalating pattern
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                            setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium), 60);
+                            setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light), 120);
+                        }
+                    }
+                    
+                    // Stage 6: 96-99% - Intense buildup
+                    else if (progress >= 96 && progress <= 99) {
+                        if (!hapticMilestones.has(`buildup_${progress}`)) {
+                            hapticMilestones.add(`buildup_${progress}`);
+                            // Rapid escalating pattern
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+                            setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium), 40);
+                            setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light), 80);
+                            setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light), 120);
+                        }
+                    }
+                };
+                
+                createHapticPattern(roundedValue);
+                
+                // Epic finale at 100%
+                if (roundedValue === 100 && !hapticMilestones.has('epic_finale')) {
+                    hapticMilestones.add('epic_finale');
+                    
+                    // Multi-layered celebration sequence
+                    const celebrationSequence = () => {
+                        // Initial burst
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+                        
+                        // Escalating wave pattern
+                        setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 100);
+                        setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 150);
+                        setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium), 200);
+                        setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium), 250);
+                        setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light), 300);
+                        setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light), 350);
+                        
+                        // Final triumphant tap
+                        setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 500);
+                    };
+                    
+                    celebrationSequence();
+                    
+                    // Celebration scale animation
                     Animated.sequence([
                         Animated.timing(scaleValue, {
-                            toValue: roundedValue === 100 ? 1.15 : 1.08,
-                            duration: 150,
+                            toValue: 1.15,
+                            duration: 200,
                             useNativeDriver: true,
                         }),
                         Animated.timing(scaleValue, {
                             toValue: 1,
-                            duration: 150,
+                            duration: 200,
                             useNativeDriver: true,
                         }),
                     ]).start();
@@ -182,7 +240,7 @@ export default function Progress() {
                                     />
                                     
                                     {/* Progress Circle */}
-                                    <Circle
+                                    <AnimatedCircle
                                         cx="140"
                                         cy="140"
                                         r="131"
@@ -194,22 +252,9 @@ export default function Progress() {
                                         strokeDashoffset={progressValue.interpolate({
                                             inputRange: [0, 100],
                                             outputRange: [2 * Math.PI * 131, 0],
-                                            easing: Easing.out(Easing.quad),
+                                            extrapolate: 'clamp',
                                         })}
                                         transform="rotate(-90 140 140)"
-                                        style={{
-                                            shadowColor: '#D4DE95',
-                                            shadowOffset: { width: 0, height: 0 },
-                                            shadowOpacity: progressValue.interpolate({
-                                                inputRange: [0, 100],
-                                                outputRange: [0.2, 0.8],
-                                            }),
-                                            shadowRadius: progressValue.interpolate({
-                                                inputRange: [0, 100],
-                                                outputRange: [8, 20],
-                                            }),
-                                            elevation: 15,
-                                        }}
                                     />
                                 </Svg>
                             </Animated.View>

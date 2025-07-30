@@ -17,29 +17,35 @@ export default function IdentityScore() {
     const [doubtScore, setDoubtScore] = useState(35); // Default fallback
 
     useEffect(() => {
-        calculateScores();
+        const initializeScreen = async () => {
+            const calculatedScores = await calculateScores();
+            
+            // Entrance animation
+            Animated.parallel([
+                Animated.timing(fadeValue, {
+                    toValue: 1,
+                    duration: 800,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(slideValue, {
+                    toValue: 0,
+                    duration: 600,
+                    useNativeDriver: true,
+                }),
+            ]).start(() => {
+                // Start bar animations with the calculated scores (not state)
+                animateBars(calculatedScores.dreamScore, calculatedScores.doubtScore);
+            });
+        };
         
-        // Entrance animation
-        Animated.parallel([
-            Animated.timing(fadeValue, {
-                toValue: 1,
-                duration: 800,
-                useNativeDriver: true,
-            }),
-            Animated.timing(slideValue, {
-                toValue: 0,
-                duration: 600,
-                useNativeDriver: true,
-            }),
-        ]).start(() => {
-            // Start bar animations after entrance
-            animateBars();
-        });
+        initializeScreen();
     }, []);
 
     const calculateScores = async () => {
         try {
             const savedAnswers = await AsyncStorage.getItem('quiz_answers');
+            let finalDreamScore, finalDoubtScore;
+            
             if (savedAnswers) {
                 const answers = JSON.parse(savedAnswers);
                 
@@ -77,20 +83,25 @@ export default function IdentityScore() {
                 const doubtPercentage = Math.min(Math.max((weightedDoubt / total) * 100, 35), 85);
                 const dreamPercentage = Math.max(Math.min(100 - doubtPercentage, 65), 15);
                 
-                setDreamScore(Math.round(dreamPercentage));
-                setDoubtScore(Math.round(doubtPercentage));
+                finalDreamScore = Math.round(dreamPercentage);
+                finalDoubtScore = Math.round(doubtPercentage);
             } else {
                 // Default scores if no answers found - weighted toward doubt for urgency
                 const weightedDoubt = 50 * 1.6;
                 const weightedDream = 50 * 0.4;
                 const total = weightedDoubt + weightedDream;
                 
-                const doubtPercentage = Math.round((weightedDoubt / total) * 100);
-                const dreamPercentage = Math.round(100 - doubtPercentage);
-                
-                setDreamScore(dreamPercentage); // ~38%
-                setDoubtScore(doubtPercentage); // ~62%
+                finalDoubtScore = Math.round((weightedDoubt / total) * 100);
+                finalDreamScore = Math.round(100 - finalDoubtScore);
             }
+            
+            // Set state for display
+            setDreamScore(finalDreamScore);
+            setDoubtScore(finalDoubtScore);
+            
+            // Return calculated values for immediate use in animation
+            return { dreamScore: finalDreamScore, doubtScore: finalDoubtScore };
+            
         } catch (error) {
             console.error('Error calculating scores:', error);
             // Error fallback - weighted toward doubt for urgency
@@ -98,46 +109,51 @@ export default function IdentityScore() {
             const weightedDream = 50 * 0.4;
             const total = weightedDoubt + weightedDream;
             
-            const doubtPercentage = Math.round((weightedDoubt / total) * 100);
-            const dreamPercentage = Math.round(100 - doubtPercentage);
+            const finalDoubtScore = Math.round((weightedDoubt / total) * 100);
+            const finalDreamScore = Math.round(100 - finalDoubtScore);
             
-            setDreamScore(dreamPercentage); // ~38%
-            setDoubtScore(doubtPercentage); // ~62%
+            setDreamScore(finalDreamScore);
+            setDoubtScore(finalDoubtScore);
+            
+            return { dreamScore: finalDreamScore, doubtScore: finalDoubtScore };
         }
     };
 
-    const animateBars = () => {
-        console.log('Animating bars with actual scores:', { dreamScore, doubtScore });
+    const animateBars = (actualDreamScore, actualDoubtScore) => {
+        console.log('🎯 Animating bars with CALCULATED scores:', { 
+            dreamScore: actualDreamScore, 
+            doubtScore: actualDoubtScore 
+        });
         
         // Reset bars to 0 first to ensure clean animation
         dreamBarWidth.setValue(0);
         doubtBarWidth.setValue(0);
         
-        // Animate dream bar to exact percentage
+        // Animate dream bar to exact calculated percentage
         setTimeout(() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            console.log('Animating dream bar to:', dreamScore);
+            console.log('🟢 Animating dream bar to:', actualDreamScore, '%');
             Animated.timing(dreamBarWidth, {
-                toValue: dreamScore, // This should be the exact percentage (e.g. 25, 78, etc.)
+                toValue: actualDreamScore, // Use the passed calculated value, not state
                 duration: 1500,
                 useNativeDriver: false,
             }).start(() => {
-                console.log('Dream bar animation complete at:', dreamScore, '%');
-                console.log('Dream bar animated value:', dreamBarWidth._value);
+                console.log('✅ Dream bar animation complete at:', actualDreamScore, '%');
+                console.log('📊 Dream bar final animated value:', dreamBarWidth._value);
             });
         }, 600);
 
         // Animate doubt bar with slight delay
         setTimeout(() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            console.log('Animating doubt bar to:', doubtScore);
+            console.log('🔴 Animating doubt bar to:', actualDoubtScore, '%');
             Animated.timing(doubtBarWidth, {
-                toValue: doubtScore, // This should be the exact percentage (e.g. 75, 22, etc.)
+                toValue: actualDoubtScore, // Use the passed calculated value, not state
                 duration: 1500,
                 useNativeDriver: false,
             }).start(() => {
-                console.log('Doubt bar animation complete at:', doubtScore, '%');
-                console.log('Doubt bar animated value:', doubtBarWidth._value);
+                console.log('✅ Doubt bar animation complete at:', actualDoubtScore, '%');
+                console.log('📊 Doubt bar final animated value:', doubtBarWidth._value);
             });
         }, 1000);
     };
@@ -186,11 +202,7 @@ export default function IdentityScore() {
                                 style={[
                                     styles.barFill,
                                     {
-                                        width: dreamBarWidth.interpolate({
-                                            inputRange: [0, 100],
-                                            outputRange: ['0%', '100%'],
-                                            extrapolate: 'clamp',
-                                        }),
+                                        width: dreamBarWidthInterpolate,
                                         backgroundColor: '#D4DE95',
                                     }
                                 ]}
@@ -207,11 +219,7 @@ export default function IdentityScore() {
                                 style={[
                                     styles.barFill,
                                     {
-                                        width: doubtBarWidth.interpolate({
-                                            inputRange: [0, 100],
-                                            outputRange: ['0%', '100%'],
-                                            extrapolate: 'clamp',
-                                        }),
+                                        width: doubtBarWidthInterpolate,
                                         backgroundColor: '#FF6B6B',
                                     }
                                 ]}

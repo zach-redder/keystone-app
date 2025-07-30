@@ -1,8 +1,9 @@
-import { View, Text, Modal, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, Modal, ScrollView, TouchableOpacity, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect } from 'react';
 import * as Haptics from 'expo-haptics';
 import { getPreferredAiPersona, setPreferredAiPersona } from '../../services/userPreferences';
+import { fetchCustomPersonalities, createCustomPersonality, deleteCustomPersonality } from '../../services/customPersonalitiesService';
 import { checkUserProStatus } from '../../services/auth';
 import keysStyles from '../../styles/keys';
 
@@ -10,9 +11,23 @@ const AIPersonalityModal = ({ visible, onClose, onUpgradePress }) => {
   const [selectedPersonality, setSelectedPersonality] = useState('Default');
   const [isPro, setIsPro] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showCustomForm, setShowCustomForm] = useState(false);
+  const [customName, setCustomName] = useState('');
+  const [customDescription, setCustomDescription] = useState('');
+  const [customPersonalities, setCustomPersonalities] = useState([]);
 
-  // Original three free personalities from onboarding
-  const freePersonalities = [
+  // Basic personalities available to all users (post-paywall)
+  const basicPersonalities = [
+    {
+      name: 'Life Coach',
+      description: 'Professional and strategic. Structured approach to achieving your goals.',
+      icon: 'trophy-outline',
+    },
+    {
+      name: 'Mindful Monk',
+      description: 'Calm and centered. Focuses on presence, balance, and inner peace.',
+      icon: 'leaf-outline',
+    },
     {
       name: 'Gentle Guide',
       description: 'Kind and encouraging. Offers gentle support when you need it most.',
@@ -30,18 +45,8 @@ const AIPersonalityModal = ({ visible, onClose, onUpgradePress }) => {
     },
   ];
 
-  // Additional Pro personalities
-  const proPersonalities = [
-    {
-      name: 'Life Coach',
-      description: 'Professional and strategic. Structured approach to achieving your goals.',
-      icon: 'trophy-outline',
-    },
-    {
-      name: 'Mindful Monk',
-      description: 'Calm and centered. Focuses on presence, balance, and inner peace.',
-      icon: 'leaf-outline',
-    },
+  // Advanced personalities for premium experience
+  const advancedPersonalities = [
     {
       name: 'David Goggins',
       description: 'Mental toughness and extreme discipline. "Stay hard" and push through any obstacle.',
@@ -83,6 +88,7 @@ const AIPersonalityModal = ({ visible, onClose, onUpgradePress }) => {
     if (visible) {
       loadCurrentPersonality();
       checkProStatus();
+      loadCustomPersonalities();
     }
   }, [visible]);
 
@@ -108,19 +114,29 @@ const AIPersonalityModal = ({ visible, onClose, onUpgradePress }) => {
     }
   };
 
-  const handlePersonalitySelect = async (personalityName) => {
-    const personalities = isPro ? proPersonalities : freePersonalities;
+  const loadCustomPersonalities = async () => {
+    try {
+      const customs = await fetchCustomPersonalities();
+      setCustomPersonalities(customs);
+    } catch (error) {
+      console.error('Error loading custom personalities:', error);
+      setCustomPersonalities([]);
+    }
+  };
 
-    const selected = personalities.find(p => p.name === personalityName);
+  const handlePersonalitySelect = async (personalityName, isCustom = false) => {
+    let selected;
+    
+    if (isCustom) {
+      selected = customPersonalities.find(p => p.name === personalityName);
+    } else {
+      // All personalities are now available since user passed hard paywall
+      const allPersonalities = [...basicPersonalities, ...advancedPersonalities];
+      selected = allPersonalities.find(p => p.name === personalityName);
+    }
 
     if (!selected) {
       console.warn("Selected personality not found.");
-      return;
-    }
-
-    if (!isPro && !freePersonalities.find(p => p.name === personalityName)) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      onUpgradePress();
       return;
     }
 
@@ -138,25 +154,103 @@ const AIPersonalityModal = ({ visible, onClose, onUpgradePress }) => {
     }
   };
 
+  const handleCreateCustomPersonality = async () => {
+    if (!customName.trim() || !customDescription.trim()) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      return;
+    }
+
+    const newPersonality = {
+      name: customName.trim(),
+      description: customDescription.trim(),
+      icon: 'create-outline', // Default icon for custom personalities
+      isCustom: true,
+    };
+
+    setIsLoading(true);
+    try {
+      // Create in database
+      const createdPersonality = await createCustomPersonality({
+        name: newPersonality.name,
+        description: newPersonality.description,
+        icon: newPersonality.icon,
+      });
+      
+      if (createdPersonality) {
+        // Add to local state
+        setCustomPersonalities(prev => [...prev, createdPersonality]);
+        
+        // Set as selected personality
+        const fullPersona = `${createdPersonality.name}: ${createdPersonality.description}`;
+        await setPreferredAiPersona(fullPersona);
+        setSelectedPersonality(createdPersonality.name);
+        
+        // Reset form
+        setCustomName('');
+        setCustomDescription('');
+        setShowCustomForm(false);
+        
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      } else {
+        console.error('Failed to create custom personality');
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+      }
+    } catch (error) {
+      console.error('Error creating custom personality:', error);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteCustomPersonality = async (personalityName) => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      
+      // Find the personality to get its ID
+      const personalityToDelete = customPersonalities.find(p => p.name === personalityName);
+      if (!personalityToDelete || !personalityToDelete.id) {
+        console.error('Cannot find personality to delete');
+        return;
+      }
+      
+      // Delete from database
+      const success = await deleteCustomPersonality(personalityToDelete.id);
+      
+      if (success) {
+        // Remove from local state
+        setCustomPersonalities(prev => prev.filter(p => p.name !== personalityName));
+        
+        // If this was the selected personality, switch to default
+        if (selectedPersonality === personalityName) {
+          await setPreferredAiPersona('Life Coach: Professional and strategic. Structured approach to achieving your goals.');
+          setSelectedPersonality('Life Coach');
+        }
+        
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      } else {
+        console.error('Failed to delete custom personality');
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+      }
+    } catch (error) {
+      console.error('Error deleting custom personality:', error);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    }
+  };
+
   const handleClose = () => {
     onClose();
   };
 
-  const renderPersonalityCard = (personality, isLocked = false) => (
+  const renderPersonalityCard = (personality) => (
     <TouchableOpacity
       key={personality.name}
       style={[
         styles.personalityCard,
         selectedPersonality === personality.name && styles.selectedCard,
-        isLocked && styles.lockedCard,
       ]}
       onPress={() => {
-        if (isLocked) {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-          onUpgradePress && onUpgradePress();
-        } else {
-          handlePersonalitySelect(personality.name);
-        }
+        handlePersonalitySelect(personality.name, personality.isCustom);
       }}
       disabled={isLoading}
       activeOpacity={0.7}
@@ -164,7 +258,7 @@ const AIPersonalityModal = ({ visible, onClose, onUpgradePress }) => {
       <View style={styles.cardHeader}>
         <View style={[
           styles.iconContainer,
-          selectedPersonality === personality.name && styles.selectedIconContainer
+          selectedPersonality === personality.name && styles.selectedIconContainer,
         ]}>
           <Ionicons
             name={personality.icon}
@@ -180,12 +274,62 @@ const AIPersonalityModal = ({ visible, onClose, onUpgradePress }) => {
             ]}>
               {personality.name}
             </Text>
-            {isLocked && (
-              <View style={styles.lockContainer}>
-                <Ionicons name="lock-closed" size={16} color="#B9C096" />
-                <Text style={styles.proText}>PRO</Text>
-              </View>
-            )}
+          </View>
+          <Text style={[
+            styles.personalityDescription,
+            selectedPersonality === personality.name && styles.selectedDescription
+          ]}>
+            {personality.description}
+          </Text>
+        </View>
+      </View>
+      {selectedPersonality === personality.name && (
+        <View style={styles.checkmarkContainer}>
+          <Ionicons name="checkmark-circle" size={24} color="#B9C096" />
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+
+  const renderCustomPersonalityCard = (personality) => (
+    <TouchableOpacity
+      key={personality.name}
+      style={[
+        styles.customPersonalityCard,
+        selectedPersonality === personality.name && styles.selectedCard,
+      ]}
+      onPress={() => {
+        handlePersonalitySelect(personality.name, personality.isCustom);
+      }}
+      disabled={isLoading}
+      activeOpacity={0.7}
+    >
+      <View style={styles.cardHeader}>
+        <View style={[
+          styles.iconContainer,
+          selectedPersonality === personality.name && styles.selectedIconContainer,
+        ]}>
+          <Ionicons
+            name={personality.icon}
+            size={24}
+            color="#B9C096"
+          />
+        </View>
+        <View style={styles.cardContent}>
+          <View style={styles.nameRow}>
+            <Text style={[
+              styles.personalityName,
+              selectedPersonality === personality.name && styles.selectedName
+            ]}>
+              {personality.name}
+            </Text>
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={() => handleDeleteCustomPersonality(personality.name)}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="trash-outline" size={16} color="#FF6B6B" />
+            </TouchableOpacity>
           </View>
           <Text style={[
             styles.personalityDescription,
@@ -224,12 +368,99 @@ const AIPersonalityModal = ({ visible, onClose, onUpgradePress }) => {
         </View>
 
         <ScrollView style={keysStyles.infoContent} showsVerticalScrollIndicator={false}>
-          <View style={styles.personalitiesContainer}>
-            <Text style={[styles.sectionTitle, styles.firstSectionTitle]}>Free Personalities</Text>
-            {freePersonalities.map(personality => renderPersonalityCard(personality, false))}
+          <View style={styles.personalitiesContainer}> 
+            {/* Show existing custom personalities */}
+            {customPersonalities.length > 0 && (
+              <View style={styles.customPersonalitiesSection}>
+                {customPersonalities.map(personality => renderCustomPersonalityCard(personality))}
+              </View>
+            )}
             
-            <Text style={styles.sectionTitle}>Pro Personalities</Text>
-            {proPersonalities.map(personality => renderPersonalityCard(personality, !isPro))}
+            {/* Create new custom personality */}
+            {!showCustomForm ? (
+              <TouchableOpacity
+                style={styles.createCustomButton}
+                onPress={() => {
+                  setShowCustomForm(true);
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }}
+                activeOpacity={0.7}
+              >
+                <View style={styles.createCustomContent}>
+                  <View style={styles.createIconContainer}>
+                    <Ionicons name="add-circle-outline" size={32} color="#B9C096" />
+                  </View>
+                  <View style={styles.createTextContainer}>
+                    <Text style={styles.createCustomTitle}>
+                      {customPersonalities.length > 0 ? 'Create Another Custom Personality' : 'Create Custom Personality'}
+                    </Text>
+                    <Text style={styles.createCustomSubtitle}>Design your own AI companion with a unique name and description</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.customForm}>
+                <Text style={styles.formTitle}>Create Your AI Personality</Text>
+                
+                <Text style={styles.inputLabel}>Name</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={customName}
+                  onChangeText={setCustomName}
+                  placeholder="e.g., Personal Trainer, Wise Sage, Motivational Speaker"
+                  placeholderTextColor="#888"
+                  maxLength={50}
+                />
+                
+                <Text style={styles.inputLabel}>Description</Text>
+                <TextInput
+                  style={[styles.textInput, styles.textArea]}
+                  value={customDescription}
+                  onChangeText={setCustomDescription}
+                  placeholder="Describe how this personality should communicate with you..."
+                  placeholderTextColor="#888"
+                  multiline
+                  numberOfLines={4}
+                  maxLength={200}
+                />
+                
+                <View style={styles.formButtons}>
+                  <TouchableOpacity
+                    style={styles.cancelButton}
+                    onPress={() => {
+                      setShowCustomForm(false);
+                      setCustomName('');
+                      setCustomDescription('');
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.cancelButtonText}>Cancel</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity
+                    style={[
+                      styles.createButton,
+                      (!customName.trim() || !customDescription.trim()) && styles.disabledButton
+                    ]}
+                    onPress={handleCreateCustomPersonality}
+                    disabled={!customName.trim() || !customDescription.trim() || isLoading}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.createButtonText}>
+                      {isLoading ? 'Creating...' : 'Create & Select'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+            
+            <Text style={[styles.sectionTitle]}>Basic Personalities</Text>
+            {basicPersonalities.map(personality => renderPersonalityCard(personality, false))}
+            
+            <Text style={styles.sectionTitle}>Advanced Personalities</Text>
+            {advancedPersonalities.map(personality => renderPersonalityCard(personality, false))}
+          
           </View>
           
           <View style={styles.bottomSpacing} />
@@ -291,9 +522,6 @@ const styles = {
     backgroundColor: '#2b2b2b',
     borderColor: '#B9C096',
   },
-  lockedCard: {
-    opacity: 0.6,
-  },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -327,19 +555,22 @@ const styles = {
   selectedName: {
     color: '#B9C096',
   },
-  lockContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#2b2b2b',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+  customPersonalitiesSection: {
+    marginBottom: 16,
   },
-  proText: {
-    fontSize: 12,
-    color: '#B9C096',
-    fontWeight: '600',
-    marginLeft: 4,
+  customPersonalityCard: {
+    backgroundColor: '#3a3a3a',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  deleteButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 107, 107, 0.1)',
+    marginLeft: 12,
   },
   personalityDescription: {
     fontSize: 14,
@@ -356,6 +587,104 @@ const styles = {
   },
   bottomSpacing: {
     height: 40,
+  },
+  // Custom personality creation styles
+  createCustomButton: {
+    backgroundColor: '#3a3a3a',
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    borderStyle: 'dashed',
+  },
+  createCustomContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  createIconContainer: {
+    marginRight: 16,
+  },
+  createTextContainer: {
+    flex: 1,
+  },
+  createCustomTitle: {
+    fontSize: 16,
+    color: '#fff',
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  createCustomSubtitle: {
+    fontSize: 14,
+    color: '#ccc',
+    lineHeight: 20,
+  },
+  customForm: {
+    backgroundColor: '#3a3a3a',
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 12,
+  },
+  formTitle: {
+    fontSize: 18,
+    color: '#fff',
+    fontWeight: '600',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  inputLabel: {
+    fontSize: 14,
+    color: '#B9C096',
+    fontWeight: '600',
+    marginBottom: 8,
+    marginTop: 16,
+  },
+  textInput: {
+    backgroundColor: '#2b2b2b',
+    borderRadius: 8,
+    padding: 12,
+    color: '#fff',
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: '#555',
+  },
+  textArea: {
+    height: 100,
+    textAlignVertical: 'top',
+  },
+  formButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 20,
+    gap: 12,
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: '#555',
+    borderRadius: 25,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  createButton: {
+    flex: 1,
+    backgroundColor: '#B9C096',
+    borderRadius: 25,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  createButtonText: {
+    color: '#2B2B2B',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  disabledButton: {
+    backgroundColor: '#555',
+    opacity: 0.6,
   },
 };
 

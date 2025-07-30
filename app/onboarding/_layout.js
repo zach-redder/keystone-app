@@ -138,6 +138,20 @@ export default function OnboardingLayout() {
           gestureEnabled: false,
         }}
       />
+      <Stack.Screen 
+        name="PaywallTrial" 
+        options={{
+          animation: 'slide_from_right',
+          gestureEnabled: false,
+        }}
+      />
+      <Stack.Screen 
+        name="Subscription" 
+        options={{
+          animation: 'slide_from_right',
+          gestureEnabled: false,
+        }}
+      />
     </Stack>
   );
 }

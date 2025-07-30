@@ -156,7 +156,7 @@ export default function QuizQuestion() {
 
     const handleSkipQuiz = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        router.push('/onboarding/Quiz/UserInfo');
+        router.push('/onboarding/LifeGoals');
     };
 
     if (!currentQuestion) {
@@ -200,7 +200,7 @@ export default function QuizQuestion() {
                     {currentQuestion.question}
                 </Text>
 
-                <View style={{ width: '100%' }}>
+                <View style={{ width: '100%', flex: 1 }}>
                     {currentQuestion.options.map((option, index) => (
                         <TouchableOpacity
                             key={index}

@@ -1,7 +1,8 @@
 import { View, Text, Pressable, SafeAreaView, TouchableOpacity, Image, ScrollView, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
-import { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import keysStyles from '../../styles/keys';
 import AlignModal from '../../components/modals/AlignModal';
 import AlignButton from '../../components/buttons/AlignButton';
@@ -18,6 +19,7 @@ import ReferralModal from '../../components/modals/ReferralModal';
 import { fetchIdentityKeys, deleteIdentityKey, updateIdentityKey, addIdentityKey } from '../../services/userKeys';
 import { checkUserProStatus } from '../../services/auth';
 import { shareKeysPage } from '../../services/shareService';
+import { getUserDayStreak } from '../../services/userPreferences';
 
 function AppButton({ title, onPress, style, icon, iconRight, plusMarginRight, animatedStyle }) {
   const pressScale = useRef(new Animated.Value(1)).current;
@@ -144,7 +146,7 @@ export default function Keys() {
   const [communityModalVisible, setCommunityModalVisible] = useState(false);
   const [keyToDelete, setKeyToDelete] = useState(null);
   const [keyToEdit, setKeyToEdit] = useState(null);
-  const [badgeText, setBadgeText] = useState('PRO');
+  const [dayStreak, setDayStreak] = useState(0);
   const menuBtnRef = useRef(null);
   const [alignModalVisible, setAlignModalVisible] = useState(false);
   const [affirmIdentityModalVisible, setAffirmIdentityModalVisible] = useState(false);
@@ -154,16 +156,22 @@ export default function Keys() {
   // Load user keys when component mounts or selected item changes
   useEffect(() => {
     loadUserKeys();
-    checkProStatus();
   }, [selectedItem]);
 
-  const checkProStatus = async () => {
+  // Load streak whenever the screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      loadDayStreak();
+    }, [])
+  );
+
+  const loadDayStreak = async () => {
     try {
-      const isPro = await checkUserProStatus();
-      setBadgeText(isPro ? 'COMMUNITY' : 'PRO');
+      const streak = await getUserDayStreak();
+      setDayStreak(streak);
     } catch (error) {
-      console.error('Error checking Pro status:', error);
-      setBadgeText('PRO');
+      console.error('Error loading day streak:', error);
+      setDayStreak(0);
     }
   };
 
@@ -364,24 +372,7 @@ export default function Keys() {
     }
   };
 
-  const handleBadgePress = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    try {
-      const isPro = await checkUserProStatus();
-      if (isPro) {
-        // Show Community modal for Pro users
-        setCommunityModalVisible(true);
-      } else {
-        // Show Pro upgrade modal for non-Pro users
-        setProModalVisible(true);
-      }
-    } catch (error) {
-      console.error('Error checking Pro status:', error);
-      // Show Pro modal on error to be safe
-      setProModalVisible(true);
-    }
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  };
+  // Removed handleBadgePress - no longer needed with streak UI
 
   const handleSharePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -406,9 +397,10 @@ export default function Keys() {
         <View style={keysStyles.headerRow}>
           <Text style={keysStyles.header}>Your Keys</Text>
           <View style={keysStyles.headerButtons}>
-            <TouchableOpacity style={keysStyles.proBadgeWrap} onPress={handleBadgePress}>
-              <Text style={keysStyles.proBadge}>{badgeText}</Text>
-            </TouchableOpacity>
+            <View style={keysStyles.streakBadgeWrap}>
+              <Ionicons name="flame" size={16} color="#D4DE95" />
+              <Text style={keysStyles.streakBadge}>{dayStreak}</Text>
+            </View>
             <TouchableOpacity style={keysStyles.shareButton} onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               handleSharePress();

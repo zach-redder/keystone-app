@@ -8,40 +8,34 @@ import { LinearGradient } from 'expo-linear-gradient';
 const MOTIVATIONAL_QUOTES = [
     {
         id: 1,
-        name: 'Jay Shetty',
-        quote: 'You are not what you think you are. You are what you think.',
-        image: require('../../assets/keystone_transparent.png'), // Using placeholder for now
+        name: 'Steve Jobs',
+        quote: 'Don’t let the noise of others’ opinions drown out your own inner voice.',
+        image: require('../../assets/steve_jobs.jpeg'), // Using placeholder for now
     },
     {
         id: 2,
-        name: 'Mel Robbins',
-        quote: 'You are one decision away from a completely different life.',
-        image: require('../../assets/keystone_transparent.png'), // Using placeholder for now
+        name: 'Joe Rogan',
+        quote: 'The people who are worried about what other people think of them are being controlled by those people.',
+        image: require('../../assets/joe_rogan.png'), // Using placeholder for now
     },
     {
         id: 3,
-        name: 'Lewis Howes',
-        quote: 'Your identity drives your actions, and your actions create your results.',
-        image: require('../../assets/keystone_transparent.png'), // Using placeholder for now
+        name: 'Kevin Hart',
+        quote: 'The minute you start caring about what other people think is the minute you stop being yourself.',
+        image: require('../../assets/kevin_hart.jpg'), // Using placeholder for now
     },
     {
         id: 4,
         name: 'David Goggins',
-        quote: 'The most important conversation you have every day is the one you have with yourself.',
-        image: require('../../assets/keystone_transparent.png'), // Using placeholder for now
+        quote: 'The biggest thing that holds people back is not even fear, it’s what other people think.',
+        image: require('../../assets/david_goggins.jpg'), // Using placeholder for now
     },
     {
         id: 5,
-        name: 'Brené Brown',
-        quote: 'Owning our story and loving ourselves through that process is the bravest thing we will ever do.',
-        image: require('../../assets/keystone_transparent.png'), // Using placeholder for now
+        name: 'Kai Cenat',
+        quote: 'You gotta believe in your vision when nobody else does.',
+        image: require('../../assets/kai_cenat.jpg'), // Using placeholder for now
     },
-    {
-        id: 6,
-        name: 'Tony Robbins',
-        quote: 'The quality of your life is the quality of your relationships with yourself.',
-        image: require('../../assets/keystone_transparent.png'), // Using placeholder for now
-    }
 ];
 
 export default function BenefitsDeepDive() {

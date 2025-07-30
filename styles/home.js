@@ -36,6 +36,21 @@ const homeStyles = StyleSheet.create({
     fontWeight: '300',
     marginLeft: 16,
   },
+  streakBadgeWrap: {
+    backgroundColor: '#3a3a3a',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  streakBadge: {
+    color: '#D4DE95',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 6,
+  },
   trendsContainer: {
     backgroundColor: '#3C3C3C',
     borderRadius: 16,

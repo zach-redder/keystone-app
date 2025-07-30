@@ -24,7 +24,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const appState = useRef(AppState.currentState);
   const lastNotificationStatus = useRef(false);
-  const [badgeText, setBadgeText] = useState('PRO');
+  // Removed badgeText - replaced with streak UI
   const [proModalVisible, setProModalVisible] = useState(false);
   const [communityModalVisible, setCommunityModalVisible] = useState(false);
   const [contactModalVisible, setContactModalVisible] = useState(false);
@@ -80,10 +80,8 @@ export default function ProfileScreen() {
     try {
       const proStatus = await checkUserProStatus();
       setIsPro(proStatus);
-      setBadgeText(proStatus ? 'COMMUNITY' : 'PRO');
     } catch (error) {
       console.error('Error checking Pro status:', error);
-      setBadgeText('PRO');
     }
   };
 
@@ -209,21 +207,7 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleBadgePress = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    try {
-      const proStatus = await checkUserProStatus();
-      if (proStatus) {
-        setCommunityModalVisible(true);
-      } else {
-        setProModalVisible(true);
-      }
-    } catch (error) {
-      console.error('Error checking Pro status:', error);
-      setProModalVisible(true);
-    }
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  };
+  // Removed handleBadgePress - no longer needed with streak UI
 
   function handleSignOut() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -307,9 +291,10 @@ export default function ProfileScreen() {
         <View style={profileStyles.headerRow}>
           <Text style={profileStyles.header}>Profile</Text>
           <View style={profileStyles.headerButtons}>
-            <TouchableOpacity style={profileStyles.proBadgeWrap} onPress={handleBadgePress}>
-              <Text style={profileStyles.proBadge}>{badgeText}</Text>
-            </TouchableOpacity>
+            <View style={profileStyles.streakBadgeWrap}>
+              <Ionicons name="flame" size={16} color="#D4DE95" />
+              <Text style={profileStyles.streakBadge}>{dayStreak}</Text>
+            </View>
             <TouchableOpacity style={profileStyles.shareButton} onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               handleSharePress();

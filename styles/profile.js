@@ -35,6 +35,21 @@ const profileStyles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
+  streakBadgeWrap: {
+    backgroundColor: '#3a3a3a',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  streakBadge: {
+    color: '#D4DE95',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 6,
+  },
   header: {
     fontSize: 28,
     color: '#fff',
