@@ -3,11 +3,12 @@ import { View, Text, TouchableOpacity, Animated, TextInput } from 'react-native'
 import React, { useRef, useEffect, useState } from 'react';
 import { styles } from '../../styles/onboarding';
 import * as Haptics from 'expo-haptics';
-import OnboardingHeader from './OnboardingHeader';
+import OnboardingProgressHeader from './OnboardingProgressHeader';
 import { Gesture, GestureDetector, ScrollView as GestureScrollView } from 'react-native-gesture-handler';
 import * as Notifications from 'expo-notifications';
 import CustomTimePicker from './CustomTimePicker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function OnboardingStep() {
 
@@ -21,10 +22,8 @@ export default function OnboardingStep() {
   const steps = [
     'FutureSelfVision',
     'LifeGoals',
-    'CoreValues',
-    'AIPersonality',
-    'NotificationOptIn',
-    'NotificationTime'
+    'CoreValues'
+    // Removed: 'AIPersonality', 'NotificationOptIn', 'NotificationTime'
   ];
 
   const [selectedOptions, setSelectedOptions] = useState([]);
@@ -134,10 +133,8 @@ export default function OnboardingStep() {
   const nextStepMap = {
     FutureSelfVision: '/onboarding/LifeGoals',
     LifeGoals: '/onboarding/CoreValues',
-    CoreValues: '/onboarding/AIPersonality',
-    AIPersonality: '/onboarding/NotificationOptIn',
-    NotificationOptIn: '/onboarding/NotificationTime',
-    NotificationTime: '/register',
+    CoreValues: '/onboarding/Progress'
+    // Analysis circle after core identity screens, then to register
   };
 
   const descriptions = {
@@ -271,6 +268,7 @@ export default function OnboardingStep() {
   };
 
   const toggleOption = (option) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSelectedOptions((prevSelected) => {
       if (prevSelected.includes(option)) {
         return prevSelected.filter((item) => item !== option);
@@ -341,8 +339,13 @@ export default function OnboardingStep() {
     switch (step) {
       case 'FutureSelfVision':
         return (
-          <View style={styles.container}>
-            <OnboardingHeader />
+          <LinearGradient
+                            colors={['#2B2B2B', '#2F2F2C', '#2B2B2B']}
+            style={styles.gradientContainer}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <OnboardingProgressHeader />
             <Text style={styles.selfVisionTitle}>Fast forward 10 years.</Text>
             <Text style={styles.selfVisionSubtitle}>Who do you wish to be?</Text>
             <Text style={styles.selfVisionDescription}>Select up to 5.</Text>
@@ -454,12 +457,17 @@ export default function OnboardingStep() {
             <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
               <Text style={styles.buttonText}>Next</Text>
             </TouchableOpacity>
-          </View>
+          </LinearGradient>
         );        
         case 'LifeGoals':
           return (
-            <View style={styles.container}>
-              <OnboardingHeader />
+            <LinearGradient
+                              colors={['#2B2B2B', '#2F2F2C', '#2B2B2B']}
+              style={styles.gradientContainer}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <OnboardingProgressHeader />
               <Text style={styles.selfVisionTitle}>You have big goals.</Text>
               <Text style={styles.selfVisionSubtitle}>What are they?</Text>
               <Text style={styles.selfVisionDescription}>Select up to 5.</Text>
@@ -572,12 +580,17 @@ export default function OnboardingStep() {
               <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
                 <Text style={styles.buttonText}>Next</Text>
               </TouchableOpacity>
-            </View>
+            </LinearGradient>
           );
       case 'CoreValues':
         return (
-          <View style={styles.container}>
-            <OnboardingHeader />
+          <LinearGradient
+                            colors={['#2B2B2B', '#2F2F2C', '#2B2B2B']}
+            style={styles.gradientContainer}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <OnboardingProgressHeader />
             <Text style={styles.selfVisionTitle}>Values define you.</Text>
             <Text style={styles.selfVisionSubtitle}>What should people notice in you?</Text>
             <Text style={styles.selfVisionDescription}>Select up to 5.</Text>
@@ -690,7 +703,7 @@ export default function OnboardingStep() {
             <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
               <Text style={styles.buttonText}>Next</Text>
             </TouchableOpacity>
-          </View>
+          </LinearGradient>
         );
       case 'AIPersonality':
         return (
@@ -748,10 +761,7 @@ export default function OnboardingStep() {
 
   return (      
     <GestureDetector gesture={swipeGesture}>
-      <View style={styles.container}>
-        <OnboardingHeader />
-        {renderStep()}
-      </View>
+      {renderStep()}
     </GestureDetector>
   );
 }

@@ -15,10 +15,8 @@ const shared = {
 const steps = [
   'FutureSelfVision',
   'LifeGoals',
-  'CoreValues',
-  'AIPersonality',
-  'NotificationOptIn',
-  'NotificationTime',
+  'CoreValues'
+  // Removed: 'AIPersonality', 'NotificationOptIn', 'NotificationTime'
 ];
 
 export default function OnboardingHeader() {

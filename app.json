@@ -7,7 +7,6 @@
     "orientation": "portrait",
     "icon": "./assets/keystone.png",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": false,
     "splash": {
       "image": "./assets/keystone.png",
       "resizeMode": "contain",
