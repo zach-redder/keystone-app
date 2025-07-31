@@ -11,6 +11,7 @@ import AlignModal from '../../components/modals/AlignModal';
 import AlignButton from '../../components/buttons/AlignButton';
 import LogActionModal from '../../components/modals/LogActionModal';
 import ShareProgressModal from '../../components/modals/ShareProgressModal';
+import CommunityCard from '../../components/CommunityCard';
 // Removed ReferralModal - now using direct app sharing
 // Removed checkUserProStatus import - app is now fully paid-only
 import { fetchRecentActionLog, fetchActionLogs } from '../../services/actionLogs';
@@ -358,176 +359,174 @@ export default function HomeScreen() {
             </View>
           </View>
 
-          {/* Analytics & Progress Section */}
-          <View style={homeStyles.sectionContainer}>
-            <Text style={homeStyles.sectionTitle}>Your Growth Journey</Text>
-            
-            {/* Streaks Row */}
-            <View style={homeStyles.analyticsRow}>
-              <View style={homeStyles.analyticsCard}>
-                <View style={homeStyles.analyticsHeader}>
-                  <Ionicons name="flame" size={20} color="#FF6B35" />
-                  <Text style={homeStyles.analyticsCardTitle}>Current Streak</Text>
-                </View>
-                <Text style={homeStyles.analyticsNumber}>{dayStreak}</Text>
-                <Text style={homeStyles.analyticsLabel}>days</Text>
-              </View>
-              
-              <View style={homeStyles.analyticsCard}>
-                <View style={homeStyles.analyticsHeader}>
-                  <Ionicons name="trophy" size={20} color="#D4DE95" />
-                  <Text style={homeStyles.analyticsCardTitle}>Longest Streak</Text>
-                </View>
-                <Text style={homeStyles.analyticsNumber}>{longestStreak}</Text>
-                <Text style={homeStyles.analyticsLabel}>days</Text>
-              </View>
-            </View>
+                     {/* Analytics & Progress Section */}
+           <View style={homeStyles.sectionContainer}>
+             <Text style={homeStyles.sectionTitle}>Current Alignment</Text>
+             
+             {/* Streaks Row */}
+             <View style={homeStyles.analyticsRow}>
+               <View style={homeStyles.analyticsCard}>
+                 <View style={homeStyles.analyticsHeader}>
+                   <Ionicons name="flame" size={20} color="#FF6B35" />
+                   <Text style={homeStyles.analyticsCardTitle}>Current Streak</Text>
+                 </View>
+                 <Text style={homeStyles.analyticsNumber}>{dayStreak}</Text>
+                 <Text style={homeStyles.analyticsLabel}>days</Text>
+               </View>
+               
+               <View style={homeStyles.analyticsCard}>
+                 <View style={homeStyles.analyticsHeader}>
+                   <Ionicons name="trophy" size={20} color="#D4DE95" />
+                   <Text style={homeStyles.analyticsCardTitle}>Longest Streak</Text>
+                 </View>
+                 <Text style={homeStyles.analyticsNumber}>{longestStreak}</Text>
+                 <Text style={homeStyles.analyticsLabel}>days</Text>
+               </View>
+             </View>
 
-            {/* Trends Row */}
-            <View style={homeStyles.analyticsRow}>
-              <View style={homeStyles.analyticsCard}>
-                <View style={homeStyles.analyticsHeader}>
-                  <Ionicons name="trending-up" size={20} color="#4CAF50" />
-                  <Text style={homeStyles.analyticsCardTitle}>This Week</Text>
-                </View>
-                <Text style={homeStyles.analyticsNumber}>{weeklyLogCount}</Text>
-                <Text style={homeStyles.analyticsLabel}>actions logged</Text>
-              </View>
-              
-              <View style={homeStyles.analyticsCard}>
-                <View style={homeStyles.analyticsHeader}>
-                  <Ionicons 
-                    name={alignmentTrend && alignmentTrend.isImproving ? "trending-up" : "trending-down"} 
-                    size={20} 
-                    color={alignmentTrend && alignmentTrend.isImproving ? "#4CAF50" : "#FF6B35"} 
-                  />
-                  <Text style={homeStyles.analyticsCardTitle}>Alignment Trend</Text>
-                </View>
-                <Text style={[
-                  homeStyles.analyticsNumber,
-                  { color: alignmentTrend && alignmentTrend.isImproving ? "#4CAF50" : "#FF6B35" }
-                ]}>
-                  {alignmentTrend && alignmentTrend.isImproving ? "+" : ""}{Math.abs((alignmentTrend && alignmentTrend.changePercent) || 0).toFixed(1)}%
-                </Text>
-                <Text style={homeStyles.analyticsLabel}>this week</Text>
-              </View>
-            </View>
+             {/* Trends Row */}
+             <View style={homeStyles.analyticsRow}>
+               <View style={homeStyles.analyticsCard}>
+                 <View style={homeStyles.analyticsHeader}>
+                   <Ionicons name="trending-up" size={20} color="#4CAF50" />
+                   <Text style={homeStyles.analyticsCardTitle}>This Week</Text>
+                 </View>
+                 <Text style={homeStyles.analyticsNumber}>{weeklyLogCount}</Text>
+                 <Text style={homeStyles.analyticsLabel}>actions logged</Text>
+               </View>
+               
+               <View style={homeStyles.analyticsCard}>
+                 <View style={homeStyles.analyticsHeader}>
+                   <Ionicons 
+                     name={alignmentTrend && alignmentTrend.isImproving ? "trending-up" : "trending-down"} 
+                     size={20} 
+                     color={alignmentTrend && alignmentTrend.isImproving ? "#4CAF50" : "#FF6B35"} 
+                   />
+                   <Text style={homeStyles.analyticsCardTitle}>Alignment Trend</Text>
+                 </View>
+                 <Text style={[
+                   homeStyles.analyticsNumber,
+                   { color: alignmentTrend && alignmentTrend.isImproving ? "#4CAF50" : "#FF6B35" }
+                 ]}>
+                   {alignmentTrend && alignmentTrend.isImproving ? "+" : ""}{Math.abs((alignmentTrend && alignmentTrend.changePercent) || 0).toFixed(1)}%
+                 </Text>
+                 <Text style={homeStyles.analyticsLabel}>this week</Text>
+               </View>
+             </View>
 
+             {/* Alignment Chart */}
+             <View style={homeStyles.trendsContainer}>
+               <View style={{ minHeight: 130, height: 130, justifyContent: 'center' }}>
+                 {alignmentValue === null ? (
+                   <View style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }}>
+                     <Text style={{ color: '#888', fontSize: 16, textAlign: 'center', marginBottom: 16 }}>
+                       No alignment data yet for this key. Add a key or align now to see your progress!
+                     </Text>
+                   </View>
+                 ) : (
+                   <View style={homeStyles.trendsChart}>
+                     {/* Golden Mean Alignment Chart */}
+                     <View style={homeStyles.goldenMeanContainer}>
+                       <View style={homeStyles.goldenMeanChart}>
+                         {/* Scale Labels */}
+                         <View style={homeStyles.scaleLabels}>
+                           <Text style={[
+                             homeStyles.scaleLabelDeficient,
+                             getCurrentAlignment() < LOW_VALUE && { color: '#FF4C4C' },
+                             getCurrentAlignment() > HIGH_VALUE && { color: '#999' },
+                             getCurrentAlignment() >= LOW_VALUE && getCurrentAlignment() <= HIGH_VALUE && { color: '#999' },
+                           ]}>{getCurrentLabels().deficient}</Text>
+                           <Text style={[
+                             homeStyles.scaleLabelIdeal,
+                             getCurrentAlignment() >= LOW_VALUE && getCurrentAlignment() <= HIGH_VALUE && { color: '#D4DE95' },
+                             (getCurrentAlignment() < LOW_VALUE || getCurrentAlignment() > HIGH_VALUE) && { color: '#999' },
+                           ]}>{getCurrentLabels().ideal}</Text>
+                           <Text style={[
+                             homeStyles.scaleLabelExcess,
+                             getCurrentAlignment() > HIGH_VALUE && { color: '#FF4C4C' },
+                             getCurrentAlignment() < LOW_VALUE && { color: '#999' },
+                             getCurrentAlignment() >= LOW_VALUE && getCurrentAlignment() <= HIGH_VALUE && { color: '#999' },
+                           ]}>{getCurrentLabels().excess}</Text>
+                         </View>
+                         {/* Progress Bar */}
+                         <View style={homeStyles.progressContainer}>
+                           <View style={homeStyles.progressBar}>
+                             {/* Golden Mean Indicator */}
+                             <View style={homeStyles.goldenMeanIndicator} />
+                             {/* User Position */}
+                             <View style={[
+                               homeStyles.userPosition,
+                               { left: `${getCurrentAlignment() * 100}%` }
+                             ]}>
+                               <View style={[
+                                 homeStyles.userDot,
+                                 (getCurrentAlignment() < LOW_VALUE || getCurrentAlignment() > HIGH_VALUE) && {
+                                   borderColor: '#FF4C4C',
+                                   shadowColor: '#FF4C4C',
+                                   backgroundColor: '#fff',
+                                 },
+                               ]} />
+                             </View>
+                             {/* Progress Fill */}
+                             <View style={[
+                               homeStyles.progressFill,
+                               { 
+                                 left: `${Math.min(50, getCurrentAlignment() * 100)}%`,
+                                 width: `${Math.abs(getCurrentAlignment() * 100 - 50)}%`,
+                                 backgroundColor:
+                                   (getCurrentAlignment() < LOW_VALUE || getCurrentAlignment() > HIGH_VALUE)
+                                     ? '#FF4C4C'
+                                     : '#D4DE95',
+                                 shadowColor:
+                                   (getCurrentAlignment() < LOW_VALUE || getCurrentAlignment() > HIGH_VALUE)
+                                     ? '#FF4C4C'
+                                     : '#D4DE95',
+                               }
+                             ]} />
+                           </View>
+                         </View>
+                         {/* Subtitle Labels Below */}
+                         <View style={homeStyles.scaleSubtitles}>
+                           <Text style={[
+                             homeStyles.scaleSubtitleDeficient,
+                             getCurrentAlignment() < LOW_VALUE && { color: '#FF4C4C' },
+                             getCurrentAlignment() > HIGH_VALUE && { color: '#666' },
+                             getCurrentAlignment() >= LOW_VALUE && getCurrentAlignment() <= HIGH_VALUE && { color: '#666' },
+                           ]}>Deficient</Text>
+                           <Text style={[
+                             homeStyles.scaleSubtitleIdeal,
+                             getCurrentAlignment() >= LOW_VALUE && getCurrentAlignment() <= HIGH_VALUE && { color: '#A8B89E' },
+                             (getCurrentAlignment() < LOW_VALUE || getCurrentAlignment() > HIGH_VALUE) && { color: '#666' },
+                           ]}>Aligned</Text>
+                           <Text style={[
+                             homeStyles.scaleSubtitleExcess,
+                             getCurrentAlignment() > HIGH_VALUE && { color: '#FF4C4C' },
+                             getCurrentAlignment() < LOW_VALUE && { color: '#666' },
+                             getCurrentAlignment() >= LOW_VALUE && getCurrentAlignment() <= HIGH_VALUE && { color: '#666' },
+                           ]}>Excessive</Text>
+                         </View>
+                       </View>
+                     </View>
+                   </View>
+                 )}
+               </View>
+               {/* Key Type Selector */}
+               <View style={homeStyles.keyTypeSelector}>
+                 <TouchableOpacity onPress={() => handleKeyTypeNavigation('left')}>
+                   <Text style={homeStyles.keyTypeArrow}>‹</Text>
+                 </TouchableOpacity>
+                 <Text style={homeStyles.keyTypeText}>
+                   {getCurrentKeyTypeDisplay()}
+                 </Text>
+                 <TouchableOpacity onPress={() => handleKeyTypeNavigation('right')}>
+                   <Text style={homeStyles.keyTypeArrow}>›</Text>
+                 </TouchableOpacity>
+               </View>
+             </View>
 
-          </View>
+           </View>
 
-          {/* Alignment Trends Section */}
-          <View style={homeStyles.sectionContainer}>
-            <Text style={homeStyles.sectionTitle}>Current Alignment</Text>
-            <View style={homeStyles.trendsContainer}>
-              <View style={{ minHeight: 130, height: 130, justifyContent: 'center' }}>
-                {alignmentValue === null ? (
-                  <View style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }}>
-                    <Text style={{ color: '#888', fontSize: 16, textAlign: 'center', marginBottom: 16 }}>
-                      No alignment data yet for this key. Add a key or align now to see your progress!
-                    </Text>
-                  </View>
-                ) : (
-                  <View style={homeStyles.trendsChart}>
-                    {/* Golden Mean Alignment Chart */}
-                    <View style={homeStyles.goldenMeanContainer}>
-                      <View style={homeStyles.goldenMeanChart}>
-                        {/* Scale Labels */}
-                        <View style={homeStyles.scaleLabels}>
-                          <Text style={[
-                            homeStyles.scaleLabelDeficient,
-                            getCurrentAlignment() < LOW_VALUE && { color: '#FF4C4C' },
-                            getCurrentAlignment() > HIGH_VALUE && { color: '#999' },
-                            getCurrentAlignment() >= LOW_VALUE && getCurrentAlignment() <= HIGH_VALUE && { color: '#999' },
-                          ]}>{getCurrentLabels().deficient}</Text>
-                          <Text style={[
-                            homeStyles.scaleLabelIdeal,
-                            getCurrentAlignment() >= LOW_VALUE && getCurrentAlignment() <= HIGH_VALUE && { color: '#D4DE95' },
-                            (getCurrentAlignment() < LOW_VALUE || getCurrentAlignment() > HIGH_VALUE) && { color: '#999' },
-                          ]}>{getCurrentLabels().ideal}</Text>
-                          <Text style={[
-                            homeStyles.scaleLabelExcess,
-                            getCurrentAlignment() > HIGH_VALUE && { color: '#FF4C4C' },
-                            getCurrentAlignment() < LOW_VALUE && { color: '#999' },
-                            getCurrentAlignment() >= LOW_VALUE && getCurrentAlignment() <= HIGH_VALUE && { color: '#999' },
-                          ]}>{getCurrentLabels().excess}</Text>
-                        </View>
-                        {/* Progress Bar */}
-                        <View style={homeStyles.progressContainer}>
-                          <View style={homeStyles.progressBar}>
-                            {/* Golden Mean Indicator */}
-                            <View style={homeStyles.goldenMeanIndicator} />
-                            {/* User Position */}
-                            <View style={[
-                              homeStyles.userPosition,
-                              { left: `${getCurrentAlignment() * 100}%` }
-                            ]}>
-                              <View style={[
-                                homeStyles.userDot,
-                                (getCurrentAlignment() < LOW_VALUE || getCurrentAlignment() > HIGH_VALUE) && {
-                                  borderColor: '#FF4C4C',
-                                  shadowColor: '#FF4C4C',
-                                  backgroundColor: '#fff',
-                                },
-                              ]} />
-                            </View>
-                            {/* Progress Fill */}
-                            <View style={[
-                              homeStyles.progressFill,
-                              { 
-                                left: `${Math.min(50, getCurrentAlignment() * 100)}%`,
-                                width: `${Math.abs(getCurrentAlignment() * 100 - 50)}%`,
-                                backgroundColor:
-                                  (getCurrentAlignment() < LOW_VALUE || getCurrentAlignment() > HIGH_VALUE)
-                                    ? '#FF4C4C'
-                                    : '#D4DE95',
-                                shadowColor:
-                                  (getCurrentAlignment() < LOW_VALUE || getCurrentAlignment() > HIGH_VALUE)
-                                    ? '#FF4C4C'
-                                    : '#D4DE95',
-                              }
-                            ]} />
-                          </View>
-                        </View>
-                        {/* Subtitle Labels Below */}
-                        <View style={homeStyles.scaleSubtitles}>
-                          <Text style={[
-                            homeStyles.scaleSubtitleDeficient,
-                            getCurrentAlignment() < LOW_VALUE && { color: '#FF4C4C' },
-                            getCurrentAlignment() > HIGH_VALUE && { color: '#666' },
-                            getCurrentAlignment() >= LOW_VALUE && getCurrentAlignment() <= HIGH_VALUE && { color: '#666' },
-                          ]}>Deficient</Text>
-                          <Text style={[
-                            homeStyles.scaleSubtitleIdeal,
-                            getCurrentAlignment() >= LOW_VALUE && getCurrentAlignment() <= HIGH_VALUE && { color: '#A8B89E' },
-                            (getCurrentAlignment() < LOW_VALUE || getCurrentAlignment() > HIGH_VALUE) && { color: '#666' },
-                          ]}>Aligned</Text>
-                          <Text style={[
-                            homeStyles.scaleSubtitleExcess,
-                            getCurrentAlignment() > HIGH_VALUE && { color: '#FF4C4C' },
-                            getCurrentAlignment() < LOW_VALUE && { color: '#666' },
-                            getCurrentAlignment() >= LOW_VALUE && getCurrentAlignment() <= HIGH_VALUE && { color: '#666' },
-                          ]}>Excessive</Text>
-                        </View>
-                      </View>
-                    </View>
-                  </View>
-                )}
-              </View>
-              {/* Key Type Selector */}
-              <View style={homeStyles.keyTypeSelector}>
-                <TouchableOpacity onPress={() => handleKeyTypeNavigation('left')}>
-                  <Text style={homeStyles.keyTypeArrow}>‹</Text>
-                </TouchableOpacity>
-                <Text style={homeStyles.keyTypeText}>
-                  {getCurrentKeyTypeDisplay()}
-                </Text>
-                <TouchableOpacity onPress={() => handleKeyTypeNavigation('right')}>
-                  <Text style={homeStyles.keyTypeArrow}>›</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
+          
 
           {/* Previous Action Log Section */}
           <View style={homeStyles.sectionContainer}>
@@ -572,6 +571,12 @@ export default function HomeScreen() {
                 ))
               )}
             </View>
+          </View>
+
+          {/* Community Card Section */}
+          <View style={homeStyles.sectionContainer}>
+            <Text style={homeStyles.sectionTitle}>Community</Text>
+            <CommunityCard />
           </View>
 
           {/* Weekly Overview Section */}
