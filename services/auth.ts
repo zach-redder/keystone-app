@@ -483,38 +483,9 @@ export const resendConfirmationEmail = async (email: string) => {
 };
 
 export const checkUserProStatus = async () => {
-  try {
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-    
-    if (authError || !user) {
-      console.log('User not authenticated, returning false for pro status');
-      return false; // Return false instead of throwing
-    }
-
-    const { data, error } = await supabase
-      .from('users')
-      .select('is_pro')
-      .eq('id', user.id)
-      .maybeSingle(); // Use maybeSingle instead of single
-
-    if (error) {
-      console.error('Error checking pro status:', error);
-      return false; // Return false on error instead of throwing
-    }
-
-    if (!data) {
-      console.log('User record not found, returning false for pro status');
-      return false;
-    }
-
-    return data?.is_pro || false;
-  } catch (error) {
-    console.error('Error in checkUserProStatus:', error);
-    return false;
-  }
+  // 🔒 PAID-ONLY APP: All users are considered "Pro" by default
+  // This function now always returns true since the app is behind a hard paywall
+  return true;
 };
 
 export const upgradeUserToPro = async (userId?: string) => {

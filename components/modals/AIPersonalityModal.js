@@ -4,12 +4,12 @@ import { useState, useEffect } from 'react';
 import * as Haptics from 'expo-haptics';
 import { getPreferredAiPersona, setPreferredAiPersona } from '../../services/userPreferences';
 import { fetchCustomPersonalities, createCustomPersonality, deleteCustomPersonality } from '../../services/customPersonalitiesService';
-import { checkUserProStatus } from '../../services/auth';
+// Removed checkUserProStatus import - app is now fully paid-only
 import keysStyles from '../../styles/keys';
 
 const AIPersonalityModal = ({ visible, onClose, onUpgradePress }) => {
   const [selectedPersonality, setSelectedPersonality] = useState('Default');
-  const [isPro, setIsPro] = useState(false);
+  // Removed isPro state - app is now fully paid-only
   const [isLoading, setIsLoading] = useState(false);
   const [showCustomForm, setShowCustomForm] = useState(false);
   const [customName, setCustomName] = useState('');
@@ -87,7 +87,7 @@ const AIPersonalityModal = ({ visible, onClose, onUpgradePress }) => {
   useEffect(() => {
     if (visible) {
       loadCurrentPersonality();
-      checkProStatus();
+      // Removed checkProStatus call - app is now fully paid-only
       loadCustomPersonalities();
     }
   }, [visible]);
@@ -105,14 +105,7 @@ const AIPersonalityModal = ({ visible, onClose, onUpgradePress }) => {
     }
   };
 
-  const checkProStatus = async () => {
-    try {
-      const proStatus = await checkUserProStatus();
-      setIsPro(proStatus);
-    } catch (error) {
-      console.error('Error checking pro status:', error);
-    }
-  };
+  // Removed checkProStatus function - app is now fully paid-only
 
   const loadCustomPersonalities = async () => {
     try {

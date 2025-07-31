@@ -29,7 +29,7 @@ const DOUBT_CONSEQUENCES = [
         icon: 'account-cancel',
         iconAnimation: 'fade',
         title: 'Self-Doubt',
-        subtitle: "You can't trust your own decisions, making every choice feel incorrect.",
+        subtitle: "You don't believe in yourself enough to be able to push through hard times.",
         color: '#FF6B6B'
     },
     {
@@ -190,7 +190,7 @@ export default function DoubtConsequences() {
     return (
         <GestureDetector gesture={swipeGesture}>
             <LinearGradient
-                colors={currentPage === 5 ? ['#2B2B2B', '#2F2F2C', '#2B2B2B'] : ['#FF6B6B', '#FF5555', '#FF6B6B']}
+                colors={currentPage === 5 ? ['#2B2B2B', '#2F2F2C', '#2B2B2B'] : ['#FF6B6B', '#FF4C4C', '#FF6B6B']}
                 style={styles.doubtConsequenceContainer}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}

@@ -522,7 +522,6 @@ export const styles = StyleSheet.create({
     color: '#b3b3b3',
     fontSize: 16,
     textAlign: 'center',
-    textDecorationLine: 'underline',
   },
   
   // Good News screen styles
@@ -977,7 +976,6 @@ export const styles = StyleSheet.create({
     color: '#888888',
     fontSize: 16,
     textAlign: 'center',
-    textDecorationLine: 'underline',
   },
 
   // App Rating Styles
@@ -1488,6 +1486,31 @@ export const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     letterSpacing: 0.5,
+  },
+
+  // Additional Referral Code Styles
+  validatingIndicator: {
+    position: 'absolute',
+    right: 15,
+    top: '50%',
+    transform: [{ translateY: -10 }],
+  },
+  validationMessage: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 20,
+    paddingHorizontal: 20,
+    fontWeight: '600',
+  },
+  validMessage: {
+    color: '#4CAF50',
+  },
+  invalidMessage: {
+    color: '#F44336',
+  },
+  referralSubmitButtonDisabled: {
+    backgroundColor: 'rgba(212, 222, 149, 0.5)',
+    shadowOpacity: 0.2,
   },
   
 });

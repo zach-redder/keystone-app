@@ -220,7 +220,7 @@ export default function IdentityScore() {
                                     styles.barFill,
                                     {
                                         width: doubtBarWidthInterpolate,
-                                        backgroundColor: '#FF6B6B',
+                                        backgroundColor: '#FF4C4C',
                                     }
                                 ]}
                             />

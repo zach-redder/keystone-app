@@ -12,7 +12,7 @@ const KEYSTONE_BENEFITS = [
         id: 1,
         icon: 'crown',
         iconAnimation: 'glow',
-        title: 'Keystone is the Answer',
+        title: 'Introducing Keystone',
         subtitle: 'The #1 app to overcome doubt and stop caring what people think.',
     },
     {
@@ -31,10 +31,17 @@ const KEYSTONE_BENEFITS = [
     },
     {
         id: 4,
+        icon: 'bullseye',
+        iconAnimation: 'pulse',
+        title: 'Affirm Vision',
+        subtitle: 'Keep your vision constantly in mind to keep yourself on track and motivated.',
+    },
+    {
+        id: 5,
         icon: 'rocket-launch',
         iconAnimation: 'bounce',
-        title: 'Become Your Best Self',
-        subtitle: 'Build a version of you that always follows through on what matters most to you.',
+        title: 'Become Authentic',
+        subtitle: 'Project your true self to get rid of any self-doubt or outside opinions.',
     }
 ];
 

@@ -5,7 +5,7 @@ import AffirmIdentityModal from './AffirmIdentityModal';
 import LogActionModal from './LogActionModal';
 import ActionLogResultModal from './ActionLogResultModal';
 import ShareProgressModal from './ShareProgressModal';
-import { checkUserProStatus } from '../../services/auth';
+// Removed checkUserProStatus import - app is now fully paid-only
 import { fetchTodaysActionLogCount } from '../../services/actionLogs';
 
 const { height: screenHeight } = Dimensions.get('window');
@@ -16,7 +16,7 @@ const AlignModal = ({ visible, onClose, onUpgradePress, onAffirmIdentity }) => {
   const dragOffset = useRef(new Animated.Value(0)).current;
   const isClosing = useRef(false);
   const [showLogActionModal, setShowLogActionModal] = useState(false);
-  const [checkingLimit, setCheckingLimit] = useState(false);
+  // Removed checkingLimit state - no longer needed in paid-only app
   const [showShareProgressModal, setShowShareProgressModal] = useState(false);
 
   // Pan responder for drag gestures - applies only to draggable content area
@@ -92,25 +92,8 @@ const AlignModal = ({ visible, onClose, onUpgradePress, onAffirmIdentity }) => {
 
   const handleLogAction = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setCheckingLimit(true);
-    try {
-      const isPro = await checkUserProStatus();
-      if (!isPro) {
-        const count = await fetchTodaysActionLogCount();
-        console.log('AlignModal: count', count);
-        if (count >= 2) {
-          setCheckingLimit(false);
-          if (onUpgradePress) onUpgradePress();
-          return;
-        }
-      }
-      setShowLogActionModal(true);
-    } catch (e) {
-      // fallback: open upgrade modal if error
-      if (onUpgradePress) onUpgradePress();
-    } finally {
-      setCheckingLimit(false);
-    }
+    // 🔒 PAID-ONLY APP: All users have unlimited access to action logging
+    setShowLogActionModal(true);
   };
 
   const handleLogActionClose = () => {

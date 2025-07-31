@@ -43,7 +43,12 @@ const features = [
   }
 ];
 
-const productIds = ['your_subscription_id'];
+// Define product IDs for each subscription type
+const productIds = {
+  monthly: 'com.reddermedia.keystone.pro.monthly',
+  yearly: 'com.reddermedia.keystone.pro.yearly', 
+  lifetime: 'com.reddermedia.keystone.pro.lifetime'
+};
 
 export default function SubscriptionScreen() {
   const router = useRouter();
@@ -58,9 +63,13 @@ export default function SubscriptionScreen() {
   const checkSubscriptionStatus = async () => {
     try {
       const purchases = await RNIap.getAvailablePurchases();
-      // Replace 'your_subscription_id' with your actual product id(s)
+      // Check for any active subscription or lifetime purchase
       const hasActivePro = purchases.some(
-        (purchase) => purchase.productId === productIds[0] && !purchase.isExpired
+        (purchase) => {
+          const isSubscriptionActive = (purchase.productId === productIds.monthly || purchase.productId === productIds.yearly) && !purchase.isExpired;
+          const hasLifetime = purchase.productId === productIds.lifetime;
+          return isSubscriptionActive || hasLifetime;
+        }
       );
       if (hasActivePro) {
         await upgradeUserToPro();
@@ -129,27 +138,22 @@ export default function SubscriptionScreen() {
     }, 5000);
   };
 
-  const handleClose = () => {
-    const returnTo = params.returnTo || 'home';
-    
-    // Navigate back to the specific page
-    if (returnTo === 'home') {
-      router.push('/tabs/home');
-    } else if (returnTo === 'keys') {
-      router.push('/tabs/keys');
-    } else if (returnTo === 'profile') {
-      router.push('/tabs/profile');
-    } else {
-      router.back();
-    }
-  };
-
   const handleStartFreeTrial = async () => {
     try {
-      const purchase = await RNIap.requestSubscription(productIds[0]);
+      let purchase;
+      const selectedProductId = productIds[selectedSubscription];
+      
+      if (selectedSubscription === 'lifetime') {
+        // Use requestPurchase for one-time lifetime purchase
+        purchase = await RNIap.requestPurchase(selectedProductId);
+      } else {
+        // Use requestSubscription for monthly/yearly subscriptions
+        purchase = await RNIap.requestSubscription(selectedProductId);
+      }
+      
       await handlePurchase(purchase);
     } catch (err) {
-      console.warn(err);
+      console.warn('Purchase error:', err);
     }
   };  
 
@@ -221,7 +225,10 @@ export default function SubscriptionScreen() {
                   styles.subscriptionOption,
                   selectedSubscription === 'monthly' && styles.selectedOption
                 ]}
-                onPress={() => setSelectedSubscription('monthly')}
+                onPress={() => {
+                  setSelectedSubscription('monthly');
+                  Haptics.selectionAsync();
+                }}
               >
                 <View style={styles.subscriptionOptionContent}>
                   <Text style={styles.subscriptionTitle}>Monthly</Text>
@@ -236,7 +243,10 @@ export default function SubscriptionScreen() {
                   styles.recommendedOption,
                   selectedSubscription === 'yearly' && styles.selectedOption
                 ]}
-                onPress={() => setSelectedSubscription('yearly')}
+                onPress={() => {
+                  setSelectedSubscription('yearly');
+                  Haptics.selectionAsync();
+                }}
               >
                 <View style={styles.saveBadge}>
                   <Text style={styles.saveBadgeText}>Save 75%</Text>
@@ -253,22 +263,29 @@ export default function SubscriptionScreen() {
                   styles.subscriptionOption,
                   selectedSubscription === 'lifetime' && styles.selectedOption
                 ]}
-                onPress={() => setSelectedSubscription('lifetime')}
+                onPress={() => {
+                  setSelectedSubscription('lifetime');
+                  Haptics.selectionAsync();
+                }}
               >
                 <View style={styles.subscriptionOptionContent}>
                   <Text style={styles.subscriptionTitle}>Lifetime</Text>
-                  <Text style={styles.subscriptionPrice}>$99.99 after trial ends</Text>
+                  <Text style={styles.subscriptionPrice}>$99.99 for life</Text>
                 </View>
               </TouchableOpacity>
             </View>
 
-            {/* Start Free Trial button */}
+            {/* Purchase button with dynamic text */}
             <TouchableOpacity style={styles.trialButton} onPress={handleStartFreeTrial}>
-              <Text style={styles.trialButtonText}>Start Free Trial</Text>
+              <Text style={styles.trialButtonText}>
+                {selectedSubscription === 'lifetime' ? 'Purchase Lifetime Access' : 'Start Free Trial'}
+              </Text>
             </TouchableOpacity>
 
-            {/* No payment text */}
-            <Text style={styles.noPaymentText}>No payment due now</Text>
+            {/* Payment info text */}
+            <Text style={styles.noPaymentText}>
+              {selectedSubscription === 'lifetime' ? 'One-time payment' : 'No payment due now'}
+            </Text>
           </View>
         </View>
       </View>

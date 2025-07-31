@@ -1,4 +1,4 @@
-import { View, Text, Pressable, SafeAreaView, TouchableOpacity, Image, ScrollView, Animated } from 'react-native';
+import { View, Text, Pressable, SafeAreaView, TouchableOpacity, Image, ScrollView, Animated, Share } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
@@ -11,14 +11,14 @@ import InfoModal from '../../components/modals/InfoModal';
 import DeleteConfirmationModal from '../../components/modals/DeleteConfirmationModal';
 import EditKeyModal from '../../components/modals/EditKeyModal';
 import CreateKeyModal from '../../components/modals/CreateKeyModal';
-import ProUpgradeModal from '../../components/modals/ProUpgradeModal';
+// Removed ProUpgradeModal import - no longer needed in paid-only app
 import CommunityModal from '../../components/modals/CommunityModal';
 import AffirmIdentityModal from '../../components/modals/AffirmIdentityModal';
 import ShareProgressModal from '../../components/modals/ShareProgressModal';
-import ReferralModal from '../../components/modals/ReferralModal';
+// Removed ReferralModal - now using direct app sharing
 import { fetchIdentityKeys, deleteIdentityKey, updateIdentityKey, addIdentityKey } from '../../services/userKeys';
-import { checkUserProStatus } from '../../services/auth';
-import { shareKeysPage } from '../../services/shareService';
+// Removed checkUserProStatus import - app is now fully paid-only
+import { getAppStoreLink, APP_NAME } from '../../constants/appStore';
 import { getUserDayStreak } from '../../services/userPreferences';
 
 function AppButton({ title, onPress, style, icon, iconRight, plusMarginRight, animatedStyle }) {
@@ -142,7 +142,7 @@ export default function Keys() {
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [createModalVisible, setCreateModalVisible] = useState(false);
-  const [proModalVisible, setProModalVisible] = useState(false);
+  // Removed proModalVisible state - no longer needed in paid-only app
   const [communityModalVisible, setCommunityModalVisible] = useState(false);
   const [keyToDelete, setKeyToDelete] = useState(null);
   const [keyToEdit, setKeyToEdit] = useState(null);
@@ -151,7 +151,7 @@ export default function Keys() {
   const [alignModalVisible, setAlignModalVisible] = useState(false);
   const [affirmIdentityModalVisible, setAffirmIdentityModalVisible] = useState(false);
   const [shareProgressModalVisible, setShareProgressModalVisible] = useState(false);
-  const [referralModalVisible, setReferralModalVisible] = useState(false);
+  // Removed referralModalVisible - now using direct app sharing
 
   // Load user keys when component mounts or selected item changes
   useEffect(() => {
@@ -250,29 +250,7 @@ export default function Keys() {
   };
 
   const handleMenuItemSelect = async (item) => {
-    // Define Pro-only categories
-    const proOnlyCategories = ['identity_traits', 'motivations', 'avoidances'];
-    
-    // Check if the selected category requires Pro
-    if (proOnlyCategories.includes(item.category)) {
-      try {
-        const isPro = await checkUserProStatus();
-        if (!isPro) {
-          // User doesn't have Pro, show upgrade modal instead
-          setProModalVisible(true);
-          setMenuVisible(false);
-          return;
-        }
-      } catch (error) {
-        console.error('Error checking Pro status:', error);
-        // Show Pro modal on error for restricted categories
-        setProModalVisible(true);
-        setMenuVisible(false);
-        return;
-      }
-    }
-    
-    // User has Pro or category is free, proceed normally
+    // 🔒 PAID-ONLY APP: All categories are now available to all users
     setSelectedItem(item);
     setMenuVisible(false);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -335,25 +313,7 @@ export default function Keys() {
   };
 
   const handleCreatePress = async () => {
-    const categoryKeys = getCurrentCategoryKeys();
-    
-    try {
-      const isPro = await checkUserProStatus();
-      
-      // Check if user already has 5 keys in this category and is not Pro
-      if (categoryKeys.length >= 5 && !isPro) {
-        // Show pro upgrade modal instead
-        setProModalVisible(true);
-        return;
-      }
-    } catch (error) {
-      console.error('Error checking Pro status:', error);
-      // If there's an error checking Pro status and user has 5+ keys, show Pro modal
-      if (categoryKeys.length >= 5) {
-        setProModalVisible(true);
-        return;
-      }
-    }
+    // 🔒 PAID-ONLY APP: All users have unlimited key creation
     
     // Open modal instantly
     setCreateModalVisible(true);
@@ -374,16 +334,21 @@ export default function Keys() {
 
   // Removed handleBadgePress - no longer needed with streak UI
 
-  const handleSharePress = () => {
+  const handleSharePress = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setReferralModalVisible(true);
+    try {
+      const appStoreLink = getAppStoreLink();
+      await Share.share({
+        message: `Check out ${APP_NAME} - the app that helps you overcome doubt and become your best self! Download it here: ${appStoreLink}`,
+        url: appStoreLink,
+        title: `${APP_NAME} - Overcome Doubt`
+      });
+    } catch (error) {
+      console.error('Error sharing app:', error);
+    }
   };
 
-  // Handler to open Pro modal from AffirmIdentityModal
-  const handleRequestProUpgrade = () => {
-    setAffirmIdentityModalVisible(false);
-    setProModalVisible(true);
-  };
+  // Removed handleRequestProUpgrade - no longer needed in paid-only app
 
   // Handler for Affirm Identity from AlignModal
   const handleAffirmIdentity = () => {
@@ -509,11 +474,7 @@ export default function Keys() {
         onCreate={handleCreateSave}
         keyType={selectedItem.label.slice(0, -1)}
       />
-      <ProUpgradeModal
-        visible={proModalVisible}
-        onClose={() => setProModalVisible(false)}
-        currentPage="keys"
-      />
+      {/* Removed ProUpgradeModal - no longer needed in paid-only app */}
       <CommunityModal
         visible={communityModalVisible}
         onClose={() => setCommunityModalVisible(false)}
@@ -522,24 +483,19 @@ export default function Keys() {
         visible={alignModalVisible}
         onClose={() => setAlignModalVisible(false)}
         onUpgradePress={() => {
-          setAlignModalVisible(false);
-          setProModalVisible(true);
+          // No longer needed - all users have full access
         }}
         onAffirmIdentity={handleAffirmIdentity}
       />
       <AffirmIdentityModal
         visible={affirmIdentityModalVisible}
         onClose={() => setAffirmIdentityModalVisible(false)}
-        onRequestProUpgrade={handleRequestProUpgrade}
       />
               <ShareProgressModal
           visible={shareProgressModalVisible}
           onClose={() => setShareProgressModalVisible(false)}
         />
-        <ReferralModal
-          visible={referralModalVisible}
-          onClose={() => setReferralModalVisible(false)}
-        />
+        {/* Removed ReferralModal - now using direct app sharing */}
     </SafeAreaView>
   );
 }

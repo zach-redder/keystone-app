@@ -128,7 +128,7 @@ export default function AppRating() {
                 {renderStars()}
 
                 <Text style={styles.ratingSubtitle}>
-                    This app was designed for you.
+                    Keystone was designed specifically for you.
                 </Text>
                 
                 {/* Fake app store reviews for visual display */}

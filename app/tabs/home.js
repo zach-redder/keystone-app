@@ -1,20 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, SafeAreaView, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, SafeAreaView, TouchableOpacity, ScrollView, Share } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import globalStyles from '../../styles/global';
 import keysStyles from '../../styles/keys';
 import homeStyles from '../../styles/home';
-import ProUpgradeModal from '../../components/modals/ProUpgradeModal';
+// Removed ProUpgradeModal import - no longer needed in paid-only app
 import CommunityModal from '../../components/modals/CommunityModal';
 import AlignModal from '../../components/modals/AlignModal';
 import AlignButton from '../../components/buttons/AlignButton';
 import LogActionModal from '../../components/modals/LogActionModal';
 import ShareProgressModal from '../../components/modals/ShareProgressModal';
-import ReferralModal from '../../components/modals/ReferralModal';
-import { checkUserProStatus } from '../../services/auth';
+// Removed ReferralModal - now using direct app sharing
+// Removed checkUserProStatus import - app is now fully paid-only
 import { fetchRecentActionLog, fetchActionLogs } from '../../services/actionLogs';
-import { shareHomePage } from '../../services/shareService';
+import { getAppStoreLink, APP_NAME } from '../../constants/appStore';
 import { fetchTodayReminder, setupReminderNotifications } from '../../services/reminderService';
 import { 
   fetchAlignmentValue, 
@@ -25,12 +25,14 @@ import {
   getScoreColor
 } from '../../services/alignmentService';
 import { getUserDayStreak } from '../../services/userPreferences';
+import { checkForStreakMilestone, markMilestoneAsShown } from '../../services/streakRewardsService';
 import * as Haptics from 'expo-haptics';
 import ActionLogResultModal from '../../components/modals/ActionLogResultModal';
 import AffirmIdentityModal from '../../components/modals/AffirmIdentityModal';
+import StreakRewardModal from '../../components/modals/StreakRewardModal';
 
 export default function HomeScreen() {
-  const [proModalVisible, setProModalVisible] = useState(false);
+  // Removed proModalVisible state - no longer needed in paid-only app
   const [communityModalVisible, setCommunityModalVisible] = useState(false);
   const [alignModalVisible, setAlignModalVisible] = useState(false);
   const [dayStreak, setDayStreak] = useState(0);
@@ -50,7 +52,9 @@ export default function HomeScreen() {
   const [resultLog, setResultLog] = useState(null);
   const [affirmIdentityModalVisible, setAffirmIdentityModalVisible] = useState(false);
   const [shareProgressModalVisible, setShareProgressModalVisible] = useState(false);
-  const [referralModalVisible, setReferralModalVisible] = useState(false);
+  // Removed referralModalVisible - now using direct app sharing
+  const [streakRewardModalVisible, setStreakRewardModalVisible] = useState(false);
+  const [currentMilestone, setCurrentMilestone] = useState(null);
 
   const HIGH_VALUE = 0.7; // Threshold for excessive alignment
   const LOW_VALUE = 0.3; // Threshold for deficient alignment
@@ -166,6 +170,17 @@ export default function HomeScreen() {
     try {
       const streak = await getUserDayStreak();
       setDayStreak(streak);
+      
+      // Check for streak milestone achievements
+      if (streak > 0) {
+        const milestone = await checkForStreakMilestone(streak);
+        if (milestone) {
+          setCurrentMilestone(milestone);
+          setStreakRewardModalVisible(true);
+          // Mark this milestone as shown
+          await markMilestoneAsShown(milestone.days);
+        }
+      }
     } catch (error) {
       console.error('Error loading day streak:', error);
       setDayStreak(0);
@@ -196,9 +211,18 @@ export default function HomeScreen() {
     setLogActionModalVisible(true);
   };
 
-  const handleSharePress = () => {
+  const handleSharePress = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setReferralModalVisible(true);
+    try {
+      const appStoreLink = getAppStoreLink();
+      await Share.share({
+        message: `Check out ${APP_NAME} - the app that helps you overcome doubt and become your best self! Download it here: ${appStoreLink}`,
+        url: appStoreLink,
+        title: `${APP_NAME} - Overcome Doubt`
+      });
+    } catch (error) {
+      console.error('Error sharing app:', error);
+    }
   };
 
   const formatActionLogDate = (dateString) => {
@@ -246,11 +270,7 @@ export default function HomeScreen() {
     return `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
   };
 
-  // Handler to open Pro modal from AffirmIdentityModal
-  const handleRequestProUpgrade = () => {
-    setAffirmIdentityModalVisible(false);
-    setProModalVisible(true); // Add delay to ensure modal sequencing
-  };
+  // Removed handleRequestProUpgrade - no longer needed in paid-only app
 
   // Handler for Affirm Identity from AlignModal
   const handleAffirmIdentity = () => {
@@ -530,17 +550,12 @@ export default function HomeScreen() {
           visible={alignModalVisible}
           onClose={() => setAlignModalVisible(false)}
           onUpgradePress={() => {
-            setAlignModalVisible(false);
-            setProModalVisible(true);
+            // No longer needed - all users have full access
           }}
           onAffirmIdentity={handleAffirmIdentity}
         />
         
-        <ProUpgradeModal
-          visible={proModalVisible}
-          onClose={() => setProModalVisible(false)}
-          currentPage="home"
-        />
+        {/* Removed ProUpgradeModal - no longer needed in paid-only app */}
         
         <CommunityModal
           visible={communityModalVisible}
@@ -563,15 +578,19 @@ export default function HomeScreen() {
         <AffirmIdentityModal
           visible={affirmIdentityModalVisible}
           onClose={() => setAffirmIdentityModalVisible(false)}
-          onRequestProUpgrade={handleRequestProUpgrade}
         />
         <ShareProgressModal
           visible={shareProgressModalVisible}
           onClose={() => setShareProgressModalVisible(false)}
         />
-        <ReferralModal
-          visible={referralModalVisible}
-          onClose={() => setReferralModalVisible(false)}
+        {/* Removed ReferralModal - now using direct app sharing */}
+        <StreakRewardModal
+          visible={streakRewardModalVisible}
+          milestone={currentMilestone}
+          onClose={() => {
+            setStreakRewardModalVisible(false);
+            setCurrentMilestone(null);
+          }}
         />
       </View>
     </SafeAreaView>

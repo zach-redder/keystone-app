@@ -8,9 +8,9 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const TYPING_PHRASES = [
-    'This app is for you.',
-    "It's time to take the first step.",
-    "Let's do this together."
+    "Keystone is now custom built just for you.",
+    "It's designed to help you become your authentic self.",
+    "Now, it's time for you to take the first step."
 ];
 
 export default function AnimatedProfileCard() {
@@ -103,7 +103,7 @@ export default function AnimatedProfileCard() {
                                 router.push('/onboarding/PaywallTrial');
                             }, 800); // Much shorter final pause
                         }
-                    }, 1000); // Much shorter hold phrase time
+                    }, 1200); // Much shorter hold phrase time
                 }
             }
         };
