@@ -1,4 +1,4 @@
-import { View, Text, Pressable, SafeAreaView, TouchableOpacity, Image, ScrollView, Animated, Share } from 'react-native';
+import { View, Text, Pressable, SafeAreaView, TouchableOpacity, Image, ScrollView, Animated, Share, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
@@ -21,74 +21,60 @@ import { fetchIdentityKeys, deleteIdentityKey, updateIdentityKey, addIdentityKey
 import { getAppStoreLink, APP_NAME } from '../../constants/appStore';
 import { getUserDayStreak } from '../../services/userPreferences';
 
-function AppButton({ title, onPress, style, icon, iconRight, plusMarginRight, animatedStyle }) {
-  const pressScale = useRef(new Animated.Value(1)).current;
-  const pressOpacity = useRef(new Animated.Value(1)).current;
-
-  const handlePressIn = () => {
-    Animated.parallel([
-      Animated.timing(pressScale, {
-        toValue: 0.96,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-      Animated.timing(pressOpacity, {
-        toValue: 0.7,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-    ]).start();
+function AppButton({ title, onPress, style, icon, iconRight, plusMarginRight }) {
+  const handlePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  };
-
-  const handlePressOut = () => {
-    // Trigger onPress when finger is released
     if (onPress) {
       onPress();
     }
-    
-    Animated.parallel([
-      Animated.timing(pressScale, {
-        toValue: 1,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-      Animated.timing(pressOpacity, {
-        toValue: 1,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-    ]).start();
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
   };
 
-  const combinedAnimatedStyle = [
-    animatedStyle,
-    {
-      transform: [
-        ...(animatedStyle?.transform || []),
-        { scale: pressScale }
-      ],
-      opacity: pressOpacity,
-    }
-  ];
+  return (
+    <TouchableOpacity 
+      onPress={handlePress}
+      style={[keysStyles.button, style]}
+      activeOpacity={0.8}
+    >
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+        {icon && <Text style={keysStyles.buttonIcon}>{icon}</Text>}
+        <Text style={keysStyles.buttonText}>{title}</Text>
+        {iconRight && (
+          <Image source={require('../../assets/plus.png')} style={{ ...keysStyles.plusImage, marginRight: plusMarginRight }} />
+        )}
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+// Simple key row component without complex animations
+function KeyRow({ keyData, onEdit, onDelete }) {
+  const handleEditPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onEdit(keyData);
+  };
+
+  const handleDeletePress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onDelete(keyData);
+  };
 
   return (
-    <Animated.View style={combinedAnimatedStyle}>
-      <Pressable 
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-        style={[keysStyles.button, style]}
+    <View style={keysStyles.inputRow}>
+      <TouchableOpacity 
+        style={keysStyles.keyTextContainer}
+        onPress={handleEditPress}
+        activeOpacity={0.8}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-          {icon && <Text style={keysStyles.buttonIcon}>{icon}</Text>}
-          <Text style={keysStyles.buttonText}>{title}</Text>
-          {iconRight && (
-            <Image source={require('../../assets/plus.png')} style={{ ...keysStyles.plusImage, marginRight: plusMarginRight }} />
-          )}
-        </View>
-      </Pressable>
-    </Animated.View>
+        <Text style={keysStyles.keyText}>{keyData.description}</Text>
+      </TouchableOpacity>
+      <TouchableOpacity 
+        style={keysStyles.trashWrap}
+        onPress={handleDeletePress}
+        activeOpacity={0.7}
+      >
+        <Image source={require('../../assets/delete.png')} style={{ width: 28, height: 28 }} resizeMode="contain" />
+      </TouchableOpacity>
+    </View>
   );
 }
 
@@ -152,6 +138,8 @@ export default function Keys() {
   const [affirmIdentityModalVisible, setAffirmIdentityModalVisible] = useState(false);
   const [shareProgressModalVisible, setShareProgressModalVisible] = useState(false);
   // Removed referralModalVisible - now using direct app sharing
+
+  const scrollViewRef = useRef(null);
 
   // Load user keys when component mounts or selected item changes
   useEffect(() => {
@@ -220,20 +208,12 @@ export default function Keys() {
     }
 
     return categoryKeys.map((key, index) => (
-      <View key={key.id || index} style={keysStyles.inputRow}>
-        <TouchableOpacity 
-          style={keysStyles.keyTextContainer}
-          onPress={() => handleEditPress(key)}
-        >
-          <Text style={keysStyles.keyText}>{key.description}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={keysStyles.trashWrap}
-          onPress={() => handleDeletePress(key)}
-        >
-          <Image source={require('../../assets/delete.png')} style={{ width: 28, height: 28 }} resizeMode="contain" />
-        </TouchableOpacity>
-      </View>
+      <KeyRow
+        key={`${selectedItem.category}-${key.id || index}`}
+        keyData={key}
+        onEdit={handleEditPress}
+        onDelete={handleDeletePress}
+      />
     ));
   };
 
@@ -251,9 +231,19 @@ export default function Keys() {
 
   const handleMenuItemSelect = async (item) => {
     // 🔒 PAID-ONLY APP: All categories are now available to all users
-    setSelectedItem(item);
+    
+    // Only change if actually changing category
+    if (item.category !== selectedItem.category) {
+      setSelectedItem(item);
+      
+      // Scroll to top
+      if (scrollViewRef.current) {
+        scrollViewRef.current.scrollTo({ y: 0, animated: true });
+      }
+    }
+    
     setMenuVisible(false);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
   };
 
   const handleInfoPress = () => {
@@ -432,8 +422,12 @@ export default function Keys() {
           onItemSelect={handleMenuItemSelect}
         />
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={keysStyles.scrollView}>  
-
+        <ScrollView 
+          ref={scrollViewRef}
+          showsVerticalScrollIndicator={false} 
+          contentContainerStyle={keysStyles.scrollView}
+          scrollEventThrottle={16}
+        >  
           {renderCategoryKeys()}
 
           <AppButton
@@ -443,7 +437,6 @@ export default function Keys() {
             iconRight={"+"}
             plusMarginRight={0}
           />
-
         </ScrollView>
 
         <AlignButton onPress={handleAlignButtonPress} />
@@ -486,16 +479,21 @@ export default function Keys() {
           // No longer needed - all users have full access
         }}
         onAffirmIdentity={handleAffirmIdentity}
+        onLogActionResult={(log) => {
+          // Automatically show result modal after successful log action
+          // For keys page, we'll need to add the result modal states if not present
+          console.log('Log action completed:', log);
+          // TODO: Add result modal handling to keys page if needed
+        }}
       />
       <AffirmIdentityModal
         visible={affirmIdentityModalVisible}
         onClose={() => setAffirmIdentityModalVisible(false)}
       />
-              <ShareProgressModal
+        <ShareProgressModal
           visible={shareProgressModalVisible}
           onClose={() => setShareProgressModalVisible(false)}
         />
-        {/* Removed ReferralModal - now using direct app sharing */}
     </SafeAreaView>
   );
 }

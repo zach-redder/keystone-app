@@ -491,7 +491,7 @@ export default function ProfileScreen() {
             }}>
               <Ionicons name="people-outline" size={20} color="#B9C096" style={profileStyles.profileItemIcon} />
               <Text style={profileStyles.profileItemText}>Join the Community</Text>
-              <View style={profileStyles.profileItemRight}>hop
+              <View style={profileStyles.profileItemRight}>
                 <Ionicons name="chevron-forward" size={16} color="#fff" />
               </View>
             </TouchableOpacity>
@@ -520,7 +520,7 @@ export default function ProfileScreen() {
               }
             }}>
               <Ionicons name="business-outline" size={20} color="#B9C096" style={profileStyles.profileItemIcon} />
-              <Text style={profileStyles.profileItemText}>Redder Media Company</Text>
+              <Text style={profileStyles.profileItemText}>Parent Company</Text>
               <View style={profileStyles.profileItemRight}>
                 <Ionicons name="chevron-forward" size={16} color="#fff" />
               </View>

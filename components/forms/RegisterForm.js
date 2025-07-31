@@ -15,6 +15,7 @@ export default function RegisterForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [preferences, setPreferences] = useState(null);
   const router = useRouter();
 
   const handleBack = () => {
@@ -35,6 +36,18 @@ export default function RegisterForm() {
     setError(null);
 
     try {
+      // Get preferences from AsyncStorage before proceeding
+      const savedPrefs = await AsyncStorage.getItem('final_preferences');
+      const userPreferences = savedPrefs ? JSON.parse(savedPrefs) : null;
+      
+      if (!userPreferences) {
+        setError('No preferences found. Please complete the onboarding process first.');
+        setLoading(false);
+        return;
+      }
+      
+      setPreferences(userPreferences);
+      
       // Check if email already exists in the database
       const exists = await checkEmailExists(email);
       if (exists) {
@@ -79,7 +92,7 @@ export default function RegisterForm() {
     return (
       <WaitForEmailConfirmation 
         email={email}
-        preferences={null}
+        preferences={preferences}
         onTryDifferentEmail={() => {
           setShowConfirmation(false);
           setEmail('');
@@ -92,11 +105,6 @@ export default function RegisterForm() {
 
   return (
     <View style={styles.container}>
-      <View style={{ position: 'absolute', top: 72, left: 24, zIndex: 10 }}>
-        <TouchableOpacity onPress={handleBack} style={{ width: 48, height: 48, justifyContent: 'center', alignItems: 'center' }}>
-          <Ionicons name="arrow-back" size={48} color="#FFFFFF" />
-        </TouchableOpacity>
-      </View>
       <Image source={require('../../assets/keystone_transparent.png')} style={styles.logo} />
       <Text style={styles.title}>Register to get started!</Text>
 

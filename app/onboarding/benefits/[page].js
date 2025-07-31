@@ -33,8 +33,8 @@ const KEYSTONE_BENEFITS = [
         id: 4,
         icon: 'bullseye',
         iconAnimation: 'pulse',
-        title: 'Affirm Vision',
-        subtitle: 'Keep your vision constantly in mind to keep yourself on track and motivated.',
+        title: 'Vision Affirmation',
+        subtitle: 'Keep your goals constantly in mind to keep yourself on track and motivated.',
     },
     {
         id: 5,

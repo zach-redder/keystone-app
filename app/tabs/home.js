@@ -24,7 +24,7 @@ import {
   getScoreLabel,
   getScoreColor
 } from '../../services/alignmentService';
-import { getUserDayStreak } from '../../services/userPreferences';
+import { getUserDayStreak, getUserLongestStreak } from '../../services/userPreferences';
 import { checkForStreakMilestone, markMilestoneAsShown } from '../../services/streakRewardsService';
 import * as Haptics from 'expo-haptics';
 import ActionLogResultModal from '../../components/modals/ActionLogResultModal';
@@ -36,6 +36,7 @@ export default function HomeScreen() {
   const [communityModalVisible, setCommunityModalVisible] = useState(false);
   const [alignModalVisible, setAlignModalVisible] = useState(false);
   const [dayStreak, setDayStreak] = useState(0);
+  const [longestStreak, setLongestStreak] = useState(0);
   const [selectedKeyTypeIndex, setSelectedKeyTypeIndex] = useState(0);
   const [recentActionLog, setRecentActionLog] = useState(null);
   const [loadingActionLog, setLoadingActionLog] = useState(true);
@@ -55,6 +56,10 @@ export default function HomeScreen() {
   // Removed referralModalVisible - now using direct app sharing
   const [streakRewardModalVisible, setStreakRewardModalVisible] = useState(false);
   const [currentMilestone, setCurrentMilestone] = useState(null);
+
+  // New analytics state
+  const [weeklyLogCount, setWeeklyLogCount] = useState(0);
+  const [alignmentTrend, setAlignmentTrend] = useState(null);
 
   const HIGH_VALUE = 0.7; // Threshold for excessive alignment
   const LOW_VALUE = 0.3; // Threshold for deficient alignment
@@ -87,10 +92,12 @@ export default function HomeScreen() {
     React.useCallback(() => {
       console.log('Home screen focused - reloading data');
       loadDayStreak();
+      loadLongestStreak();
       loadRecentActionLog();
       loadDailyReminder();
       loadWeeklySnapshot();
       loadAlignmentScoreChange();
+      loadAnalyticsData();
       setupReminderNotifications().catch(console.error);
       loadRecentActionLogs();
       return () => {
@@ -184,6 +191,43 @@ export default function HomeScreen() {
     } catch (error) {
       console.error('Error loading day streak:', error);
       setDayStreak(0);
+    }
+  };
+
+  const loadLongestStreak = async () => {
+    try {
+      const longest = await getUserLongestStreak();
+      setLongestStreak(longest);
+    } catch (error) {
+      console.error('Error loading longest streak:', error);
+      setLongestStreak(0);
+    }
+  };
+
+
+
+  const loadAnalyticsData = async () => {
+    try {
+      // Calculate weekly log count
+      const logs = await fetchActionLogs(50); // Get recent logs
+      const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const weeklyLogs = logs.filter(log => new Date(log.created_at) > oneWeekAgo);
+      setWeeklyLogCount(weeklyLogs.length);
+
+      // Calculate alignment trend
+      const currentAlignment = await fetchAlignmentValue(keyTypes[selectedKeyTypeIndex]);
+      const weekAgoAlignment = currentAlignment - (alignmentScoreChange?.percentChange || 0) / 100;
+      const trend = {
+        current: currentAlignment,
+        previous: weekAgoAlignment,
+        isImproving: currentAlignment > weekAgoAlignment,
+        changePercent: alignmentScoreChange?.percentChange || 0
+      };
+      setAlignmentTrend(trend);
+
+
+    } catch (error) {
+      console.error('Error loading analytics data:', error);
     }
   };
 
@@ -312,6 +356,64 @@ export default function HomeScreen() {
                 <Text style={homeStyles.reminderText}>{dailyReminder}</Text>
               )}
             </View>
+          </View>
+
+          {/* Analytics & Progress Section */}
+          <View style={homeStyles.sectionContainer}>
+            <Text style={homeStyles.sectionTitle}>Your Growth Journey</Text>
+            
+            {/* Streaks Row */}
+            <View style={homeStyles.analyticsRow}>
+              <View style={homeStyles.analyticsCard}>
+                <View style={homeStyles.analyticsHeader}>
+                  <Ionicons name="flame" size={20} color="#FF6B35" />
+                  <Text style={homeStyles.analyticsCardTitle}>Current Streak</Text>
+                </View>
+                <Text style={homeStyles.analyticsNumber}>{dayStreak}</Text>
+                <Text style={homeStyles.analyticsLabel}>days</Text>
+              </View>
+              
+              <View style={homeStyles.analyticsCard}>
+                <View style={homeStyles.analyticsHeader}>
+                  <Ionicons name="trophy" size={20} color="#D4DE95" />
+                  <Text style={homeStyles.analyticsCardTitle}>Longest Streak</Text>
+                </View>
+                <Text style={homeStyles.analyticsNumber}>{longestStreak}</Text>
+                <Text style={homeStyles.analyticsLabel}>days</Text>
+              </View>
+            </View>
+
+            {/* Trends Row */}
+            <View style={homeStyles.analyticsRow}>
+              <View style={homeStyles.analyticsCard}>
+                <View style={homeStyles.analyticsHeader}>
+                  <Ionicons name="trending-up" size={20} color="#4CAF50" />
+                  <Text style={homeStyles.analyticsCardTitle}>This Week</Text>
+                </View>
+                <Text style={homeStyles.analyticsNumber}>{weeklyLogCount}</Text>
+                <Text style={homeStyles.analyticsLabel}>actions logged</Text>
+              </View>
+              
+              <View style={homeStyles.analyticsCard}>
+                <View style={homeStyles.analyticsHeader}>
+                  <Ionicons 
+                    name={alignmentTrend && alignmentTrend.isImproving ? "trending-up" : "trending-down"} 
+                    size={20} 
+                    color={alignmentTrend && alignmentTrend.isImproving ? "#4CAF50" : "#FF6B35"} 
+                  />
+                  <Text style={homeStyles.analyticsCardTitle}>Alignment Trend</Text>
+                </View>
+                <Text style={[
+                  homeStyles.analyticsNumber,
+                  { color: alignmentTrend && alignmentTrend.isImproving ? "#4CAF50" : "#FF6B35" }
+                ]}>
+                  {alignmentTrend && alignmentTrend.isImproving ? "+" : ""}{Math.abs((alignmentTrend && alignmentTrend.changePercent) || 0).toFixed(1)}%
+                </Text>
+                <Text style={homeStyles.analyticsLabel}>this week</Text>
+              </View>
+            </View>
+
+
           </View>
 
           {/* Alignment Trends Section */}
@@ -553,6 +655,11 @@ export default function HomeScreen() {
             // No longer needed - all users have full access
           }}
           onAffirmIdentity={handleAffirmIdentity}
+          onLogActionResult={(log) => {
+            // Automatically show result modal after successful log action
+            setResultLog(log);
+            setResultModalVisible(true);
+          }}
         />
         
         {/* Removed ProUpgradeModal - no longer needed in paid-only app */}

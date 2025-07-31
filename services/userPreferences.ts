@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface UserPreferences {
   timezone?: string;
@@ -210,10 +211,24 @@ export const updateUserDayStreak = async (): Promise<number> => {
     // But if they missed two days in a row, streak is 0
     // The above loop already handles this logic
 
-    // Update the users table
+    // Get current longest streak from database
+    const { data: userData, error: userDataError } = await supabase
+      .from('users')
+      .select('longest_streak')
+      .eq('id', user.id)
+      .single();
+
+    const currentLongestStreak = userData?.longest_streak || 0;
+
+    // Update the users table with new streak and longest streak if needed
+    const updateData: any = { day_streak: streak };
+    if (streak > currentLongestStreak) {
+      updateData.longest_streak = streak;
+    }
+
     await supabase
       .from('users')
-      .update({ day_streak: streak })
+      .update(updateData)
       .eq('id', user.id);
 
     return streak;
@@ -236,6 +251,37 @@ export const getUserDayStreak = async (): Promise<number> => {
     return await updateUserDayStreak();
   } catch (error) {
     console.error('Error in getUserDayStreak:', error);
+    return 0;
+  }
+};
+
+/**
+ * Gets the user's longest streak from the database
+ * @returns {Promise<number>} The user's longest streak
+ */
+export const getUserLongestStreak = async (): Promise<number> => {
+  try {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError || !user) {
+      console.log('User not authenticated, returning 0 for longest streak');
+      return 0;
+    }
+
+    const { data, error } = await supabase
+      .from('users')
+      .select('longest_streak')
+      .eq('id', user.id)
+      .single();
+
+    if (error) {
+      console.error('Error fetching longest streak:', error);
+      return 0;
+    }
+
+    return data?.longest_streak || 0;
+  } catch (error) {
+    console.error('Error in getUserLongestStreak:', error);
     return 0;
   }
 };
@@ -310,3 +356,36 @@ export const getUserName = async (): Promise<string> => {
 //     return '';
 //   }
 // };
+
+// Clear all AsyncStorage data including quiz answers
+export const clearAllAsyncStorageData = async (): Promise<boolean> => {
+  try {
+    const keysToRemove = [
+      'quiz_answers',
+      '@user_name',
+      '@user_age',
+      '@user_preferences',
+      '@user_keys',
+      '@user_reminders',
+      '@user_alignment_scores',
+      '@user_action_logs',
+      '@user_weekly_snapshots',
+      '@user_alignment_changes',
+      'pending_referral_code'
+    ];
+
+    for (const key of keysToRemove) {
+      try {
+        await AsyncStorage.removeItem(key);
+      } catch (error) {
+        console.error(`Error removing ${key}:`, error);
+      }
+    }
+
+    console.log('All AsyncStorage data cleared successfully');
+    return true;
+  } catch (error) {
+    console.error('Error clearing AsyncStorage data:', error);
+    return false;
+  }
+};

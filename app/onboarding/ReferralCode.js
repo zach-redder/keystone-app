@@ -5,7 +5,8 @@ import { styles } from '../../styles/onboarding';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AntDesign } from '@expo/vector-icons';
-import { redeemReferralCode, validateReferralCode } from '../../services/referralService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { validateReferralCode } from '../../services/referralService';
 
 export default function ReferralCode() {
     const router = useRouter();
@@ -37,9 +38,11 @@ export default function ReferralCode() {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }, []);
 
-    const handleSkip = () => {
+    const handleSkip = async () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        router.push('/register');
+        // Mark referral code step as complete
+        await AsyncStorage.setItem('referral_code_complete', 'true');
+        router.push('/onboarding/AnimatedProfileCard');
     };
 
     const handleBack = () => {
@@ -56,7 +59,10 @@ export default function ReferralCode() {
 
         setIsValidating(true);
         try {
+            console.log('🔍 Validating referral code:', code);
             const validation = await validateReferralCode(code);
+            console.log('🔍 Validation result:', validation);
+            
             if (validation.valid && validation.referralCode) {
                 setIsValid(true);
                 const subscriptionType = validation.referralCode.subscription_type;
@@ -70,6 +76,7 @@ export default function ReferralCode() {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
             }
         } catch (error) {
+            console.error('❌ Error validating code:', error);
             setIsValid(false);
             setValidationMessage('Error validating code');
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
@@ -92,13 +99,32 @@ export default function ReferralCode() {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         
         try {
-            const result = await redeemReferralCode(referralCode);
+            console.log('🎁 Redeeming referral code:', referralCode);
             
-            if (result.success) {
+            // Since user isn't authenticated yet, we need to validate and save to AsyncStorage
+            const validation = await validateReferralCode(referralCode);
+            
+            if (validation.valid && validation.referralCode) {
+                // Save referral code info to AsyncStorage for later use
+                const referralInfo = {
+                    code: referralCode.toUpperCase().trim(),
+                    subscriptionType: validation.referralCode.subscription_type,
+                    description: validation.referralCode.description,
+                    durationMonths: validation.referralCode.duration_months,
+                    redeemedAt: new Date().toISOString()
+                };
+                
+                await AsyncStorage.setItem('pending_referral_code', JSON.stringify(referralInfo));
+                await AsyncStorage.setItem('subscription_complete', 'true');
+                await AsyncStorage.setItem('referral_code_complete', 'true');
+                
+                console.log('💾 Saved referral code to AsyncStorage:', referralInfo);
+                
                 // Show success alert
                 Alert.alert(
                     '🎉 Success!',
-                    result.message,
+                    `Code redeemed! You'll get ${validation.referralCode.subscription_type === 'monthly' ? '1 month' : 
+                    validation.referralCode.subscription_type === 'yearly' ? '1 year' : 'lifetime'} of Pro access after registration.`,
                     [
                         {
                             text: 'Continue',
@@ -110,12 +136,13 @@ export default function ReferralCode() {
             } else {
                 Alert.alert(
                     'Error',
-                    result.message,
+                    validation.error || 'Invalid referral code',
                     [{ text: 'OK' }]
                 );
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
             }
         } catch (error) {
+            console.error('Error redeeming code:', error);
             Alert.alert(
                 'Error',
                 'An error occurred while processing your referral code. Please try again.',
@@ -159,7 +186,7 @@ export default function ReferralCode() {
                     ]}
                 >
                     <Text style={styles.referralTitle}>
-                        Do you have a referral code?
+                        Have a Referral Code?
                     </Text>
 
                     <View style={styles.referralInputContainer}>

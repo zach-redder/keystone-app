@@ -19,7 +19,7 @@ import { fetchRecentActionLog } from '../../services/actionLogs';
 import { fetchTodayReminder } from '../../services/reminderService';
 import { fetchIdentityKeys } from '../../services/userKeys';
 import { getAppStoreLink } from '../../constants/appStore';
-import { getReferralLink, getReferralStats } from '../../services/referralService';
+import { getUserReferralInfo } from '../../services/referralService';
 import ReferralModal from './ReferralModal';
 
 const ShareProgressModal = ({ visible, onClose }) => {
@@ -32,8 +32,7 @@ const ShareProgressModal = ({ visible, onClose }) => {
   const [selectedAlignmentCategory, setSelectedAlignmentCategory] = useState('core_values');
   const [loading, setLoading] = useState(true);
   const [availableAlignmentCategories, setAvailableAlignmentCategories] = useState([]);
-  const [referralStats, setReferralStats] = useState({ downloads_count: 0, free_months_earned: 0, next_reward_at: 1 });
-  const [referralLink, setReferralLink] = useState('');
+  const [referralInfo, setReferralInfo] = useState(null);
   const [showReferralModal, setShowReferralModal] = useState(false);
 
   // Available alignment categories
@@ -52,25 +51,14 @@ const ShareProgressModal = ({ visible, onClose }) => {
     }
   }, [visible, selectedAlignmentCategory]);
 
-  // Filter alignment categories based on user keys
+  // Set all alignment categories as available - let users choose any category
   const filterAlignmentCategories = async () => {
     try {
-      const userKeys = await fetchIdentityKeys();
-      const userCategories = [...new Set(userKeys.map(key => key.category))];
-      
-      const filteredCategories = alignmentCategories.filter(category => 
-        userCategories.includes(category.id)
-      );
-      
-      setAvailableAlignmentCategories(filteredCategories);
-      
-      // Update selected category if current selection is not available
-      if (filteredCategories.length > 0 && !filteredCategories.find(cat => cat.id === selectedAlignmentCategory)) {
-        setSelectedAlignmentCategory(filteredCategories[0].id);
-      }
+      console.log('ShareProgressModal - Setting all categories as available');
+      setAvailableAlignmentCategories(alignmentCategories);
     } catch (error) {
-      console.error('Error filtering alignment categories:', error);
-      setAvailableAlignmentCategories([]);
+      console.error('Error setting alignment categories:', error);
+      setAvailableAlignmentCategories(alignmentCategories);
     }
   };
 
@@ -81,29 +69,35 @@ const ShareProgressModal = ({ visible, onClose }) => {
       // Filter alignment categories first
       await filterAlignmentCategories();
       
-      const [alignment, actionLog, reminder, stats, link] = await Promise.all([
-        fetchAlignmentValue(selectedAlignmentCategory),
-        fetchRecentActionLog(),
-        fetchTodayReminder(),
-        getReferralStats(),
-        getReferralLink(),
-      ]);
+      console.log('ShareProgressModal - Loading data for category:', selectedAlignmentCategory);
       
-      console.log('ShareProgressModal - Loaded data:', {
-        alignment,
-        actionLog,
-        reminder,
-        stats,
-        link,
-        selectedAlignmentCategory,
-        availableAlignmentCategories: availableAlignmentCategories.length
-      });
+      // Load alignment data
+      const alignment = await fetchAlignmentValue(selectedAlignmentCategory);
+      console.log('ShareProgressModal - Alignment value:', alignment);
       
-      setAlignmentValue(alignment);
-      setRecentActionLog(actionLog);
-      setDailyReminder(reminder);
-      setReferralStats(stats);
-      setReferralLink(link);
+      // Load action log data
+      const actionLog = await fetchRecentActionLog();
+      console.log('ShareProgressModal - Action log:', actionLog);
+      
+      // Load reminder data
+      const reminder = await fetchTodayReminder();
+      console.log('ShareProgressModal - Reminder:', reminder);
+      
+             // Load referral data
+       const referralInfo = await getUserReferralInfo();
+       
+       console.log('ShareProgressModal - Final data:', {
+         alignment,
+         actionLog: actionLog ? 'EXISTS' : 'NULL',
+         reminder: reminder || 'EMPTY',
+         selectedAlignmentCategory,
+         referralInfo: referralInfo ? 'EXISTS' : 'NULL'
+       });
+       
+       setAlignmentValue(alignment);
+       setRecentActionLog(actionLog);
+       setDailyReminder(reminder);
+       setReferralInfo(referralInfo);
     } catch (error) {
       console.error('Error loading share data:', error);
     } finally {
@@ -219,28 +213,36 @@ const ShareProgressModal = ({ visible, onClose }) => {
       dailyReminder,
       availableAlignmentCategories: availableAlignmentCategories.length
     });
+    
+    console.log('ShareProgressModal - RENDER CONDITIONS:');
+    console.log('- selectedTemplate:', selectedTemplate);
+    console.log('- alignmentValue !== null:', alignmentValue !== null);
+    console.log('- alignmentValue:', alignmentValue);
+    console.log('- Will show alignment data:', selectedTemplate === 'alignment' && alignmentValue !== null);
+    console.log('- Will show action data:', selectedTemplate === 'action' && !!recentActionLog);
+    console.log('- Will show reminder data:', selectedTemplate === 'reminder');
 
-     return (
-       <View ref={shareCardRef} style={styles.shareCard}>
-         {/* Cool gradient background */}
-         <View style={styles.storyGradientBackground}>
-           <View style={styles.gradientLayer1} />
-           <View style={styles.gradientLayer2} />
-           <View style={styles.gradientLayer3} />
-         </View>
-         
-                  {/* Content Card */}
-         <View style={styles.storyContentCard}>
-           {/* Header */}
-           <View style={styles.cardHeader}>
-             <Text style={styles.appName}>Keystone</Text>
-             <Text style={styles.cardSubtitle}>Overcome Doubt</Text>
+            return (
+         <View ref={shareCardRef} style={styles.shareCard}>
+           {/* Premium gradient background */}
+           <View style={styles.storyGradientBackground}>
+             <View style={styles.gradientLayer1} />
+             <View style={styles.gradientLayer2} />
+             <View style={styles.gradientLayer3} />
            </View>
+           
+           {/* Content Card */}
+           <View style={styles.storyContentCard}>
+             {/* Clean Header */}
+             <View style={styles.cardHeader}>
+               <Text style={styles.appName}>Keystone</Text>
+               <Text style={styles.cardSubtitle}>Personal Growth Journey</Text>
+             </View>
 
            {/* Content based on selected template */}
            {selectedTemplate === 'alignment' && (
              <View style={styles.alignmentContent}>
-               {alignmentValue !== null && availableAlignmentCategories.length > 0 ? (
+               {alignmentValue !== null && alignmentValue !== undefined ? (
                  <>
                    <Text style={styles.alignmentTitle}>
                      My {getAlignmentCategoryTitle(selectedAlignmentCategory).replace(/\b\w/g, l => l.toUpperCase())}
@@ -276,48 +278,55 @@ const ShareProgressModal = ({ visible, onClose }) => {
                  </>
                ) : (
                  <>
-                   <Text style={styles.alignmentTitle}>No Alignment Data</Text>
+                   <Text style={styles.alignmentTitle}>No {getAlignmentCategoryTitle(selectedAlignmentCategory).replace(/\b\w/g, l => l.toUpperCase())} Data</Text>
                    <Text style={styles.noDataText}>
-                     Add some keys to see your alignment progress.
+                     No alignment data found for this category.
+                   </Text>
+                   <Text style={styles.noDataHint}>
+                     Log some actions related to your {getAlignmentCategoryTitle(selectedAlignmentCategory).toLowerCase()} to see your alignment progress.
                    </Text>
                  </>
                )}
              </View>
            )}
 
-           {selectedTemplate === 'action' && (
-             <View style={styles.actionContent}>
-               <Text style={styles.actionTitle}>My Recent Action</Text>
-               {recentActionLog ? (
-                 <>
-                   <Text style={styles.actionText} numberOfLines={3}>
-                     {recentActionLog.action_description || 'No action logged'}
-                   </Text>
-                   <Text style={styles.actionDate}>
-                     {new Date(recentActionLog.created_at).toLocaleDateString()}
-                   </Text>
-                 </>
-               ) : (
-                 <Text style={styles.noDataText}>
-                   No action logs found. Log your first action to see it here.
-                 </Text>
-               )}
-             </View>
-           )}
+                     {selectedTemplate === 'action' && (
+            <View style={styles.actionContent}>
+              <Text style={styles.actionTitle}>My Recent Action</Text>
+              {recentActionLog && recentActionLog.action_description ? (
+                <>
+                  <Text style={styles.actionText} numberOfLines={3}>
+                    {recentActionLog.action_description}
+                  </Text>
+                  <Text style={styles.actionDate}>
+                    {new Date(recentActionLog.created_at).toLocaleDateString()}
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.noDataText}>
+                    No action logs found.
+                  </Text>
+                  <Text style={styles.noDataHint}>
+                    Tap "Align Now" from your home screen and log an action to see it here.
+                  </Text>
+                </>
+              )}
+            </View>
+          )}
 
            {selectedTemplate === 'reminder' && (
              <View style={styles.reminderContent}>
                <Text style={styles.reminderTitle}>My Daily Reminder</Text>
                <Text style={styles.reminderText}>
-                 {dailyReminder || "Stay focused on your goals and values today."}
+                 {dailyReminder && dailyReminder.trim() ? dailyReminder : "Stay focused on your goals and values today."}
                </Text>
              </View>
            )}
 
-           {/* Footer */}
+           {/* Clean Footer */}
            <View style={styles.cardFooter}>
-             <Text style={styles.footerText}>Achieve your dreams at</Text>
-             <Text style={styles.footerSubtext}>thekeystoneapp.com</Text>
+             <Text style={styles.footerText}>thekeystoneapp.com</Text>
            </View>
          </View>
        </View>
@@ -344,7 +353,7 @@ const ShareProgressModal = ({ visible, onClose }) => {
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32 }}>
           <Text style={styles.title}>Share Progress</Text>
           <Text style={styles.description}>
-            Start caring less about what people think by sharing your alignment progress publicly.
+            Share your alignment journey with others. Your progress is worth celebrating.
           </Text>
 
           {/* Template Selector */}
@@ -379,8 +388,8 @@ const ShareProgressModal = ({ visible, onClose }) => {
             </ScrollView>
           </View>
 
-          {/* Alignment Category Selector - Only show when alignment template is selected and user has keys */}
-          {selectedTemplate === 'alignment' && availableAlignmentCategories.length > 0 && (
+          {/* Alignment Category Selector - Show when alignment template is selected */}
+          {selectedTemplate === 'alignment' && (
             <View style={styles.alignmentCategorySelector}>
               <Text style={styles.alignmentCategoryTitle}>Choose Alignment Category</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.alignmentCategoryScroll}>
@@ -413,14 +422,7 @@ const ShareProgressModal = ({ visible, onClose }) => {
             </View>
           )}
 
-          {/* Message when alignment template is selected but user has no keys */}
-          {selectedTemplate === 'alignment' && availableAlignmentCategories.length === 0 && (
-            <View style={styles.noKeysMessage}>
-              <Text style={styles.noKeysText}>
-                You need to add some keys first to share your alignment progress.
-              </Text>
-            </View>
-          )}
+
 
             {/* Share Card Preview */}
             <View style={styles.previewContainer}>
@@ -437,7 +439,7 @@ const ShareProgressModal = ({ visible, onClose }) => {
         <View style={styles.buttonContainerFixed}>
           <TouchableOpacity style={styles.shareButton} onPress={handleSharePress}>
             <Ionicons name="share-social" size={20} color="#23272F" />
-            <Text style={styles.shareButtonText}>Share</Text>
+            <Text style={styles.shareButtonText}>Share Progress</Text>
           </TouchableOpacity>
           
           <TouchableOpacity style={styles.cancelButton} onPress={handleClose}>
@@ -474,7 +476,7 @@ const styles = {
     color: '#fff',
     fontSize: 32,
     fontWeight: '700',
-    marginBottom: 20,
+    marginBottom: 16,
     textAlign: 'center',
   },
   description: {
@@ -737,11 +739,6 @@ const styles = {
     alignItems: 'center',
   },
   footerText: {
-    fontSize: 14,
-    color: '#A1A1AA',
-    marginBottom: 4,
-  },
-  footerSubtext: {
     fontSize: 12,
     color: '#888',
   },
@@ -800,11 +797,25 @@ const styles = {
     textAlign: 'center',
     lineHeight: 22,
   },
+  noKeysHint: {
+    color: '#888',
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: 8,
+    fontStyle: 'italic',
+  },
   noDataText: {
     color: '#A1A1AA',
     fontSize: 14,
     textAlign: 'center',
     marginTop: 8,
+  },
+  noDataHint: {
+    color: '#888',
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 8,
+    fontStyle: 'italic',
   },
 };
 

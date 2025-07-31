@@ -8,6 +8,7 @@ export default function AlignButton({ onPress }) {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const opacityAnim = useRef(new Animated.Value(1)).current;
   const rippleAnim = useRef(new Animated.Value(0)).current;
+  const shadowAnim = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -24,6 +25,12 @@ export default function AlignButton({ onPress }) {
         duration: 100,
         easing: Easing.out(Easing.quad),
         useNativeDriver: true,
+      }),
+      Animated.spring(shadowAnim, {
+        toValue: 0.9,
+        useNativeDriver: false,
+        speed: 20,
+        bounciness: 4,
       }),
     ]).start();
   };
@@ -54,13 +61,27 @@ export default function AlignButton({ onPress }) {
           easing: Easing.out(Easing.exp),
           useNativeDriver: true,
         }),
+        Animated.spring(shadowAnim, {
+          toValue: 1.08,
+          useNativeDriver: false,
+          speed: 20,
+          bounciness: 14,
+        }),
       ]),
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        useNativeDriver: true,
-        speed: 14,
-        bounciness: 5,
-      }),
+      Animated.parallel([
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          useNativeDriver: true,
+          speed: 14,
+          bounciness: 5,
+        }),
+        Animated.spring(shadowAnim, {
+          toValue: 1,
+          useNativeDriver: false,
+          speed: 14,
+          bounciness: 5,
+        }),
+      ]),
     ]).start();
   };
 
@@ -99,25 +120,33 @@ export default function AlignButton({ onPress }) {
         <Animated.View
           style={[
             {
-              transform: [{ scale: scaleAnim }],
-              opacity: opacityAnim,
               shadowColor: '#D4DE95',
               shadowOpacity: 0.5,
               shadowOffset: { width: 0, height: 0 },
-              shadowRadius: scaleAnim.interpolate({
+              shadowRadius: shadowAnim.interpolate({
                 inputRange: [0.9, 1.08],
                 outputRange: [2, 10],
               }),
+              elevation: 8,
             },
           ]}
         >
-          <View style={alignButtonStyles.alignContent}>
-            <Image
-              source={require('../../assets/checkmark.png')}
-              style={alignButtonStyles.plusImage}
-            />
-            <Text style={alignButtonStyles.alignText}>Align Now</Text>
-          </View>
+          <Animated.View
+            style={[
+              {
+                transform: [{ scale: scaleAnim }],
+                opacity: opacityAnim,
+              },
+            ]}
+          >
+            <View style={alignButtonStyles.alignContent}>
+              <Image
+                source={require('../../assets/checkmark.png')}
+                style={alignButtonStyles.plusImage}
+              />
+              <Text style={alignButtonStyles.alignText}>Align Now</Text>
+            </View>
+          </Animated.View>
         </Animated.View>
       </View>
     </Pressable>
