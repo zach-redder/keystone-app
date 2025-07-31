@@ -39,7 +39,7 @@ export default function ReferralCode() {
 
     const handleSkip = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        router.push('/onboarding/AppRating');
+        router.push('/register');
     };
 
     const handleBack = () => {
@@ -102,7 +102,7 @@ export default function ReferralCode() {
                     [
                         {
                             text: 'Continue',
-                            onPress: () => router.push('/onboarding/AppRating'),
+                            onPress: () => router.push('/register'),
                         }
                     ]
                 );
@@ -126,6 +126,8 @@ export default function ReferralCode() {
             setIsRedeeming(false);
         }
     };
+
+
 
     return (
         <LinearGradient

@@ -156,7 +156,7 @@ export default function QuizQuestion() {
 
     const handleSkipQuiz = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        router.push('/onboarding/LifeGoals');
+        router.push('/onboarding/FutureSelfVision');
     };
 
     if (!currentQuestion) {

@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { upgradeUserToPro, downgradeUserToFree } from './auth.ts';
+import { upgradeUserToPro, downgradeUserToFree } from './auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface ReferralCode {
@@ -59,8 +59,25 @@ export interface ReferralRedemption {
 export const validateReferralCode = async (code: string): Promise<{ valid: boolean; referralCode?: ReferralCode; error?: string }> => {
   try {
     const upperCode = code.toUpperCase().trim();
+    console.log('🔍 Validating referral code:', upperCode);
     
-    // Query database for the referral code
+    // First, let's check if the table exists and we can access it
+    const { data: tableCheck, error: tableError } = await supabase
+      .from('referral_codes')
+      .select('code')
+      .limit(1);
+    
+    if (tableError) {
+      console.error('❌ Table access error:', tableError);
+      return { 
+        valid: false, 
+        error: `Database error: ${tableError.message}. Please ensure the referral_codes table exists and RLS policies allow access.` 
+      };
+    }
+    
+    console.log('✅ Table accessible, found', tableCheck?.length || 0, 'total codes');
+    
+    // Query database for the specific referral code
     const { data: dbCode, error } = await supabase
       .from('referral_codes')
       .select('*')
@@ -68,29 +85,49 @@ export const validateReferralCode = async (code: string): Promise<{ valid: boole
       .eq('is_active', true)
       .single();
 
+    console.log('🔎 Database query result:', { data: dbCode, error });
+
     if (error && error.code !== 'PGRST116') { // PGRST116 is "not found"
-      console.error('Error validating referral code:', error);
-      return { valid: false, error: 'Error validating code. Please try again.' };
+      console.error('❌ Database query error:', error);
+      return { valid: false, error: `Database error: ${error.message}` };
     }
     
     if (!dbCode) {
+      // Let's also check if the code exists but is inactive
+      const { data: inactiveCode } = await supabase
+        .from('referral_codes')
+        .select('code, is_active')
+        .eq('code', upperCode)
+        .single();
+      
+      if (inactiveCode) {
+        console.log('❌ Code exists but is inactive:', inactiveCode);
+        return { valid: false, error: 'This referral code is no longer active' };
+      }
+      
+      console.log('❌ Code not found in database');
       return { valid: false, error: 'Invalid referral code' };
     }
     
+    console.log('✅ Found valid code:', dbCode);
+    
     // Check usage limits
     if (dbCode.usage_limit && dbCode.used_count >= dbCode.usage_limit) {
+      console.log('❌ Usage limit exceeded:', { used: dbCode.used_count, limit: dbCode.usage_limit });
       return { valid: false, error: 'This referral code has reached its usage limit' };
     }
     
     // Check expiration
     if (dbCode.expires_at && new Date() > new Date(dbCode.expires_at)) {
+      console.log('❌ Code expired:', dbCode.expires_at);
       return { valid: false, error: 'This referral code has expired' };
     }
     
+    console.log('🎉 Code validation successful!');
     return { valid: true, referralCode: dbCode };
   } catch (error) {
-    console.error('Error in validateReferralCode:', error);
-    return { valid: false, error: 'Error validating code. Please try again.' };
+    console.error('💥 Unexpected error in validateReferralCode:', error);
+    return { valid: false, error: `Validation error: ${error instanceof Error ? error.message : 'Unknown error'}` };
   }
 };
 
@@ -306,6 +343,51 @@ export const getAvailableReferralCodes = async (): Promise<string[]> => {
   } catch (error) {
     console.error('Error in getAvailableReferralCodes:', error);
     return [];
+  }
+};
+
+/**
+ * 🐛 DEBUG FUNCTION: Test referral code database connection
+ * Use this to troubleshoot referral code validation issues
+ */
+export const debugReferralDatabase = async (): Promise<void> => {
+  console.log('🐛 Starting referral database debug...');
+  
+  try {
+    // Test 1: Check if table exists
+    console.log('📝 Test 1: Checking table access...');
+    const { data: allCodes, error: tableError } = await supabase
+      .from('referral_codes')
+      .select('*');
+    
+    if (tableError) {
+      console.error('❌ Table access failed:', tableError);
+      return;
+    }
+    
+    console.log('✅ Table accessible! Found codes:', allCodes?.length || 0);
+    
+    // Test 2: Show all codes in database
+    if (allCodes && allCodes.length > 0) {
+      console.log('📋 All codes in database:');
+      allCodes.forEach(code => {
+        console.log(`  - ${code.code} (${code.subscription_type}, active: ${code.is_active}, used: ${code.used_count}/${code.usage_limit || 'unlimited'})`);
+      });
+    } else {
+      console.log('⚠️ No referral codes found in database!');
+      console.log('💡 Run the setup SQL script: database/setup_referral_codes.sql');
+    }
+    
+    // Test 3: Test validation with existing codes
+    if (allCodes && allCodes.length > 0) {
+      const testCode = allCodes[0].code;
+      console.log(`🧪 Test 3: Testing validation with code: ${testCode}`);
+      const validation = await validateReferralCode(testCode);
+      console.log('🧪 Validation result:', validation);
+    }
+    
+  } catch (error) {
+    console.error('💥 Debug failed:', error);
   }
 };
 

@@ -95,6 +95,9 @@ export default function SubscriptionScreen() {
     // You should validate the purchase with your backend for security
     // For demo, we just upgrade immediately
     await upgradeUserToPro();
+    
+    // Navigate to register screen after successful subscription
+    router.push('/register');
   };
 
   // Auto-slide functionality
