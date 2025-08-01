@@ -5,6 +5,7 @@ import { styles } from '../../../styles/onboarding';
 import * as Haptics from 'expo-haptics';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const DOUBT_CONSEQUENCES = [
     {
@@ -12,7 +13,7 @@ const DOUBT_CONSEQUENCES = [
         icon: 'account-heart',
         iconAnimation: 'pulse',
         title: 'People-Pleasing',
-        subtitle: 'You say yes when you mean no, destroying your authentic self and leading to resentment.',
+        subtitle: 'You say yes when you mean no, destroying your authentic self and leading to failure.',
         color: '#FF6B6B'
     },
     {
@@ -28,31 +29,23 @@ const DOUBT_CONSEQUENCES = [
         icon: 'account-cancel',
         iconAnimation: 'fade',
         title: 'Self-Doubt',
-        subtitle: "You can't trust your own decisions, making every choice feel wrong and paralyzing your progress.",
+        subtitle: "You don't believe in yourself enough to be able to push through hard times.",
         color: '#FF6B6B'
     },
     {
         id: 4,
-        icon: 'compass-off',
-        iconAnimation: 'wobble',
-        title: 'Lost Dreams',
-        subtitle: 'Your dreams feel unrealistic and impossible to achieve without confidence.',
+        icon: 'brain',
+        iconAnimation: 'shake',
+        title: 'Overthinking',
+        subtitle: 'You overthink everything, letting loops of worry replace action keeping you stuck.',
         color: '#FF6B6B'
     },
     {
         id: 5,
-        icon: 'brain',
-        iconAnimation: 'shake',
-        title: 'Overthinking',
-        subtitle: 'You overthink everything, letting mental loops of worry replace action and keeping you stuck.',
-        color: '#FF6B6B'
-    },
-    {
-        id: 6,
         icon: 'lightbulb-on',
         iconAnimation: 'glow',
-        title: 'Overcoming doubt is possible',
-        subtitle: 'You just need to realign with who you truly are.',
+        title: "It's Time to Change",
+        subtitle: 'Overcoming doubt is possible, you just need to realign with who you are.',
         color: '#D4DE95'
     }
 ];
@@ -196,8 +189,13 @@ export default function DoubtConsequences() {
 
     return (
         <GestureDetector gesture={swipeGesture}>
-            <View style={[styles.doubtConsequenceContainer, { backgroundColor: currentPage === 6 ? '#2B2B2B' : '#FF6B6B' }]}>
-                {/* Keystone Logo */}
+            <LinearGradient
+                colors={currentPage === 5 ? ['#2B2B2B', '#2F2F2C', '#2B2B2B'] : ['#FF6B6B', '#FF4C4C', '#FF6B6B']}
+                style={styles.doubtConsequenceContainer}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+            >
+                {/* Keystone Logo
                 <Animated.View 
                     style={[
                         styles.benefitsLogoContainer,
@@ -208,7 +206,7 @@ export default function DoubtConsequences() {
                         source={require('../../../assets/keystone_transparent.png')} 
                         style={styles.benefitsLogo} 
                     />
-                </Animated.View>
+                </Animated.View> */}
 
                 <Animated.View 
                 style={[
@@ -244,7 +242,7 @@ export default function DoubtConsequences() {
                     <MaterialCommunityIcons 
                         name={currentItem.icon} 
                         size={80} 
-                        color={currentPage === 6 ? '#D4DE95' : '#ffffff'}
+                        color={currentPage === 5 ? '#D4DE95' : '#ffffff'}
                         style={styles.consequenceIcon}
                     />
                 </Animated.View>
@@ -252,7 +250,7 @@ export default function DoubtConsequences() {
                 {/* Title */}
                 <Text style={[
                     styles.consequenceTitle,
-                    { color: currentPage === 6 ? '#D4DE95' : '#ffffff' }
+                    { color: currentPage === 5 ? '#D4DE95' : '#ffffff' }
                 ]}>
                     {currentItem.title}
                 </Text>
@@ -260,7 +258,7 @@ export default function DoubtConsequences() {
                 {/* Subtitle */}
                 <Text style={[
                     styles.consequenceSubtitle,
-                    { color: currentPage === 6 ? '#ffffff' : 'rgba(255, 255, 255, 0.9)' }
+                    { color: currentPage === 5 ? '#ffffff' : 'rgba(255, 255, 255, 0.9)' }
                 ]}>
                     {currentItem.subtitle}
                 </Text>
@@ -273,19 +271,19 @@ export default function DoubtConsequences() {
             <TouchableOpacity 
                 style={[
                     styles.consequenceNextButton,
-                    { backgroundColor: currentPage === 6 ? '#D4DE95' : 'rgba(255, 255, 255, 0.2)' }
+                    { backgroundColor: currentPage === 5 ? '#D4DE95' : 'rgba(255, 255, 255, 0.2)' }
                 ]} 
                 onPress={handleNext}
                 activeOpacity={0.8}
             >
                 <Text style={[
                     styles.consequenceNextButtonText,
-                    { color: currentPage === 6 ? '#2B2B2B' : '#ffffff' }
+                    { color: currentPage === 5 ? '#2B2B2B' : '#ffffff' }
                 ]}>
                     Next
                 </Text>
             </TouchableOpacity>
-            </View>
+            </LinearGradient>
         </GestureDetector>
     );
 }

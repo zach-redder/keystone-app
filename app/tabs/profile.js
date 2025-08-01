@@ -1,4 +1,4 @@
-import { View, Text, SafeAreaView, TouchableOpacity, ScrollView, Linking, AppState, Alert } from 'react-native';
+import { View, Text, SafeAreaView, TouchableOpacity, ScrollView, Linking, AppState, Alert, Platform, Share } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
@@ -6,26 +6,28 @@ import * as Notifications from 'expo-notifications';
 import * as StoreReview from 'expo-store-review';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { signOutUser, checkUserProStatus } from '../../services/auth';
+import { signOutUser } from '../../services/auth';
+// Removed checkUserProStatus import - app is now fully paid-only
 import { fetchIdentityKeys } from '../../services/userKeys';
 import { getPreferredAiPersona, updateNotificationOptIn, getUserEmail, getPreferredReminderTime, getUserDayStreak} from '../../services/userPreferences';
+import { getUserSubscriptionDetails } from '../../services/referralService';
+import { getAppStoreLink, APP_NAME } from '../../constants/appStore';
 import profileStyles from '../../styles/profile';
-import ProUpgradeModal from '../../components/modals/ProUpgradeModal';
+// Removed ProUpgradeModal import - no longer needed in paid-only app
 import CommunityModal from '../../components/modals/CommunityModal';
 import ContactReportModal from '../../components/modals/ContactReportModal';
 import FAQModal from '../../components/modals/FAQModal';
 import AIPersonalityModal from '../../components/modals/AIPersonalityModal';
 import ReminderTimeModal from '../../components/modals/ReminderTimeModal';
 import EditProfileModal from '../../components/modals/EditProfileModal';
-import ReferralModal from '../../components/modals/ReferralModal';
-import { shareProfilePage } from '../../services/shareService';
+// Removed ReferralModal and shareProfilePage - now using direct app sharing
 
 export default function ProfileScreen() {
   const router = useRouter();
   const appState = useRef(AppState.currentState);
   const lastNotificationStatus = useRef(false);
-  const [badgeText, setBadgeText] = useState('PRO');
-  const [proModalVisible, setProModalVisible] = useState(false);
+  // Removed badgeText - replaced with streak UI
+  // Removed proModalVisible state - no longer needed in paid-only app
   const [communityModalVisible, setCommunityModalVisible] = useState(false);
   const [contactModalVisible, setContactModalVisible] = useState(false);
   const [reportModalVisible, setReportModalVisible] = useState(false);
@@ -33,9 +35,15 @@ export default function ProfileScreen() {
   const [aiPersonalityModalVisible, setAiPersonalityModalVisible] = useState(false);
   const [reminderTimeModalVisible, setReminderTimeModalVisible] = useState(false);
   const [editProfileModalVisible, setEditProfileModalVisible] = useState(false);
-  const [referralModalVisible, setReferralModalVisible] = useState(false);
+  // Removed referralModalVisible - now using direct app sharing
   const [keyCount, setKeyCount] = useState(0);
-  const [isPro, setIsPro] = useState(false);
+  // Removed isPro state - all users are considered pro in paid-only app
+  const [subscriptionDetails, setSubscriptionDetails] = useState({
+    isPro: false,
+    subscriptionType: 'free',
+    displayName: 'Free Plan',
+    source: 'free'
+  });
   const [aiPersona, setAiPersona] = useState('Default');
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [reminderTime, setReminderTime] = useState('9:00 AM');
@@ -43,7 +51,8 @@ export default function ProfileScreen() {
   const [userEmail, setUserEmail] = useState('');
 
   useEffect(() => {
-    checkProStatus();
+    // Removed checkProStatus call - all users are pro in paid-only app
+    loadSubscriptionDetails();
     loadKeyCount();
     loadAiPersona();
     loadReminderTime();
@@ -66,26 +75,18 @@ export default function ProfileScreen() {
     return () => subscription?.remove();
   }, []);
 
-  // Refresh AI persona when screen comes into focus
+  // Refresh data when screen comes into focus
   useFocusEffect(
     useCallback(() => {
       loadAiPersona();
       loadReminderTime();
       loadDayStreak();
+      loadSubscriptionDetails();
       checkAndUpdateNotificationPermissions();
     }, [])
   );
 
-  const checkProStatus = async () => {
-    try {
-      const proStatus = await checkUserProStatus();
-      setIsPro(proStatus);
-      setBadgeText(proStatus ? 'COMMUNITY' : 'PRO');
-    } catch (error) {
-      console.error('Error checking Pro status:', error);
-      setBadgeText('PRO');
-    }
-  };
+  // Removed checkProStatus function - all users are pro in paid-only app
 
   const loadKeyCount = async () => {
     try {
@@ -126,6 +127,23 @@ export default function ProfileScreen() {
     } catch (error) {
       console.error('Error loading day streak:', error);
       setDayStreak(0);
+    }
+  };
+
+  const loadSubscriptionDetails = async () => {
+    try {
+      const details = await getUserSubscriptionDetails();
+      setSubscriptionDetails(details);
+      // All users are considered pro in paid-only app
+    } catch (error) {
+      console.error('Error loading subscription details:', error);
+      setSubscriptionDetails({
+        isPro: true,
+        subscriptionType: 'yearly',
+        displayName: 'Pro Plan',
+        source: 'purchase'
+      });
+      // All users are considered pro in paid-only app
     }
   };
 
@@ -209,21 +227,7 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleBadgePress = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    try {
-      const proStatus = await checkUserProStatus();
-      if (proStatus) {
-        setCommunityModalVisible(true);
-      } else {
-        setProModalVisible(true);
-      }
-    } catch (error) {
-      console.error('Error checking Pro status:', error);
-      setProModalVisible(true);
-    }
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  };
+  // Removed handleBadgePress - no longer needed with streak UI
 
   function handleSignOut() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -283,10 +287,7 @@ export default function ProfileScreen() {
     setAiPersonalityModalVisible(true);
   };
 
-  const handleUpgradeFromAI = () => {
-    setAiPersonalityModalVisible(false);
-    setProModalVisible(true);
-  };
+  // Removed handleUpgradeFromAI - no longer needed in paid-only app
 
   const handleReminderTime = () => {
     setReminderTimeModalVisible(true);
@@ -296,9 +297,18 @@ export default function ProfileScreen() {
     setReminderTime(newTime);
   };
 
-  const handleSharePress = () => {
+  const handleSharePress = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setReferralModalVisible(true);
+    try {
+      const appStoreLink = getAppStoreLink();
+      await Share.share({
+        message: `Check out ${APP_NAME} - the app that helps you overcome doubt and become your best self! Download it here: ${appStoreLink}`,
+        url: appStoreLink,
+        title: `${APP_NAME} - Overcome Doubt`
+      });
+    } catch (error) {
+      console.error('Error sharing app:', error);
+    }
   };
 
   return (
@@ -307,9 +317,10 @@ export default function ProfileScreen() {
         <View style={profileStyles.headerRow}>
           <Text style={profileStyles.header}>Profile</Text>
           <View style={profileStyles.headerButtons}>
-            <TouchableOpacity style={profileStyles.proBadgeWrap} onPress={handleBadgePress}>
-              <Text style={profileStyles.proBadge}>{badgeText}</Text>
-            </TouchableOpacity>
+            <View style={profileStyles.streakBadgeWrap}>
+              <Ionicons name="flame" size={16} color="#D4DE95" />
+              <Text style={profileStyles.streakBadge}>{dayStreak}</Text>
+            </View>
             <TouchableOpacity style={profileStyles.shareButton} onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               handleSharePress();
@@ -374,7 +385,7 @@ export default function ProfileScreen() {
               <Ionicons name="star-outline" size={20} color="#B9C096" style={profileStyles.profileItemIcon} />
               <Text style={profileStyles.profileItemText}>My Subscription</Text>
               <View style={profileStyles.profileItemRight}>
-                <Text style={profileStyles.profileItemValue}>{isPro ? 'Pro' : 'Free'} Plan</Text>
+                <Text style={profileStyles.profileItemValue}>{subscriptionDetails.displayName}</Text>
                 <Ionicons name="chevron-forward" size={16} color="#fff" />
               </View>
             </TouchableOpacity>
@@ -479,7 +490,7 @@ export default function ProfileScreen() {
               setCommunityModalVisible(true);
             }}>
               <Ionicons name="people-outline" size={20} color="#B9C096" style={profileStyles.profileItemIcon} />
-              <Text style={profileStyles.profileItemText}>Keystone Community</Text>
+              <Text style={profileStyles.profileItemText}>Join the Community</Text>
               <View style={profileStyles.profileItemRight}>
                 <Ionicons name="chevron-forward" size={16} color="#fff" />
               </View>
@@ -509,7 +520,7 @@ export default function ProfileScreen() {
               }
             }}>
               <Ionicons name="business-outline" size={20} color="#B9C096" style={profileStyles.profileItemIcon} />
-              <Text style={profileStyles.profileItemText}>Redder Media Company</Text>
+              <Text style={profileStyles.profileItemText}>Parent Company</Text>
               <View style={profileStyles.profileItemRight}>
                 <Ionicons name="chevron-forward" size={16} color="#fff" />
               </View>
@@ -524,11 +535,7 @@ export default function ProfileScreen() {
         </ScrollView>
       </View>
 
-      <ProUpgradeModal
-        visible={proModalVisible}
-        onClose={() => setProModalVisible(false)}
-        currentPage="profile"
-      />
+      {/* Removed ProUpgradeModal - no longer needed in paid-only app */}
       <CommunityModal
         visible={communityModalVisible}
         onClose={() => setCommunityModalVisible(false)}
@@ -550,7 +557,6 @@ export default function ProfileScreen() {
       <AIPersonalityModal
         visible={aiPersonalityModalVisible}
         onClose={() => setAiPersonalityModalVisible(false)}
-        onUpgradePress={handleUpgradeFromAI}
       />
       <ReminderTimeModal
         visible={reminderTimeModalVisible}
@@ -563,10 +569,7 @@ export default function ProfileScreen() {
         userEmail={userEmail}
         onSave={() => {}}
       />
-      <ReferralModal
-        visible={referralModalVisible}
-        onClose={() => setReferralModalVisible(false)}
-      />
+      {/* Removed ReferralModal - now using direct app sharing */}
     </SafeAreaView>
   );
 }

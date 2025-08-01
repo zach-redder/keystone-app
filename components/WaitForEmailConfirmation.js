@@ -135,6 +135,8 @@ export default function WaitForEmailConfirmationScreen({ email, preferences: ini
         const savedPrefs = await AsyncStorage.getItem('final_preferences');
         preferences = savedPrefs ? JSON.parse(savedPrefs) : null;
         console.log('Preferences from AsyncStorage:', preferences);
+      } else {
+        console.log('Using passed preferences:', preferences);
       }
 
       if (!preferences) {
@@ -169,9 +171,17 @@ export default function WaitForEmailConfirmationScreen({ email, preferences: ini
         'aipersonality_custom_options',
       ]);
       
-      console.log('Navigating to subscription...');
-      // Navigate to subscription
-      router.replace('/subscription');
+      // Verify the user is properly signed in and has a session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.error('No session after email confirmation - this should not happen');
+        setError('Authentication error. Please try signing in again.');
+        return;
+      }
+      
+      console.log('User session verified, navigating to main app...');
+      // Navigate to main app and let the routing logic handle the correct destination
+      router.replace('/');
     } catch (err) {
       console.error('Error in handleConfirmedEmail:', err);
       setError(err.message);

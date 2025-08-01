@@ -1,20 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, SafeAreaView, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, SafeAreaView, TouchableOpacity, ScrollView, Share } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import globalStyles from '../../styles/global';
 import keysStyles from '../../styles/keys';
 import homeStyles from '../../styles/home';
-import ProUpgradeModal from '../../components/modals/ProUpgradeModal';
+// Removed ProUpgradeModal import - no longer needed in paid-only app
 import CommunityModal from '../../components/modals/CommunityModal';
 import AlignModal from '../../components/modals/AlignModal';
 import AlignButton from '../../components/buttons/AlignButton';
 import LogActionModal from '../../components/modals/LogActionModal';
 import ShareProgressModal from '../../components/modals/ShareProgressModal';
-import ReferralModal from '../../components/modals/ReferralModal';
-import { checkUserProStatus } from '../../services/auth';
+import CommunityCard from '../../components/CommunityCard';
+// Removed ReferralModal - now using direct app sharing
+// Removed checkUserProStatus import - app is now fully paid-only
 import { fetchRecentActionLog, fetchActionLogs } from '../../services/actionLogs';
-import { shareHomePage } from '../../services/shareService';
+import { getAppStoreLink, APP_NAME } from '../../constants/appStore';
 import { fetchTodayReminder, setupReminderNotifications } from '../../services/reminderService';
 import { 
   fetchAlignmentValue, 
@@ -24,15 +25,19 @@ import {
   getScoreLabel,
   getScoreColor
 } from '../../services/alignmentService';
+import { getUserDayStreak, getUserLongestStreak } from '../../services/userPreferences';
+import { checkForStreakMilestone, markMilestoneAsShown } from '../../services/streakRewardsService';
 import * as Haptics from 'expo-haptics';
 import ActionLogResultModal from '../../components/modals/ActionLogResultModal';
 import AffirmIdentityModal from '../../components/modals/AffirmIdentityModal';
+import StreakRewardModal from '../../components/modals/StreakRewardModal';
 
 export default function HomeScreen() {
-  const [proModalVisible, setProModalVisible] = useState(false);
+  // Removed proModalVisible state - no longer needed in paid-only app
   const [communityModalVisible, setCommunityModalVisible] = useState(false);
   const [alignModalVisible, setAlignModalVisible] = useState(false);
-  const [badgeText, setBadgeText] = useState('PRO');
+  const [dayStreak, setDayStreak] = useState(0);
+  const [longestStreak, setLongestStreak] = useState(0);
   const [selectedKeyTypeIndex, setSelectedKeyTypeIndex] = useState(0);
   const [recentActionLog, setRecentActionLog] = useState(null);
   const [loadingActionLog, setLoadingActionLog] = useState(true);
@@ -49,7 +54,13 @@ export default function HomeScreen() {
   const [resultLog, setResultLog] = useState(null);
   const [affirmIdentityModalVisible, setAffirmIdentityModalVisible] = useState(false);
   const [shareProgressModalVisible, setShareProgressModalVisible] = useState(false);
-  const [referralModalVisible, setReferralModalVisible] = useState(false);
+  // Removed referralModalVisible - now using direct app sharing
+  const [streakRewardModalVisible, setStreakRewardModalVisible] = useState(false);
+  const [currentMilestone, setCurrentMilestone] = useState(null);
+
+  // New analytics state
+  const [weeklyLogCount, setWeeklyLogCount] = useState(0);
+  const [alignmentTrend, setAlignmentTrend] = useState(null);
 
   const HIGH_VALUE = 0.7; // Threshold for excessive alignment
   const LOW_VALUE = 0.3; // Threshold for deficient alignment
@@ -81,11 +92,13 @@ export default function HomeScreen() {
   useFocusEffect(
     React.useCallback(() => {
       console.log('Home screen focused - reloading data');
-      checkProStatus();
+      loadDayStreak();
+      loadLongestStreak();
       loadRecentActionLog();
       loadDailyReminder();
       loadWeeklySnapshot();
       loadAlignmentScoreChange();
+      loadAnalyticsData();
       setupReminderNotifications().catch(console.error);
       loadRecentActionLogs();
       return () => {
@@ -161,35 +174,65 @@ export default function HomeScreen() {
     }
   };
 
-  const checkProStatus = async () => {
+  const loadDayStreak = async () => {
     try {
-      const isPro = await checkUserProStatus();
-      setBadgeText(isPro ? 'COMMUNITY' : 'PRO');
+      const streak = await getUserDayStreak();
+      setDayStreak(streak);
+      
+      // Check for streak milestone achievements
+      if (streak > 0) {
+        const milestone = await checkForStreakMilestone(streak);
+        if (milestone) {
+          setCurrentMilestone(milestone);
+          setStreakRewardModalVisible(true);
+          // Mark this milestone as shown
+          await markMilestoneAsShown(milestone.days);
+        }
+      }
     } catch (error) {
-      console.error('Error checking Pro status:', error);
-      // Default to non-Pro if error
-      setBadgeText('PRO');
+      console.error('Error loading day streak:', error);
+      setDayStreak(0);
     }
   };
 
-  const handleBadgePress = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  const loadLongestStreak = async () => {
     try {
-      const isPro = await checkUserProStatus();
-      if (isPro) {
-        // Show Community modal for Pro users
-        setCommunityModalVisible(true);
-      } else {
-        // Show Pro upgrade modal for non-Pro users
-        setProModalVisible(true);
-      }
+      const longest = await getUserLongestStreak();
+      setLongestStreak(longest);
     } catch (error) {
-      console.error('Error checking Pro status:', error);
-      // Show Pro modal on error to be safe
-      setProModalVisible(true);
+      console.error('Error loading longest streak:', error);
+      setLongestStreak(0);
     }
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
   };
+
+
+
+  const loadAnalyticsData = async () => {
+    try {
+      // Calculate weekly log count
+      const logs = await fetchActionLogs(50); // Get recent logs
+      const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const weeklyLogs = logs.filter(log => new Date(log.created_at) > oneWeekAgo);
+      setWeeklyLogCount(weeklyLogs.length);
+
+      // Calculate alignment trend
+      const currentAlignment = await fetchAlignmentValue(keyTypes[selectedKeyTypeIndex]);
+      const weekAgoAlignment = currentAlignment - (alignmentScoreChange?.percentChange || 0) / 100;
+      const trend = {
+        current: currentAlignment,
+        previous: weekAgoAlignment,
+        isImproving: currentAlignment > weekAgoAlignment,
+        changePercent: alignmentScoreChange?.percentChange || 0
+      };
+      setAlignmentTrend(trend);
+
+
+    } catch (error) {
+      console.error('Error loading analytics data:', error);
+    }
+  };
+
+  // Removed handleBadgePress - no longer needed with streak UI
 
   const handleKeyTypeNavigation = (direction) => {
     if (direction === 'left') {
@@ -213,9 +256,18 @@ export default function HomeScreen() {
     setLogActionModalVisible(true);
   };
 
-  const handleSharePress = () => {
+  const handleSharePress = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setReferralModalVisible(true);
+    try {
+      const appStoreLink = getAppStoreLink();
+      await Share.share({
+        message: `Check out ${APP_NAME} - the app that helps you overcome doubt and become your best self! Download it here: ${appStoreLink}`,
+        url: appStoreLink,
+        title: `${APP_NAME} - Overcome Doubt`
+      });
+    } catch (error) {
+      console.error('Error sharing app:', error);
+    }
   };
 
   const formatActionLogDate = (dateString) => {
@@ -263,11 +315,7 @@ export default function HomeScreen() {
     return `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
   };
 
-  // Handler to open Pro modal from AffirmIdentityModal
-  const handleRequestProUpgrade = () => {
-    setAffirmIdentityModalVisible(false);
-    setProModalVisible(true); // Add delay to ensure modal sequencing
-  };
+  // Removed handleRequestProUpgrade - no longer needed in paid-only app
 
   // Handler for Affirm Identity from AlignModal
   const handleAffirmIdentity = () => {
@@ -281,9 +329,10 @@ export default function HomeScreen() {
         <View style={globalStyles.headerRow}>
           <Text style={globalStyles.header}>Keystone</Text>
           <View style={globalStyles.headerButtons}>
-            <TouchableOpacity style={keysStyles.proBadgeWrap} onPress={handleBadgePress}>
-              <Text style={keysStyles.proBadge}>{badgeText}</Text>
-            </TouchableOpacity>
+            <View style={homeStyles.streakBadgeWrap}>
+              <Ionicons name="flame" size={16} color="#D4DE95" />
+              <Text style={homeStyles.streakBadge}>{dayStreak}</Text>
+            </View>
             <TouchableOpacity style={keysStyles.shareButton} onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               handleSharePress();
@@ -310,118 +359,174 @@ export default function HomeScreen() {
             </View>
           </View>
 
-          {/* Alignment Trends Section */}
-          <View style={homeStyles.sectionContainer}>
-            <Text style={homeStyles.sectionTitle}>Current Alignment</Text>
-            <View style={homeStyles.trendsContainer}>
-              <View style={{ minHeight: 130, height: 130, justifyContent: 'center' }}>
-                {alignmentValue === null ? (
-                  <View style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }}>
-                    <Text style={{ color: '#888', fontSize: 16, textAlign: 'center', marginBottom: 16 }}>
-                      No alignment data yet for this key. Add a key or align now to see your progress!
-                    </Text>
-                  </View>
-                ) : (
-                  <View style={homeStyles.trendsChart}>
-                    {/* Golden Mean Alignment Chart */}
-                    <View style={homeStyles.goldenMeanContainer}>
-                      <View style={homeStyles.goldenMeanChart}>
-                        {/* Scale Labels */}
-                        <View style={homeStyles.scaleLabels}>
-                          <Text style={[
-                            homeStyles.scaleLabelDeficient,
-                            getCurrentAlignment() < LOW_VALUE && { color: '#FF4C4C' },
-                            getCurrentAlignment() > HIGH_VALUE && { color: '#999' },
-                            getCurrentAlignment() >= LOW_VALUE && getCurrentAlignment() <= HIGH_VALUE && { color: '#999' },
-                          ]}>{getCurrentLabels().deficient}</Text>
-                          <Text style={[
-                            homeStyles.scaleLabelIdeal,
-                            getCurrentAlignment() >= LOW_VALUE && getCurrentAlignment() <= HIGH_VALUE && { color: '#D4DE95' },
-                            (getCurrentAlignment() < LOW_VALUE || getCurrentAlignment() > HIGH_VALUE) && { color: '#999' },
-                          ]}>{getCurrentLabels().ideal}</Text>
-                          <Text style={[
-                            homeStyles.scaleLabelExcess,
-                            getCurrentAlignment() > HIGH_VALUE && { color: '#FF4C4C' },
-                            getCurrentAlignment() < LOW_VALUE && { color: '#999' },
-                            getCurrentAlignment() >= LOW_VALUE && getCurrentAlignment() <= HIGH_VALUE && { color: '#999' },
-                          ]}>{getCurrentLabels().excess}</Text>
-                        </View>
-                        {/* Progress Bar */}
-                        <View style={homeStyles.progressContainer}>
-                          <View style={homeStyles.progressBar}>
-                            {/* Golden Mean Indicator */}
-                            <View style={homeStyles.goldenMeanIndicator} />
-                            {/* User Position */}
-                            <View style={[
-                              homeStyles.userPosition,
-                              { left: `${getCurrentAlignment() * 100}%` }
-                            ]}>
-                              <View style={[
-                                homeStyles.userDot,
-                                (getCurrentAlignment() < LOW_VALUE || getCurrentAlignment() > HIGH_VALUE) && {
-                                  borderColor: '#FF4C4C',
-                                  shadowColor: '#FF4C4C',
-                                  backgroundColor: '#fff',
-                                },
-                              ]} />
-                            </View>
-                            {/* Progress Fill */}
-                            <View style={[
-                              homeStyles.progressFill,
-                              { 
-                                left: `${Math.min(50, getCurrentAlignment() * 100)}%`,
-                                width: `${Math.abs(getCurrentAlignment() * 100 - 50)}%`,
-                                backgroundColor:
-                                  (getCurrentAlignment() < LOW_VALUE || getCurrentAlignment() > HIGH_VALUE)
-                                    ? '#FF4C4C'
-                                    : '#D4DE95',
-                                shadowColor:
-                                  (getCurrentAlignment() < LOW_VALUE || getCurrentAlignment() > HIGH_VALUE)
-                                    ? '#FF4C4C'
-                                    : '#D4DE95',
-                              }
-                            ]} />
-                          </View>
-                        </View>
-                        {/* Subtitle Labels Below */}
-                        <View style={homeStyles.scaleSubtitles}>
-                          <Text style={[
-                            homeStyles.scaleSubtitleDeficient,
-                            getCurrentAlignment() < LOW_VALUE && { color: '#FF4C4C' },
-                            getCurrentAlignment() > HIGH_VALUE && { color: '#666' },
-                            getCurrentAlignment() >= LOW_VALUE && getCurrentAlignment() <= HIGH_VALUE && { color: '#666' },
-                          ]}>Deficient</Text>
-                          <Text style={[
-                            homeStyles.scaleSubtitleIdeal,
-                            getCurrentAlignment() >= LOW_VALUE && getCurrentAlignment() <= HIGH_VALUE && { color: '#A8B89E' },
-                            (getCurrentAlignment() < LOW_VALUE || getCurrentAlignment() > HIGH_VALUE) && { color: '#666' },
-                          ]}>Aligned</Text>
-                          <Text style={[
-                            homeStyles.scaleSubtitleExcess,
-                            getCurrentAlignment() > HIGH_VALUE && { color: '#FF4C4C' },
-                            getCurrentAlignment() < LOW_VALUE && { color: '#666' },
-                            getCurrentAlignment() >= LOW_VALUE && getCurrentAlignment() <= HIGH_VALUE && { color: '#666' },
-                          ]}>Excessive</Text>
-                        </View>
-                      </View>
-                    </View>
-                  </View>
-                )}
-              </View>
-              {/* Key Type Selector */}
-              <View style={homeStyles.keyTypeSelector}>
-                <TouchableOpacity onPress={() => handleKeyTypeNavigation('left')}>
-                  <Text style={homeStyles.keyTypeArrow}>‹</Text>
-                </TouchableOpacity>
-                <Text style={homeStyles.keyTypeText}>
-                  {getCurrentKeyTypeDisplay()}
-                </Text>
-                <TouchableOpacity onPress={() => handleKeyTypeNavigation('right')}>
-                  <Text style={homeStyles.keyTypeArrow}>›</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
+                     {/* Analytics & Progress Section */}
+           <View style={homeStyles.sectionContainer}>
+             <Text style={homeStyles.sectionTitle}>Current Alignment</Text>
+             
+             {/* Streaks Row */}
+             <View style={homeStyles.analyticsRow}>
+               <View style={homeStyles.analyticsCard}>
+                 <View style={homeStyles.analyticsHeader}>
+                   <Ionicons name="flame" size={20} color="#FF6B35" />
+                   <Text style={homeStyles.analyticsCardTitle}>Current Streak</Text>
+                 </View>
+                 <Text style={homeStyles.analyticsNumber}>{dayStreak}</Text>
+                 <Text style={homeStyles.analyticsLabel}>days</Text>
+               </View>
+               
+               <View style={homeStyles.analyticsCard}>
+                 <View style={homeStyles.analyticsHeader}>
+                   <Ionicons name="trophy" size={20} color="#D4DE95" />
+                   <Text style={homeStyles.analyticsCardTitle}>Longest Streak</Text>
+                 </View>
+                 <Text style={homeStyles.analyticsNumber}>{longestStreak}</Text>
+                 <Text style={homeStyles.analyticsLabel}>days</Text>
+               </View>
+             </View>
+
+             {/* Trends Row */}
+             <View style={homeStyles.analyticsRow}>
+               <View style={homeStyles.analyticsCard}>
+                 <View style={homeStyles.analyticsHeader}>
+                   <Ionicons name="trending-up" size={20} color="#4CAF50" />
+                   <Text style={homeStyles.analyticsCardTitle}>This Week</Text>
+                 </View>
+                 <Text style={homeStyles.analyticsNumber}>{weeklyLogCount}</Text>
+                 <Text style={homeStyles.analyticsLabel}>actions logged</Text>
+               </View>
+               
+               <View style={homeStyles.analyticsCard}>
+                 <View style={homeStyles.analyticsHeader}>
+                   <Ionicons 
+                     name={alignmentTrend && alignmentTrend.isImproving ? "trending-up" : "trending-down"} 
+                     size={20} 
+                     color={alignmentTrend && alignmentTrend.isImproving ? "#4CAF50" : "#FF6B35"} 
+                   />
+                   <Text style={homeStyles.analyticsCardTitle}>Alignment Trend</Text>
+                 </View>
+                 <Text style={[
+                   homeStyles.analyticsNumber,
+                   { color: alignmentTrend && alignmentTrend.isImproving ? "#4CAF50" : "#FF6B35" }
+                 ]}>
+                   {alignmentTrend && alignmentTrend.isImproving ? "+" : ""}{Math.abs((alignmentTrend && alignmentTrend.changePercent) || 0).toFixed(1)}%
+                 </Text>
+                 <Text style={homeStyles.analyticsLabel}>this week</Text>
+               </View>
+             </View>
+
+             {/* Alignment Chart */}
+             <View style={homeStyles.trendsContainer}>
+               <View style={{ minHeight: 130, height: 130, justifyContent: 'center' }}>
+                 {alignmentValue === null ? (
+                   <View style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }}>
+                     <Text style={{ color: '#888', fontSize: 16, textAlign: 'center', marginBottom: 16 }}>
+                       No alignment data yet for this key. Add a key or align now to see your progress!
+                     </Text>
+                   </View>
+                 ) : (
+                   <View style={homeStyles.trendsChart}>
+                     {/* Golden Mean Alignment Chart */}
+                     <View style={homeStyles.goldenMeanContainer}>
+                       <View style={homeStyles.goldenMeanChart}>
+                         {/* Scale Labels */}
+                         <View style={homeStyles.scaleLabels}>
+                           <Text style={[
+                             homeStyles.scaleLabelDeficient,
+                             getCurrentAlignment() < LOW_VALUE && { color: '#FF4C4C' },
+                             getCurrentAlignment() > HIGH_VALUE && { color: '#999' },
+                             getCurrentAlignment() >= LOW_VALUE && getCurrentAlignment() <= HIGH_VALUE && { color: '#999' },
+                           ]}>{getCurrentLabels().deficient}</Text>
+                           <Text style={[
+                             homeStyles.scaleLabelIdeal,
+                             getCurrentAlignment() >= LOW_VALUE && getCurrentAlignment() <= HIGH_VALUE && { color: '#D4DE95' },
+                             (getCurrentAlignment() < LOW_VALUE || getCurrentAlignment() > HIGH_VALUE) && { color: '#999' },
+                           ]}>{getCurrentLabels().ideal}</Text>
+                           <Text style={[
+                             homeStyles.scaleLabelExcess,
+                             getCurrentAlignment() > HIGH_VALUE && { color: '#FF4C4C' },
+                             getCurrentAlignment() < LOW_VALUE && { color: '#999' },
+                             getCurrentAlignment() >= LOW_VALUE && getCurrentAlignment() <= HIGH_VALUE && { color: '#999' },
+                           ]}>{getCurrentLabels().excess}</Text>
+                         </View>
+                         {/* Progress Bar */}
+                         <View style={homeStyles.progressContainer}>
+                           <View style={homeStyles.progressBar}>
+                             {/* Golden Mean Indicator */}
+                             <View style={homeStyles.goldenMeanIndicator} />
+                             {/* User Position */}
+                             <View style={[
+                               homeStyles.userPosition,
+                               { left: `${getCurrentAlignment() * 100}%` }
+                             ]}>
+                               <View style={[
+                                 homeStyles.userDot,
+                                 (getCurrentAlignment() < LOW_VALUE || getCurrentAlignment() > HIGH_VALUE) && {
+                                   borderColor: '#FF4C4C',
+                                   shadowColor: '#FF4C4C',
+                                   backgroundColor: '#fff',
+                                 },
+                               ]} />
+                             </View>
+                             {/* Progress Fill */}
+                             <View style={[
+                               homeStyles.progressFill,
+                               { 
+                                 left: `${Math.min(50, getCurrentAlignment() * 100)}%`,
+                                 width: `${Math.abs(getCurrentAlignment() * 100 - 50)}%`,
+                                 backgroundColor:
+                                   (getCurrentAlignment() < LOW_VALUE || getCurrentAlignment() > HIGH_VALUE)
+                                     ? '#FF4C4C'
+                                     : '#D4DE95',
+                                 shadowColor:
+                                   (getCurrentAlignment() < LOW_VALUE || getCurrentAlignment() > HIGH_VALUE)
+                                     ? '#FF4C4C'
+                                     : '#D4DE95',
+                               }
+                             ]} />
+                           </View>
+                         </View>
+                         {/* Subtitle Labels Below */}
+                         <View style={homeStyles.scaleSubtitles}>
+                           <Text style={[
+                             homeStyles.scaleSubtitleDeficient,
+                             getCurrentAlignment() < LOW_VALUE && { color: '#FF4C4C' },
+                             getCurrentAlignment() > HIGH_VALUE && { color: '#666' },
+                             getCurrentAlignment() >= LOW_VALUE && getCurrentAlignment() <= HIGH_VALUE && { color: '#666' },
+                           ]}>Deficient</Text>
+                           <Text style={[
+                             homeStyles.scaleSubtitleIdeal,
+                             getCurrentAlignment() >= LOW_VALUE && getCurrentAlignment() <= HIGH_VALUE && { color: '#A8B89E' },
+                             (getCurrentAlignment() < LOW_VALUE || getCurrentAlignment() > HIGH_VALUE) && { color: '#666' },
+                           ]}>Aligned</Text>
+                           <Text style={[
+                             homeStyles.scaleSubtitleExcess,
+                             getCurrentAlignment() > HIGH_VALUE && { color: '#FF4C4C' },
+                             getCurrentAlignment() < LOW_VALUE && { color: '#666' },
+                             getCurrentAlignment() >= LOW_VALUE && getCurrentAlignment() <= HIGH_VALUE && { color: '#666' },
+                           ]}>Excessive</Text>
+                         </View>
+                       </View>
+                     </View>
+                   </View>
+                 )}
+               </View>
+               {/* Key Type Selector */}
+               <View style={homeStyles.keyTypeSelector}>
+                 <TouchableOpacity onPress={() => handleKeyTypeNavigation('left')}>
+                   <Text style={homeStyles.keyTypeArrow}>‹</Text>
+                 </TouchableOpacity>
+                 <Text style={homeStyles.keyTypeText}>
+                   {getCurrentKeyTypeDisplay()}
+                 </Text>
+                 <TouchableOpacity onPress={() => handleKeyTypeNavigation('right')}>
+                   <Text style={homeStyles.keyTypeArrow}>›</Text>
+                 </TouchableOpacity>
+               </View>
+             </View>
+
+           </View>
+
+          
 
           {/* Previous Action Log Section */}
           <View style={homeStyles.sectionContainer}>
@@ -466,6 +571,12 @@ export default function HomeScreen() {
                 ))
               )}
             </View>
+          </View>
+
+          {/* Community Card Section */}
+          <View style={homeStyles.sectionContainer}>
+            <Text style={homeStyles.sectionTitle}>Community</Text>
+            <CommunityCard />
           </View>
 
           {/* Weekly Overview Section */}
@@ -546,17 +657,17 @@ export default function HomeScreen() {
           visible={alignModalVisible}
           onClose={() => setAlignModalVisible(false)}
           onUpgradePress={() => {
-            setAlignModalVisible(false);
-            setProModalVisible(true);
+            // No longer needed - all users have full access
           }}
           onAffirmIdentity={handleAffirmIdentity}
+          onLogActionResult={(log) => {
+            // Automatically show result modal after successful log action
+            setResultLog(log);
+            setResultModalVisible(true);
+          }}
         />
         
-        <ProUpgradeModal
-          visible={proModalVisible}
-          onClose={() => setProModalVisible(false)}
-          currentPage="home"
-        />
+        {/* Removed ProUpgradeModal - no longer needed in paid-only app */}
         
         <CommunityModal
           visible={communityModalVisible}
@@ -579,15 +690,19 @@ export default function HomeScreen() {
         <AffirmIdentityModal
           visible={affirmIdentityModalVisible}
           onClose={() => setAffirmIdentityModalVisible(false)}
-          onRequestProUpgrade={handleRequestProUpgrade}
         />
         <ShareProgressModal
           visible={shareProgressModalVisible}
           onClose={() => setShareProgressModalVisible(false)}
         />
-        <ReferralModal
-          visible={referralModalVisible}
-          onClose={() => setReferralModalVisible(false)}
+        {/* Removed ReferralModal - now using direct app sharing */}
+        <StreakRewardModal
+          visible={streakRewardModalVisible}
+          milestone={currentMilestone}
+          onClose={() => {
+            setStreakRewardModalVisible(false);
+            setCurrentMilestone(null);
+          }}
         />
       </View>
     </SafeAreaView>

@@ -445,7 +445,7 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 30,
-    paddingTop: 100,
+    paddingTop: 130,
   },
   quizQuestion: {
     fontSize: 18,
@@ -509,6 +509,20 @@ export const styles = StyleSheet.create({
     color: '#2b2b2b',
     fontWeight: '600',
   },
+  skipQuizButton: {
+    position: 'absolute',
+    bottom: 40,
+    left: 0,
+    right: 0,
+    paddingVertical: 15,
+    paddingHorizontal: 30,
+    alignItems: 'center',
+  },
+  skipQuizText: {
+    color: '#b3b3b3',
+    fontSize: 16,
+    textAlign: 'center',
+  },
   
   // Good News screen styles
   goodNewsContainer: {
@@ -567,6 +581,14 @@ export const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 24,
     letterSpacing: 0.8,
+  },
+  cardUserName: {
+    color: '#D4DE95',
+    fontSize: 24,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 15,
+    letterSpacing: 0.5,
   },
   streakBadgeMinimal: {
     flexDirection: 'row',
@@ -654,7 +676,7 @@ export const styles = StyleSheet.create({
   // Benefits Sequence Styles
   benefitsLogoContainer: {
     alignItems: 'center',
-    marginTop: 60,
+    marginTop: 80,
     marginBottom: 30,
   },
   benefitsLogo: {
@@ -844,7 +866,7 @@ export const styles = StyleSheet.create({
   quoteName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#D4DE95',
+    color: '#ffffff',
     letterSpacing: 0.3,
   },
   quoteBubble: {
@@ -954,7 +976,6 @@ export const styles = StyleSheet.create({
     color: '#888888',
     fontSize: 16,
     textAlign: 'center',
-    textDecorationLine: 'underline',
   },
 
   // App Rating Styles
@@ -969,6 +990,7 @@ export const styles = StyleSheet.create({
     fontSize: 36,
     fontWeight: 'bold',
     textAlign: 'center',
+    marginTop: 30,
     marginBottom: 30,
     color: '#ffffff',
     letterSpacing: 0.5,
@@ -1326,6 +1348,169 @@ export const styles = StyleSheet.create({
   },
   progressSpacer: {
     width: 44, // Same width as back button for balance
+  },
+  
+  // App Rating styles
+  rateAppButton: {
+    backgroundColor: '#D4DE95',
+    paddingVertical: 18,
+    paddingHorizontal: 40,
+    borderRadius: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 30,
+    marginBottom: 20,
+    shadowColor: '#D4DE95',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  rateAppButtonText: {
+    color: '#2B2B2B',
+    fontSize: 18,
+    fontWeight: 'bold',
+    letterSpacing: 0.5,
+  },
+  skipRatingButton: {
+    backgroundColor: 'transparent',
+    paddingVertical: 15,
+    paddingHorizontal: 30,
+    borderRadius: 25,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#666666',
+  },
+  skipRatingButtonText: {
+    color: '#b3b3b3',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  fakeReview: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  reviewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  reviewerName: {
+    color: '#D4DE95',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  reviewStars: {
+    flexDirection: 'row',
+  },
+  reviewText: {
+    color: '#ffffff',
+    fontSize: 14,
+    lineHeight: 20,
+    fontStyle: 'italic',
+  },
+  
+  // Paywall Trial Screen Styles
+  paywallTrialContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 30,
+  },
+  paywallTrialTitle: {
+    fontSize: 32,
+    color: '#ffffff',
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 45,
+    letterSpacing: 0.5,
+  },
+  paywallTrialTitleBrand: {
+    fontSize: 36,
+    color: '#D4DE95',
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 40,
+    letterSpacing: 1,
+  },
+  paywallTrialImageContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 40,
+    position: 'relative',
+  },
+  paywallTrialIcon: {
+    textShadowColor: '#D4DE95',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 10,
+  },
+  paywallTrialIconGlow: {
+    position: 'absolute',
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: '#D4DE95',
+    opacity: 0.15,
+    zIndex: -1,
+  },
+  paywallTrialSubtitle: {
+    fontSize: 18,
+    color: '#b3b3b3',
+    textAlign: 'center',
+    lineHeight: 26,
+    marginBottom: 50,
+    paddingHorizontal: 20,
+  },
+  startTrialButton: {
+    backgroundColor: '#D4DE95',
+    paddingVertical: 20,
+    paddingHorizontal: 60,
+    borderRadius: 35,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 20,
+    shadowColor: '#D4DE95',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  startTrialButtonText: {
+    color: '#2B2B2B',
+    fontSize: 20,
+    fontWeight: 'bold',
+    letterSpacing: 0.5,
+  },
+
+  // Additional Referral Code Styles
+  validatingIndicator: {
+    position: 'absolute',
+    right: 15,
+    top: '50%',
+    transform: [{ translateY: -10 }],
+  },
+  validationMessage: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 20,
+    paddingHorizontal: 20,
+    fontWeight: '600',
+  },
+  validMessage: {
+    color: '#4CAF50',
+  },
+  invalidMessage: {
+    color: '#F44336',
+  },
+  referralSubmitButtonDisabled: {
+    backgroundColor: 'rgba(212, 222, 149, 0.5)',
+    shadowOpacity: 0.2,
   },
   
 });

@@ -163,12 +163,9 @@ export default function SubscriptionScreen() {
     <>
       <View style={{ height: insets.top, backgroundColor: '#B9C096' }} />
       <View style={styles.container}>
-        {/* Header with close button */}
+        {/* Header - no close button for hard paywall */}
         <View style={styles.header}>
-          <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
-            <Ionicons name="close" size={24} color="#2B2B2B" />
-          </TouchableOpacity>
-          <Text style={styles.title}>Keystone Pro</Text>
+          <Text style={styles.title}>Keystone</Text>
         </View>
 
         {/* Feature Carousel */}
@@ -248,11 +245,11 @@ export default function SubscriptionScreen() {
                 onPress={() => setSelectedSubscription('yearly')}
               >
                 <View style={styles.saveBadge}>
-                  <Text style={styles.saveBadgeText}>Save 50%</Text>
+                  <Text style={styles.saveBadgeText}>Save 75%</Text>
                 </View>
                 <View style={styles.subscriptionOptionContent}>
                   <Text style={styles.subscriptionTitle}>Yearly</Text>
-                  <Text style={styles.subscriptionPrice}>$59.99/year after trial ends</Text>
+                  <Text style={styles.subscriptionPrice}>$29.99/year after trial ends</Text>
                 </View>
               </TouchableOpacity>
 

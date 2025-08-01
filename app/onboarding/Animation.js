@@ -57,25 +57,60 @@ export default function Animation() {
             ])
         ).start();
 
-        // Discrete haptic feedback at key animation moments
-        const hapticTimer1 = setTimeout(() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        }, 1000);
+        // Enhanced haptic crescendo building to completion
+        const hapticTimers = [];
         
-        const hapticTimer2 = setTimeout(() => {
+        // Immediate start - gentle introduction
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        
+        // Build momentum - increasing frequency and intensity
+        hapticTimers.push(setTimeout(() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        }, 2500);
-
-        // Auto-transition after 4 seconds
-        const timer = setTimeout(() => {
+        }, 400));
+        
+        hapticTimers.push(setTimeout(() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        }, 900));
+        
+        // Mid-point acceleration
+        hapticTimers.push(setTimeout(() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        }, 1500));
+        
+        hapticTimers.push(setTimeout(() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        }, 2100));
+        
+        // Building to crescendo - faster rhythm
+        hapticTimers.push(setTimeout(() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        }, 2800));
+        
+        hapticTimers.push(setTimeout(() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+        }, 3200));
+        
+        hapticTimers.push(setTimeout(() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+        }, 3500));
+        
+        // Final crescendo - completion celebration
+        const timer = setTimeout(() => {
+            // Triple haptic burst for dramatic completion
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            setTimeout(() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+            }, 100);
+            setTimeout(() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            }, 200);
+            
             router.push('/onboarding/GoodNews');
         }, 4000);
 
         return () => {
             clearTimeout(timer);
-            clearTimeout(hapticTimer1);
-            clearTimeout(hapticTimer2);
+            hapticTimers.forEach(clearTimeout);
         };
     }, []);
 
@@ -131,7 +166,7 @@ export default function Animation() {
                         color: '#ffffff',
                         fontWeight: '600'
                     }]}>
-                        Building Your Foundation...
+                        Building your foundation...
                     </Text>
                 </Animated.View>
                 

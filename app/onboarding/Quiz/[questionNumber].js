@@ -22,30 +22,30 @@ const QUIZ_QUESTIONS = [
         id: 2,
         question: "How often do you say yes to people when you mean no?",
         options: [
-            "Never",
-            "Sometimes",
+            "Always",
             "Often",
-            "Always"
+            "Sometimes",
+            "Never"
         ]
     },
     {
         id: 3,
-        question: "How often do you keep your dreams hidden?",
+        question: "How often do you keep your dreams & goals hidden?",
         options: [
-            "Never",
+            "Always",
+            "Often",
             "Sometimes",
-            "Often", 
-            "Always"
+            "Never"
         ]
     },
     {
         id: 4,
         question: "Do you feel like your daily actions reflect who you really are?",
         options: [
-            "Completely",
-            "Mostly",
-            "Somewhat",
-            "Not at all"
+            "Always",
+            "Often",
+            "Sometimes",
+            "Never"
         ]
     },
     {
@@ -62,20 +62,20 @@ const QUIZ_QUESTIONS = [
         id: 6,
         question: "How often do you think about what people think of you?",
         options: [
-            "Never",
-            "Sometimes",
+            "Always",
             "Often",
-            "Always"
+            "Sometimes",
+            "Never"
         ]
     },
     {
         id: 7,
         question: "How often do you doubt yourself?",
         options: [
-            "Never",
-            "Sometimes",
+            "Always",
             "Often",
-            "Always"
+            "Sometimes",
+            "Never"
         ]
     }
 ];
@@ -156,7 +156,7 @@ export default function QuizQuestion() {
 
     const handleSkipQuiz = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        router.push('/onboarding/Quiz/UserInfo');
+        router.push('/onboarding/FutureSelfVision');
     };
 
     if (!currentQuestion) {
@@ -200,7 +200,7 @@ export default function QuizQuestion() {
                     {currentQuestion.question}
                 </Text>
 
-                <View style={{ width: '100%' }}>
+                <View style={{ width: '100%', flex: 1 }}>
                     {currentQuestion.options.map((option, index) => (
                         <TouchableOpacity
                             key={index}

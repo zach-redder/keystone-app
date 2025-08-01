@@ -16,15 +16,33 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.reddermedia.keystone",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLName": "com.reddermedia.keystone",
+            "CFBundleURLSchemes": ["keystone"]
+          }
+        ]
       }
     },
     "android": {
+      "package": "com.reddermedia.keystone",
       "adaptiveIcon": {
         "foregroundImage": "./assets/keystone.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "keystone"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "web": {
       "favicon": "./assets/keystone.png"

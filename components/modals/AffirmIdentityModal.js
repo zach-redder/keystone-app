@@ -3,7 +3,7 @@ import { View, Text, Modal, ScrollView, TextInput, KeyboardAvoidingView, Platfor
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { getPreferredAiPersona } from '../../services/userPreferences';
 import { generateAIMessage, fetchAIChatMessages, insertAIChatMessagePair, fetchTodaysAIChatMessagePairCount, deleteAllAIChatMessages } from '../../services/affirmationService';
-import { checkUserProStatus } from '../../services/auth';
+// Removed checkUserProStatus import - app is now fully paid-only
 import Markdown from 'react-native-markdown-display';
 
 const AffirmIdentityModal = ({ visible, onClose, onRequestProUpgrade }) => {
@@ -53,17 +53,7 @@ const AffirmIdentityModal = ({ visible, onClose, onRequestProUpgrade }) => {
     if (!input.trim()) return;
     setLoadingAI(true);
     try {
-      // Check pro status and today's AI chat count
-      const isPro = await checkUserProStatus();
-      if (!isPro) {
-        const todayCount = await fetchTodaysAIChatMessagePairCount();
-        if (todayCount >= 3) {
-          setLoadingAI(false);
-          if (onClose) onClose();
-          if (onRequestProUpgrade) onRequestProUpgrade();
-          return;
-        }
-      }
+      // 🔒 PAID-ONLY APP: All users have unlimited AI chat access
       const userMsg = { role: 'user', content: input };
       const prevMessages = [...messages, userMsg];
       setMessages(prevMessages);

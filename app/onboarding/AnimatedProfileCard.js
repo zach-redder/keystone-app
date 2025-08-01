@@ -8,9 +8,9 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const TYPING_PHRASES = [
-    'This app is for you.',
-    "It's time to take the first step.",
-    "Let's do this together."
+    "Keystone is now custom built just for you.",
+    "It's designed to help you become your authentic self.",
+    "Now, it's time for you to take the first step."
 ];
 
 export default function AnimatedProfileCard() {
@@ -29,8 +29,8 @@ export default function AnimatedProfileCard() {
         const loadUserName = async () => {
             try {
                 const name = await AsyncStorage.getItem('@user_name');
-                if (name) {
-                    setUserName(name);
+                if (name && name.trim()) {
+                    setUserName(name.trim());
                 }
             } catch (error) {
                 console.error('Error loading user name:', error);
@@ -80,12 +80,12 @@ export default function AnimatedProfileCard() {
                     setCurrentPhraseIndex(phraseIndex);
                     charIndex++;
                     
-                    // Haptic feedback for each character
-                    if (charIndex % 4 === 0) { // Every 4th character (less frequent)
+                    // Haptic feedback for each character - more rapid
+                    if (charIndex % 2 === 0) { // Every 2nd character (more frequent)
                         Haptics.selectionAsync();
                     }
                     
-                    setTimeout(typeNextChar, 45); // Faster typing speed (was 80ms)
+                    setTimeout(typeNextChar, 25); // Much faster typing speed
                 } else {
                     // Finished typing this phrase, pause then move to next
                     setTimeout(() => {
@@ -94,28 +94,30 @@ export default function AnimatedProfileCard() {
                         setDisplayText('');
                         
                         if (phraseIndex < TYPING_PHRASES.length) {
-                            setTimeout(typeNextChar, 300); // Shorter pause between phrases
+                            setTimeout(typeNextChar, 150); // Much shorter pause between phrases
                         } else {
-                            // All phrases complete - auto-transition
+                            // All phrases complete - auto-transition much faster
                             setIsTyping(false);
                             setTimeout(() => {
                                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-                                router.push('/onboarding/FutureSelfVision');
-                            }, 1500); // Shorter final pause
+                                router.push('/onboarding/PaywallTrial');
+                            }, 800); // Much shorter final pause
                         }
-                    }, 1000); // Shorter hold phrase time
+                    }, 1200); // Much shorter hold phrase time
                 }
             }
         };
         
-        setTimeout(typeNextChar, 1000); // Initial delay
+        setTimeout(typeNextChar, 500); // Shorter initial delay
     };
 
     const getCurrentDate = () => {
-        const now = new Date();
-        const month = now.toLocaleDateString('en-US', { month: 'long' });
-        const year = now.getFullYear();
-        return `${month} ${year}`;
+        const date = new Date();
+        return date.toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        });
     };
 
     return (
@@ -147,40 +149,36 @@ export default function AnimatedProfileCard() {
                 {/* Profile Card */}
                 <Animated.View 
                     style={[
-                        styles.animatedProfileCard,
-                        { transform: [{ scale: cardScale }] }
+                        styles.minimalistCard,
+                        { 
+                            transform: [
+                                { scale: cardScale }
+                            ] 
+                        }
                     ]}
                 >
-                    <View style={styles.profileCardHeader}>
-                        <MaterialCommunityIcons 
-                            name="rocket-launch" 
-                            size={32} 
-                            color="#D4DE95"
-                            style={styles.profileCardIcon}
-                        />
-                        <Text style={styles.profileCardHeaderText}>
-                            Your Journey Begins
-                        </Text>
-                    </View>
+                    <MaterialCommunityIcons 
+                        name="rocket-launch" 
+                        size={32} 
+                        color="#D4DE95" 
+                        style={styles.cardIcon}
+                    />
                     
-                    <View style={styles.profileCardContent}>
-                        {userName ? (
-                            <Text style={styles.profileCardUserName}>
-                                {userName}
-                            </Text>
-                        ) : null}
-                        <Text style={styles.profileCardLabel}>
-                            Overcoming doubt since
-                        </Text>
-                        <Text style={styles.profileCardDate}>
-                            {getCurrentDate()}
-                        </Text>
-                        
-                        <View style={styles.streakContainer}>
-                            <Text style={styles.streakText}>
-                                🔥 Streak: 1 day
-                            </Text>
-                        </View>
+                    <Text style={styles.cardMainText}>
+                        Overcoming doubt since
+                    </Text>
+                    <Text style={styles.cardDateText}>
+                        {getCurrentDate()}
+                    </Text>
+                    
+                    <View style={styles.streakBadgeMinimal}>
+                        <MaterialCommunityIcons 
+                            name="fire" 
+                            size={18} 
+                            color="#FF6B6B" 
+                            style={{ marginRight: 6 }}
+                        />
+                        <Text style={styles.streakTextMinimal}>1 day streak</Text>
                     </View>
                 </Animated.View>
             </Animated.View>

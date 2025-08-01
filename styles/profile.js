@@ -35,6 +35,21 @@ const profileStyles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
+  streakBadgeWrap: {
+    backgroundColor: '#3a3a3a',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  streakBadge: {
+    color: '#D4DE95',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 6,
+  },
   header: {
     fontSize: 28,
     color: '#fff',
@@ -190,6 +205,53 @@ const profileStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  // Whop Community CTA styles
+  whopCommunityItem: {
+    backgroundColor: 'rgba(212, 222, 149, 0.05)',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(212, 222, 149, 0.2)',
+    shadowColor: '#D4DE95',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  whopIcon: {
+    backgroundColor: 'rgba(212, 222, 149, 0.15)',
+    borderRadius: 12,
+    padding: 12,
+    marginRight: 16,
+  },
+  whopContent: {
+    flex: 1,
+  },
+  whopTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#fff',
+    marginBottom: 4,
+  },
+  whopSubtitle: {
+    fontSize: 14,
+    color: '#A1A1AA',
+    marginBottom: 12,
+  },
+  whopFeatures: {
+    gap: 4,
+  },
+  whopFeature: {
+    fontSize: 13,
+    color: '#B9C096',
+    lineHeight: 18,
+  },
+  whopArrow: {
+    backgroundColor: 'rgba(212, 222, 149, 0.15)',
+    borderRadius: 8,
+    padding: 8,
+    marginLeft: 12,
   },
 });
 

@@ -11,15 +11,10 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { getReferralLink, getReferralStats } from '../../services/referralService';
+import { getUserReferralInfo } from '../../services/referralService';
 
 const ReferralModal = ({ visible, onClose }) => {
-  const [referralLink, setReferralLink] = useState('');
-  const [referralStats, setReferralStats] = useState({
-    downloads_count: 0,
-    free_months_earned: 0,
-    next_reward_at: 1,
-  });
+  const [referralInfo, setReferralInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
 
@@ -32,12 +27,8 @@ const ReferralModal = ({ visible, onClose }) => {
   const loadReferralData = async () => {
     try {
       setLoading(true);
-      const [link, stats] = await Promise.all([
-        getReferralLink(),
-        getReferralStats(),
-      ]);
-      setReferralLink(link);
-      setReferralStats(stats);
+      const referralInfo = await getUserReferralInfo();
+      setReferralInfo(referralInfo);
     } catch (error) {
       console.error('Error loading referral data:', error);
       Alert.alert('Error', 'Failed to load referral data. Please try again.');
@@ -49,7 +40,8 @@ const ReferralModal = ({ visible, onClose }) => {
   const handleCopyLink = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
-      await Clipboard.setString(referralLink);
+      const appLink = 'https://thekeystoneapp.com'; // Fallback link
+      await Clipboard.setString(appLink);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
@@ -61,10 +53,11 @@ const ReferralModal = ({ visible, onClose }) => {
   const handleShareLink = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
+      const appLink = 'https://thekeystoneapp.com'; // Fallback link
       const result = await Share.share({
         title: 'Get Keystone Pro for Free!',
-        message: `🎉 Get 1 month of Keystone Pro FREE when you download using this link!\n${referralLink}`,
-        url: referralLink,
+        message: `🎉 Get 1 month of Keystone Pro FREE when you download using this link!\n${appLink}`,
+        url: appLink,
       });
       if (result.action === Share.sharedAction) {
         console.log('Referral link shared successfully');
@@ -109,11 +102,11 @@ const ReferralModal = ({ visible, onClose }) => {
             <Text style={styles.statsTitle}>Your Progress</Text>
             <View style={styles.statsContainer}>
               <View style={styles.statItem}>
-                <Text style={styles.statNumber}>{referralStats.downloads_count}</Text>
-                <Text style={styles.statLabel}>Downloads</Text>
+                <Text style={styles.statNumber}>{referralInfo ? '1' : '0'}</Text>
+                <Text style={styles.statLabel}>Referral Used</Text>
               </View>
               <View style={styles.statItem}>
-                <Text style={styles.statNumber}>{referralStats.free_months_earned}</Text>
+                <Text style={styles.statNumber}>{referralInfo ? '1' : '0'}</Text>
                 <Text style={styles.statLabel}>Free Months</Text>
               </View>
             </View>
@@ -124,7 +117,7 @@ const ReferralModal = ({ visible, onClose }) => {
             <Text style={styles.linkTitle}>Your Referral Link</Text>
             <TouchableOpacity style={styles.linkContainer} onPress={handleCopyLink}>
               <Text style={styles.linkText} numberOfLines={2}>
-                {referralLink}
+                https://thekeystoneapp.com
               </Text>
               <View style={styles.copyIndicator}>
                 <Ionicons name={copied ? "checkmark" : "copy"} size={20} color={copied ? "#D4DE95" : "#A1A1AA"} />

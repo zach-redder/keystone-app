@@ -10,10 +10,10 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 const KEYSTONE_BENEFITS = [
     {
         id: 1,
-        icon: 'target',
+        icon: 'crown',
         iconAnimation: 'glow',
-        title: 'Identity Affirmations',
-        subtitle: 'Use AI-powered affirmations to realign your daily actions with your highest goals.',
+        title: 'Introducing Keystone',
+        subtitle: 'The #1 app to overcome doubt and stop caring what people think.',
     },
     {
         id: 2,
@@ -31,17 +31,17 @@ const KEYSTONE_BENEFITS = [
     },
     {
         id: 4,
-        icon: 'account-check',
-        iconAnimation: 'glow',
-        title: 'Stop Caring What People Think',
-        subtitle: 'Detach from opinions. Reconnect with yourself and your authentic path forward.',
+        icon: 'bullseye',
+        iconAnimation: 'pulse',
+        title: 'Vision Affirmation',
+        subtitle: 'Keep your goals constantly in mind to keep yourself on track and motivated.',
     },
     {
         id: 5,
         icon: 'rocket-launch',
         iconAnimation: 'bounce',
-        title: 'Become Your Best Self',
-        subtitle: 'Build a version of you that always follows through on what matters most.',
+        title: 'Become Authentic',
+        subtitle: 'Project your true self to get rid of any self-doubt or outside opinions.',
     }
 ];
 

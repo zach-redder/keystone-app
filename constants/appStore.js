@@ -12,7 +12,7 @@ export const getAppStoreLink = () => {
 };
 
 // Universal link for app download (if you set up a landing page)
-export const APP_DOWNLOAD_URL = "https://thekeystoneapp.com/download";
+export const APP_DOWNLOAD_URL = "https://thekeystoneapp.com";
 
 // App name and other constants
 export const APP_NAME = "Keystone";
