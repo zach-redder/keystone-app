@@ -34,7 +34,7 @@ jobs:
         run: eas build --platform ios --profile production --non-interactive --clear-cache
 
       - name: Set up App Store Connect API Key
-        run: echo "${{ secrets.EAS_APPLE_APP_STORE_CONNECT_API_KEY }}" > ./asc_api_key.json
+        run: echo "${{ secrets.EAS_APPLE_APP_STORE_CONNECT_API_KEY }}" > asc_api_key.json
 
       - name: Submit to TestFlight
-        run: eas submit -p ios --latest --non-interactive --asc-api-key-path asc_api_key.json
+        run: eas submit -p ios --latest --non-interactive --apple-api-key-path asc_api_key.json

@@ -133,8 +133,7 @@ export default function OnboardingStep() {
   const nextStepMap = {
     FutureSelfVision: '/onboarding/LifeGoals',
     LifeGoals: '/onboarding/CoreValues',
-    CoreValues: '/register'
-    // CoreValues is the last step, goes directly to registration
+    CoreValues: '/onboarding/Animation'
   };
 
   const descriptions = {

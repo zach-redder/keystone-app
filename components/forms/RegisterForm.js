@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { signUpUser, checkEmailExists } from '../../services/auth';
 import { styles } from '../../styles/authentication';
-import WaitForEmailConfirmation from '../WaitForEmailConfirmation';
+import WaitForEmailConfirmation from '../../app/emailconfirmation';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 

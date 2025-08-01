@@ -19,7 +19,7 @@ export const signUpUser = async (email: string, password: string) => {
       email,
       password,
       options: {
-        emailRedirectTo: 'keystone://auth/callback', // Deep link back to app
+        emailRedirectTo: 'keystone://emailconfirmation', // Deep link back to app
       },
     });
 
@@ -109,7 +109,7 @@ export const signInUser = async (email: string, password: string) => {
 
 export const resetPassword = async (email: string) => {
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: 'keystone://auth/callback',
+    redirectTo: 'keystone://resetpassword',
   });
 
   if (error) throw error;
