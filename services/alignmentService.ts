@@ -231,7 +231,7 @@ export const fetchAlignmentScoreChange = async () => {
 export const calculateAlignmentScoresFromQuizAnswers = (quizAnswers: { [key: string]: number }) => {
   // Map quiz questions to alignment categories and calculate scores
   // Quiz answers are 0-3 (Never=0, Sometimes=1, Often=2, Always=3)
-  // We want to map these to alignment scores where 0.5 is ideal
+  // We want to map these to alignment scores where 0.5 is the BEST possible score
   
   const alignmentScores: { [keyType: string]: number } = {
     core_values: 0.5,      // Default to ideal
@@ -245,29 +245,37 @@ export const calculateAlignmentScoresFromQuizAnswers = (quizAnswers: { [key: str
   // Question 1: "How often do you stay true to your word?" -> Core Values
   if (quizAnswers['question_1_score'] !== undefined) {
     const score = quizAnswers['question_1_score'];
-    // Higher scores (Always=3) indicate better alignment with core values
-    alignmentScores.core_values = 0.3 + (score * 0.2); // Maps 0->0.3, 3->0.9
+    // Always (0) is best, Never (3) is worst
+    // Maps: 0->0.8, 1->0.65, 2->0.35, 3->0.2
+    const scoreMap = [0.8, 0.65, 0.35, 0.2];
+    alignmentScores.core_values = scoreMap[score];
   }
 
   // Question 2: "How often do you say yes to people when you mean no?" -> Identity Traits
   if (quizAnswers['question_2_score'] !== undefined) {
     const score = quizAnswers['question_2_score'];
     // Lower scores (Never=0) indicate better authenticity
-    alignmentScores.identity_traits = 0.7 - (score * 0.2); // Maps 0->0.7, 3->0.1
+    // Maps: 0->0.8, 1->0.65, 2->0.35, 3->0.2
+    const scoreMap = [0.8, 0.65, 0.35, 0.2];
+    alignmentScores.identity_traits = scoreMap[score];
   }
 
   // Question 3: "How often do you keep your dreams & goals hidden?" -> Future Self Vision
   if (quizAnswers['question_3_score'] !== undefined) {
     const score = quizAnswers['question_3_score'];
     // Lower scores (Never=0) indicate better future self alignment
-    alignmentScores.future_self_vision = 0.7 - (score * 0.2); // Maps 0->0.7, 3->0.1
+    // Maps: 0->0.8, 1->0.65, 2->0.35, 3->0.2
+    const scoreMap = [0.8, 0.65, 0.35, 0.2];
+    alignmentScores.future_self_vision = scoreMap[score];
   }
 
   // Question 4: "Do you feel like your daily actions reflect who you really are?" -> Core Values
   if (quizAnswers['question_4_score'] !== undefined) {
     const score = quizAnswers['question_4_score'];
-    // Higher scores (Always=3) indicate better alignment
-    const question4Score = 0.3 + (score * 0.2); // Maps 0->0.3, 3->0.9
+    // Always (0) is best, Never (3) is worst
+    // Maps: 0->0.8, 1->0.65, 2->0.35, 3->0.2
+    const scoreMap = [0.8, 0.65, 0.35, 0.2];
+    const question4Score = scoreMap[score];
     // Average with previous core_values score
     alignmentScores.core_values = (alignmentScores.core_values + question4Score) / 2;
   }
@@ -276,14 +284,18 @@ export const calculateAlignmentScoresFromQuizAnswers = (quizAnswers: { [key: str
   if (quizAnswers['question_5_score'] !== undefined) {
     const score = quizAnswers['question_5_score'];
     // "Get back up immediately" (0) is ideal, "Give up" (3) is deficient
-    alignmentScores.motivations = 0.7 - (score * 0.2); // Maps 0->0.7, 3->0.1
+    // Maps: 0->0.8, 1->0.65, 2->0.35, 3->0.2
+    const scoreMap = [0.8, 0.65, 0.35, 0.2];
+    alignmentScores.motivations = scoreMap[score];
   }
 
   // Question 6: "How often do you think about what people think of you?" -> Identity Traits
   if (quizAnswers['question_6_score'] !== undefined) {
     const score = quizAnswers['question_6_score'];
     // Lower scores (Never=0) indicate better authenticity
-    const question6Score = 0.7 - (score * 0.2); // Maps 0->0.7, 3->0.1
+    // Maps: 0->0.8, 1->0.65, 2->0.35, 3->0.2
+    const scoreMap = [0.8, 0.65, 0.35, 0.2];
+    const question6Score = scoreMap[score];
     // Average with previous identity_traits score
     alignmentScores.identity_traits = (alignmentScores.identity_traits + question6Score) / 2;
   }
@@ -292,7 +304,9 @@ export const calculateAlignmentScoresFromQuizAnswers = (quizAnswers: { [key: str
   if (quizAnswers['question_7_score'] !== undefined) {
     const score = quizAnswers['question_7_score'];
     // Lower scores (Never=0) indicate better vision and purpose
-    alignmentScores.life_goals = 0.7 - (score * 0.2); // Maps 0->0.7, 3->0.1
+    // Maps: 0->0.8, 1->0.65, 2->0.35, 3->0.2
+    const scoreMap = [0.8, 0.65, 0.35, 0.2];
+    alignmentScores.life_goals = scoreMap[score];
   }
 
   // Ensure all scores are within valid range (0-1)
