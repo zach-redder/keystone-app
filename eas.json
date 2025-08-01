@@ -28,7 +28,9 @@
   "submit": {
     "production": {
       "ios": {
-        "appleApiKeyPath": "./asc_api_key.json"
+        "appleApiKey": {
+          "path": "./asc_api_key.json"
+        }
       }
     }
   }
