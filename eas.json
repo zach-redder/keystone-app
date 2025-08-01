@@ -24,14 +24,5 @@
         "simulator": false
       }
     }
-  },
-  "submit": {
-    "production": {
-      "ios": {
-        "appleApiKey": {
-          "path": "./asc_api_key.json"
-        }
-      }
-    }
   }
 }
