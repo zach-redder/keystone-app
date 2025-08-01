@@ -55,7 +55,7 @@ const CommunityCard = () => {
     }
 
     if (comparison.isAboveAverage) {
-      return `You're more aligned than ${comparison.percentile}% of Keystone users. Support the community by sharing your journey.`;
+      return `You're more aligned than ${comparison.percentile}% of Keystone users. Support others by sharing your journey.`;
     } else {
       return `Most Keystone users are ${comparison.differencePercent}% more aligned. Be supported in your journey.`;
     }

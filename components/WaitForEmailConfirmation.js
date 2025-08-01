@@ -135,6 +135,8 @@ export default function WaitForEmailConfirmationScreen({ email, preferences: ini
         const savedPrefs = await AsyncStorage.getItem('final_preferences');
         preferences = savedPrefs ? JSON.parse(savedPrefs) : null;
         console.log('Preferences from AsyncStorage:', preferences);
+      } else {
+        console.log('Using passed preferences:', preferences);
       }
 
       if (!preferences) {

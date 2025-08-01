@@ -18,6 +18,9 @@ export const signUpUser = async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        emailRedirectTo: 'keystone://auth/callback', // Deep link back to app
+      },
     });
 
     if (error) {
@@ -105,7 +108,9 @@ export const signInUser = async (email: string, password: string) => {
 };
 
 export const resetPassword = async (email: string) => {
-  const { error } = await supabase.auth.resetPasswordForEmail(email);
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: 'keystone://auth/callback',
+  });
 
   if (error) throw error;
   return true;
@@ -114,14 +119,20 @@ export const resetPassword = async (email: string) => {
 export const insertUserProfileAfterConfirmation = async (
   preferences: Preferences
 ) => {
+  console.log('insertUserProfileAfterConfirmation - Starting with preferences:', preferences);
+  
   const {
     data: { user },
     error: userError,
   } = await supabase.auth.getUser();
 
-  if (userError || !user) throw userError;
+  if (userError || !user) {
+    console.error('insertUserProfileAfterConfirmation - User error:', userError);
+    throw userError;
+  }
 
   const userId = user.id;
+  console.log('insertUserProfileAfterConfirmation - User ID:', userId);
 
   // Check if user profile already exists
   const { data: existingProfile, error: profileCheckError } = await supabase

@@ -6,7 +6,6 @@ import { styles } from '../../styles/authentication';
 import WaitForEmailConfirmation from '../WaitForEmailConfirmation';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 
 export default function RegisterForm() {
   const [email, setEmail] = useState('');
@@ -39,6 +38,8 @@ export default function RegisterForm() {
       // Get preferences from AsyncStorage before proceeding
       const savedPrefs = await AsyncStorage.getItem('final_preferences');
       let userPreferences = savedPrefs ? JSON.parse(savedPrefs) : null;
+      
+      console.log('Retrieved preferences from AsyncStorage:', userPreferences);
       
       // If no preferences found, create default preferences
       if (!userPreferences) {

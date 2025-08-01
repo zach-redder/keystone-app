@@ -17,7 +17,7 @@ export default function Index() {
         case 'no_session':
           // No active session, route to sign-in
           console.log('Main app routing - Redirecting to /signin');
-          setRedirectTo('/signin');
+          setRedirectTo('/onboarding/Welcome');
           break;
           
         case 'needs_email_confirmation':

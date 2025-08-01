@@ -133,8 +133,8 @@ export default function OnboardingStep() {
   const nextStepMap = {
     FutureSelfVision: '/onboarding/LifeGoals',
     LifeGoals: '/onboarding/CoreValues',
-    CoreValues: '/onboarding/Progress'
-    // Analysis circle after core identity screens, then to register
+    CoreValues: '/register'
+    // CoreValues is the last step, goes directly to registration
   };
 
   const descriptions = {
