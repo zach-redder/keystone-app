@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as RNIap from 'react-native-iap';
 import * as Haptics from 'expo-haptics';
 import { upgradeUserToPro, downgradeUserToFree } from '../../services/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -95,6 +96,30 @@ export default function SubscriptionScreen() {
     // You should validate the purchase with your backend for security
     // For demo, we just upgrade immediately
     await upgradeUserToPro();
+    
+    // Save final preferences before navigating to registration
+    try {
+      // Get all the saved preferences from AsyncStorage
+      const futureSelfVision = await AsyncStorage.getItem('future_self_vision');
+      const lifeGoals = await AsyncStorage.getItem('life_goals');
+      const coreValues = await AsyncStorage.getItem('core_values');
+      const aiPersonality = await AsyncStorage.getItem('ai_personality');
+      
+      // Create final preferences object
+      const finalPreferences = {
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        notification_opt_in: true,
+        preferred_reminder_time: '12:00:00',
+        preferred_ai_persona: aiPersonality ? JSON.parse(aiPersonality)[0] : 'Gentle Guide',
+      };
+      
+      // Save final preferences
+      await AsyncStorage.setItem('final_preferences', JSON.stringify(finalPreferences));
+      
+      console.log('Final preferences saved before registration:', finalPreferences);
+    } catch (error) {
+      console.error('Error saving final preferences:', error);
+    }
     
     // Navigate to register screen after successful subscription
     router.push('/register');

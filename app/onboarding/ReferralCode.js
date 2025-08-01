@@ -42,6 +42,24 @@ export default function ReferralCode() {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         // Mark referral code step as complete
         await AsyncStorage.setItem('referral_code_complete', 'true');
+        
+        // Save final preferences before navigating
+        try {
+            const aiPersonality = await AsyncStorage.getItem('ai_personality');
+            
+            const finalPreferences = {
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                notification_opt_in: true,
+                preferred_reminder_time: '12:00:00',
+                preferred_ai_persona: aiPersonality ? JSON.parse(aiPersonality)[0] : 'Gentle Guide',
+            };
+            
+            await AsyncStorage.setItem('final_preferences', JSON.stringify(finalPreferences));
+            console.log('Final preferences saved before navigation:', finalPreferences);
+        } catch (error) {
+            console.error('Error saving final preferences:', error);
+        }
+        
         router.push('/onboarding/AnimatedProfileCard');
     };
 
@@ -119,6 +137,23 @@ export default function ReferralCode() {
                 await AsyncStorage.setItem('referral_code_complete', 'true');
                 
                 console.log('💾 Saved referral code to AsyncStorage:', referralInfo);
+                
+                // Save final preferences before navigating to registration
+                try {
+                    const aiPersonality = await AsyncStorage.getItem('ai_personality');
+                    
+                    const finalPreferences = {
+                        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                        notification_opt_in: true,
+                        preferred_reminder_time: '12:00:00',
+                        preferred_ai_persona: aiPersonality ? JSON.parse(aiPersonality)[0] : 'Gentle Guide',
+                    };
+                    
+                    await AsyncStorage.setItem('final_preferences', JSON.stringify(finalPreferences));
+                    console.log('Final preferences saved before registration:', finalPreferences);
+                } catch (error) {
+                    console.error('Error saving final preferences:', error);
+                }
                 
                 // Show success alert
                 Alert.alert(

@@ -38,12 +38,21 @@ export default function RegisterForm() {
     try {
       // Get preferences from AsyncStorage before proceeding
       const savedPrefs = await AsyncStorage.getItem('final_preferences');
-      const userPreferences = savedPrefs ? JSON.parse(savedPrefs) : null;
+      let userPreferences = savedPrefs ? JSON.parse(savedPrefs) : null;
       
+      // If no preferences found, create default preferences
       if (!userPreferences) {
-        setError('No preferences found. Please complete the onboarding process first.');
-        setLoading(false);
-        return;
+        console.log('No preferences found, creating default preferences');
+        userPreferences = {
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          notification_opt_in: true,
+          preferred_reminder_time: '12:00:00',
+          preferred_ai_persona: 'Gentle Guide',
+        };
+        
+        // Save the default preferences
+        await AsyncStorage.setItem('final_preferences', JSON.stringify(userPreferences));
+        console.log('Default preferences created and saved:', userPreferences);
       }
       
       setPreferences(userPreferences);
