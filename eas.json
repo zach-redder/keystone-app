@@ -26,6 +26,10 @@
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "appleApiKeyPath": "./asc_api_key.json"
+      }
+    }
   }
 }
