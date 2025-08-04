@@ -363,17 +363,8 @@ export default function HomeScreen() {
            <View style={homeStyles.sectionContainer}>
              <Text style={homeStyles.sectionTitle}>Current Alignment</Text>
              
-             {/* Streaks Row */}
+             {/* Row */}
              <View style={homeStyles.analyticsRow}>
-               <View style={homeStyles.analyticsCard}>
-                 <View style={homeStyles.analyticsHeader}>
-                   <Ionicons name="flame" size={20} color="#FF6B35" />
-                   <Text style={homeStyles.analyticsCardTitle}>Current Streak</Text>
-                 </View>
-                 <Text style={homeStyles.analyticsNumber}>{dayStreak}</Text>
-                 <Text style={homeStyles.analyticsLabel}>days</Text>
-               </View>
-               
                <View style={homeStyles.analyticsCard}>
                  <View style={homeStyles.analyticsHeader}>
                    <Ionicons name="trophy" size={20} color="#D4DE95" />
@@ -382,36 +373,15 @@ export default function HomeScreen() {
                  <Text style={homeStyles.analyticsNumber}>{longestStreak}</Text>
                  <Text style={homeStyles.analyticsLabel}>days</Text>
                </View>
-             </View>
 
-             {/* Trends Row */}
-             <View style={homeStyles.analyticsRow}>
-               <View style={homeStyles.analyticsCard}>
-                 <View style={homeStyles.analyticsHeader}>
-                   <Ionicons name="trending-up" size={20} color="#4CAF50" />
-                   <Text style={homeStyles.analyticsCardTitle}>This Week</Text>
-                 </View>
-                 <Text style={homeStyles.analyticsNumber}>{weeklyLogCount}</Text>
-                 <Text style={homeStyles.analyticsLabel}>actions logged</Text>
-               </View>
-               
-               <View style={homeStyles.analyticsCard}>
-                 <View style={homeStyles.analyticsHeader}>
-                   <Ionicons 
-                     name={alignmentTrend && alignmentTrend.isImproving ? "trending-up" : "trending-down"} 
-                     size={20} 
-                     color={alignmentTrend && alignmentTrend.isImproving ? "#4CAF50" : "#FF6B35"} 
-                   />
-                   <Text style={homeStyles.analyticsCardTitle}>Alignment Trend</Text>
-                 </View>
-                 <Text style={[
-                   homeStyles.analyticsNumber,
-                   { color: alignmentTrend && alignmentTrend.isImproving ? "#4CAF50" : "#FF6B35" }
-                 ]}>
-                   {alignmentTrend && alignmentTrend.isImproving ? "+" : ""}{Math.abs((alignmentTrend && alignmentTrend.changePercent) || 0).toFixed(1)}%
-                 </Text>
-                 <Text style={homeStyles.analyticsLabel}>this week</Text>
-               </View>
+              <View style={homeStyles.analyticsCard}>
+                <View style={homeStyles.analyticsHeader}>
+                  <Ionicons name="trending-up" size={20} color="#4CAF50" />
+                  <Text style={homeStyles.analyticsCardTitle}>This Week</Text>
+                </View>
+                <Text style={homeStyles.analyticsNumber}>{weeklyLogCount}</Text>
+                <Text style={homeStyles.analyticsLabel}>actions logged</Text>
+              </View>
              </View>
 
              {/* Alignment Chart */}
