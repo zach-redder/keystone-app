@@ -21,6 +21,7 @@ import { fetchIdentityKeys } from '../../services/userKeys';
 import { getAppStoreLink } from '../../constants/appStore';
 import { getUserReferralInfo } from '../../services/referralService';
 import ReferralModal from './ReferralModal';
+import ShareProgressCardEnhanced from '../ShareProgressCardEnhanced';
 
 const ShareProgressModal = ({ visible, onClose }) => {
   const shareCardRef = useRef(null);
@@ -30,6 +31,7 @@ const ShareProgressModal = ({ visible, onClose }) => {
   const [dailyReminder, setDailyReminder] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState('alignment');
   const [selectedAlignmentCategory, setSelectedAlignmentCategory] = useState('core_values');
+  const [bestAlignmentData, setBestAlignmentData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [availableAlignmentCategories, setAvailableAlignmentCategories] = useState([]);
   const [referralInfo, setReferralInfo] = useState(null);
@@ -49,7 +51,7 @@ const ShareProgressModal = ({ visible, onClose }) => {
     if (visible) {
       loadData();
     }
-  }, [visible, selectedAlignmentCategory]);
+  }, [visible]);
 
   // Set all alignment categories as available - let users choose any category
   const filterAlignmentCategories = async () => {
@@ -69,11 +71,27 @@ const ShareProgressModal = ({ visible, onClose }) => {
       // Filter alignment categories first
       await filterAlignmentCategories();
       
-      console.log('ShareProgressModal - Loading data for category:', selectedAlignmentCategory);
+      // Load all alignment data to find the best score
+      const alignmentPromises = alignmentCategories.map(async (category) => {
+        const value = await fetchAlignmentValue(category.id);
+        return { category, value };
+      });
       
-      // Load alignment data
-      const alignment = await fetchAlignmentValue(selectedAlignmentCategory);
-      console.log('ShareProgressModal - Alignment value:', alignment);
+      const alignmentResults = await Promise.all(alignmentPromises);
+      const validAlignments = alignmentResults.filter(result => result.value !== null);
+      
+      // Find the best alignment score
+      let bestAlignment = null;
+      if (validAlignments.length > 0) {
+        bestAlignment = validAlignments.reduce((best, current) => {
+          // Prefer scores closer to 0.5 (perfect alignment)
+          const bestDistance = Math.abs(best.value - 0.5);
+          const currentDistance = Math.abs(current.value - 0.5);
+          return currentDistance < bestDistance ? current : best;
+        });
+      }
+      
+      console.log('ShareProgressModal - Best alignment:', bestAlignment);
       
       // Load action log data
       const actionLog = await fetchRecentActionLog();
@@ -83,21 +101,20 @@ const ShareProgressModal = ({ visible, onClose }) => {
       const reminder = await fetchTodayReminder();
       console.log('ShareProgressModal - Reminder:', reminder);
       
-             // Load referral data
-       const referralInfo = await getUserReferralInfo();
-       
-       console.log('ShareProgressModal - Final data:', {
-         alignment,
-         actionLog: actionLog ? 'EXISTS' : 'NULL',
-         reminder: reminder || 'EMPTY',
-         selectedAlignmentCategory,
-         referralInfo: referralInfo ? 'EXISTS' : 'NULL'
-       });
-       
-       setAlignmentValue(alignment);
-       setRecentActionLog(actionLog);
-       setDailyReminder(reminder);
-       setReferralInfo(referralInfo);
+      // Load referral data
+      const referralInfo = await getUserReferralInfo();
+      
+      console.log('ShareProgressModal - Final data:', {
+        bestAlignment: bestAlignment ? `${bestAlignment.category.title}: ${bestAlignment.value}` : 'NULL',
+        actionLog: actionLog ? 'EXISTS' : 'NULL',
+        reminder: reminder || 'EMPTY',
+        referralInfo: referralInfo ? 'EXISTS' : 'NULL'
+      });
+      
+      setBestAlignmentData(bestAlignment);
+      setRecentActionLog(actionLog);
+      setDailyReminder(reminder);
+      setReferralInfo(referralInfo);
     } catch (error) {
       console.error('Error loading share data:', error);
     } finally {
@@ -114,13 +131,14 @@ const ShareProgressModal = ({ visible, onClose }) => {
     const appLink = getAppStoreLink();
     switch (selectedTemplate) {
       case 'alignment':
-        return `Check out my ${getAlignmentCategoryTitle(selectedAlignmentCategory)} alignment on Keystone!\n\nDownload the app: ${appLink}`;
+        const categoryTitle = bestAlignmentData ? bestAlignmentData.category.title : 'Alignment';
+        return `🔥 Just crushed my ${categoryTitle} goals! Building elite discipline with Keystone.\n\nJoin me: ${appLink}`;
       case 'action':
-        return `Check out my recent action on Keystone!\n\nDownload the app: ${appLink}`;
+        return `💪 Another win in the books! Taking action and staying consistent with Keystone.\n\nJoin me: ${appLink}`;
       case 'reminder':
-        return `Check out my daily reminder on Keystone!\n\nDownload the app: ${appLink}`;
+        return `🎯 Staying focused on what matters most. Daily discipline with Keystone.\n\nJoin me: ${appLink}`;
       default:
-        return `Check out my progress on Keystone!\n\nDownload the app: ${appLink}`;
+        return `🚀 Building the life I want, one disciplined action at a time with Keystone.\n\nJoin me: ${appLink}`;
     }
   };
 
@@ -131,22 +149,21 @@ const ShareProgressModal = ({ visible, onClose }) => {
   };
 
 
-  const handleSharePress = async () => {
+    const handleSharePress = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    
-    const shareMessage = getShareMessage();
     
     try {
       if (shareCardRef.current) {
-                 // Capture the share card as an image with phone screen proportions
+                 // Capture the share card as an image
          const uri = await captureRef(shareCardRef, {
            format: 'png',
            quality: 1.0,
            width: 1080,
-           height: 1920, // Phone screen aspect ratio (9:16)
+           height: 1920, // 9:16 aspect ratio for Instagram Stories
          });
 
-        // Share the image
+        // Share the image with a fun message
+        const shareMessage = getShareMessage();
         const result = await Share.share({
           title: 'My Keystone Progress',
           message: shareMessage,
@@ -155,17 +172,20 @@ const ShareProgressModal = ({ visible, onClose }) => {
 
         if (result.action === Share.sharedAction) {
           console.log('Progress shared successfully');
+          // Show success feedback
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         }
       } else {
-        // Fallback to app sharing
-        await shareApp(shareMessage);
+        throw new Error('Share card ref not available');
       }
     } catch (error) {
       console.error('Error sharing progress:', error);
       
-      // Try fallback sharing if image capture fails
+      // Fallback to app sharing if image capture fails
       try {
+        const shareMessage = getShareMessage();
         await shareApp(shareMessage);
+        
       } catch (fallbackError) {
         console.error('Fallback sharing also failed:', fallbackError);
         Alert.alert('Error', 'Failed to share progress. Please try again.');
@@ -206,137 +226,69 @@ const ShareProgressModal = ({ visible, onClose }) => {
       );
     }
 
-    console.log('ShareProgressModal - Rendering card:', {
+    console.log('ShareProgressModal - Rendering enhanced card:', {
       selectedTemplate,
       alignmentValue,
       recentActionLog,
       dailyReminder,
       availableAlignmentCategories: availableAlignmentCategories.length
     });
-    
-    console.log('ShareProgressModal - RENDER CONDITIONS:');
-    console.log('- selectedTemplate:', selectedTemplate);
-    console.log('- alignmentValue !== null:', alignmentValue !== null);
-    console.log('- alignmentValue:', alignmentValue);
-    console.log('- Will show alignment data:', selectedTemplate === 'alignment' && alignmentValue !== null);
-    console.log('- Will show action data:', selectedTemplate === 'action' && !!recentActionLog);
-    console.log('- Will show reminder data:', selectedTemplate === 'reminder');
 
-            return (
-         <View ref={shareCardRef} style={styles.shareCard}>
-           {/* Premium gradient background */}
-           <View style={styles.storyGradientBackground}>
-             <View style={styles.gradientLayer1} />
-             <View style={styles.gradientLayer2} />
-             <View style={styles.gradientLayer3} />
-           </View>
-           
-           {/* Content Card */}
-           <View style={styles.storyContentCard}>
-             {/* Clean Header */}
-             <View style={styles.cardHeader}>
-               <Text style={styles.appName}>Keystone</Text>
-               <Text style={styles.cardSubtitle}>Personal Growth Journey</Text>
-             </View>
+    // Map data to enhanced card props based on selected template
+    let cardProps = {
+      theme: "dark",
+      variant: "trophy",
+      animated: true,
+      showQuote: true,
+      showProgress: true,
+    };
 
-           {/* Content based on selected template */}
-           {selectedTemplate === 'alignment' && (
-             <View style={styles.alignmentContent}>
-               {alignmentValue !== null && alignmentValue !== undefined ? (
-                 <>
-                   <Text style={styles.alignmentTitle}>
-                     My {getAlignmentCategoryTitle(selectedAlignmentCategory).replace(/\b\w/g, l => l.toUpperCase())}
-                   </Text>
-                   <View style={styles.alignmentBar}>
-                     <View style={styles.alignmentBarBg}>
-                       <View 
-                         style={[
-                           styles.alignmentBarFill,
-                           { 
-                             width: `${alignmentValue * 100}%`,
-                             backgroundColor: getAlignmentColor(alignmentValue)
-                           }
-                         ]} 
-                       />
-                       <View 
-                         style={[
-                           styles.alignmentIndicator,
-                           { 
-                             left: `${Math.max(0, Math.min(100, alignmentValue * 100))}%`,
-                             transform: [{ translateX: -8 }],
-                             backgroundColor: getAlignmentColor(alignmentValue)
-                           }
-                         ]} 
-                       />
-                     </View>
-                   </View>
-                   <View style={styles.alignmentStats}>
-                     <Text style={[styles.alignmentStatus, { color: getAlignmentColor(alignmentValue) }]}>
-                       {getAlignmentStatus(alignmentValue)}
-                     </Text>
-                   </View>
-                 </>
-               ) : (
-                 <>
-                   <Text style={styles.alignmentTitle}>No {getAlignmentCategoryTitle(selectedAlignmentCategory).replace(/\b\w/g, l => l.toUpperCase())} Data</Text>
-                   <Text style={styles.noDataText}>
-                     No alignment data found for this category.
-                   </Text>
-                   <Text style={styles.noDataHint}>
-                     Log some actions related to your {getAlignmentCategoryTitle(selectedAlignmentCategory).toLowerCase()} to see your alignment progress.
-                   </Text>
-                 </>
-               )}
-             </View>
-           )}
+         if (selectedTemplate === 'alignment' && bestAlignmentData !== null) {
+       cardProps = {
+         ...cardProps,
+         dayNumber: Math.round(bestAlignmentData.value * 100),
+         label: bestAlignmentData.category.title.toUpperCase(),
+         quote: `My ${bestAlignmentData.category.title.toLowerCase()} alignment is ${getAlignmentStatus(bestAlignmentData.value)}`,
+         streakPercent: bestAlignmentData.value,
+       };
+    } else if (selectedTemplate === 'action' && recentActionLog) {
+      cardProps = {
+        ...cardProps,
+        dayNumber: 1,
+        label: "Action Completed",
+        quote: recentActionLog.action_description || "Another step toward my goals",
+        streakPercent: 1.0,
+      };
+    } else if (selectedTemplate === 'reminder') {
+      cardProps = {
+        ...cardProps,
+        dayNumber: 1,
+        label: "Daily Focus",
+        quote: dailyReminder && dailyReminder.trim() ? dailyReminder : "Stay focused on your goals and values today",
+        streakPercent: 0.8,
+      };
+    } else {
+      // Fallback for no data
+      cardProps = {
+        ...cardProps,
+        dayNumber: 0,
+        label: "Getting Started",
+        quote: "Every journey begins with a single step",
+        streakPercent: 0.1,
+      };
+    }
 
-                     {selectedTemplate === 'action' && (
-            <View style={styles.actionContent}>
-              <Text style={styles.actionTitle}>My Recent Action</Text>
-              {recentActionLog && recentActionLog.action_description ? (
-                <>
-                  <Text style={styles.actionText} numberOfLines={3}>
-                    {recentActionLog.action_description}
-                  </Text>
-                  <Text style={styles.actionDate}>
-                    {new Date(recentActionLog.created_at).toLocaleDateString()}
-                  </Text>
-                </>
-              ) : (
-                <>
-                  <Text style={styles.noDataText}>
-                    No action logs found.
-                  </Text>
-                  <Text style={styles.noDataHint}>
-                    Tap "Align Now" from your home screen and log an action to see it here.
-                  </Text>
-                </>
-              )}
-            </View>
-          )}
+    return (
+      <View ref={shareCardRef} style={styles.shareCard} collapsable={false}>
+        <ShareProgressCardEnhanced {...cardProps} />
+      </View>
+    );
+  };
 
-           {selectedTemplate === 'reminder' && (
-             <View style={styles.reminderContent}>
-               <Text style={styles.reminderTitle}>My Daily Reminder</Text>
-               <Text style={styles.reminderText}>
-                 {dailyReminder && dailyReminder.trim() ? dailyReminder : "Stay focused on your goals and values today."}
-               </Text>
-             </View>
-           )}
-
-           {/* Clean Footer */}
-           <View style={styles.cardFooter}>
-             <Text style={styles.footerText}>thekeystoneapp.com</Text>
-           </View>
-         </View>
-       </View>
-     );
-   };
-
-   const templates = [
-    { id: 'alignment', title: 'Alignment', icon: 'trending-up' },
-    { id: 'action', title: 'Action Log', icon: 'checkmark-circle' },
-    { id: 'reminder', title: 'Daily Reminder', icon: 'bulb' },
+  const templates = [
+    { id: 'alignment', title: 'My Progress', icon: 'trending-up', color: '#D4DE95' },
+    { id: 'action', title: 'My Win', icon: 'checkmark-circle', color: '#FF6B35' },
+    { id: 'reminder', title: 'My Focus', icon: 'bulb', color: '#4A90E2' },
   ];
 
   return (
@@ -351,32 +303,34 @@ const ShareProgressModal = ({ visible, onClose }) => {
           <View style={styles.horizontalBar} />
         </View>
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32 }}>
-          <Text style={styles.title}>Share Progress</Text>
+          <Text style={styles.title}>Share Your Progress</Text>
           <Text style={styles.description}>
-            Share your alignment journey with others. Your progress is worth celebrating.
+            Show off your discipline and inspire others. Choose what you want to share.
           </Text>
 
-          {/* Template Selector */}
+          {/* Fun Template Selector */}
           <View style={styles.templateContainer}>
-            <Text style={styles.templateTitle}>Choose Template</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.templateScroll}>
+            <Text style={styles.templateTitle}>What's your flex today?</Text>
+            <View style={styles.templateGrid}>
               {templates.map((template) => (
                 <TouchableOpacity
                   key={template.id}
                   style={[
-                    styles.templateButton,
-                    selectedTemplate === template.id && styles.selectedTemplate
+                    styles.templateCard,
+                    selectedTemplate === template.id && styles.selectedTemplateCard
                   ]}
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     setSelectedTemplate(template.id);
                   }}
                 >
-                  <Ionicons 
-                    name={template.icon} 
-                    size={24} 
-                    color={selectedTemplate === template.id ? '#23272F' : '#888'} 
-                  />
+                  <View style={[styles.templateIcon, { backgroundColor: template.color }]}>
+                    <Ionicons 
+                      name={template.icon} 
+                      size={24} 
+                      color="#fff" 
+                    />
+                  </View>
                   <Text style={[
                     styles.templateText,
                     selectedTemplate === template.id && styles.selectedTemplateText
@@ -385,53 +339,18 @@ const ShareProgressModal = ({ visible, onClose }) => {
                   </Text>
                 </TouchableOpacity>
               ))}
-            </ScrollView>
+            </View>
           </View>
 
-          {/* Alignment Category Selector - Show when alignment template is selected */}
-          {selectedTemplate === 'alignment' && (
-            <View style={styles.alignmentCategorySelector}>
-              <Text style={styles.alignmentCategoryTitle}>Choose Alignment Category</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.alignmentCategoryScroll}>
-                {availableAlignmentCategories.map((category) => (
-                  <TouchableOpacity
-                    key={category.id}
-                    style={[
-                      styles.alignmentCategoryButton,
-                      selectedAlignmentCategory === category.id && styles.selectedAlignmentCategory
-                    ]}
-                    onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      setSelectedAlignmentCategory(category.id);
-                    }}
-                  >
-                    <Ionicons 
-                      name={category.icon} 
-                      size={24} 
-                      color={selectedAlignmentCategory === category.id ? '#23272F' : '#888'} 
-                    />
-                    <Text style={[
-                      styles.alignmentCategoryText,
-                      selectedAlignmentCategory === category.id && styles.selectedAlignmentCategoryText
-                    ]}>
-                      {category.title}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
+          
+
+          {/* Share Card Preview */}
+          <View style={styles.previewContainer}>
+            <Text style={styles.previewTitle}>Preview picture</Text>
+            <View style={styles.previewWrapper}>
+              {renderShareCard()}
             </View>
-          )}
-
-
-
-            {/* Share Card Preview */}
-            <View style={styles.previewContainer}>
-              <Text style={styles.previewTitle}>Preview</Text>
-              <View style={styles.previewWrapper}>
-                {renderShareCard()}
-              </View>
-            </View>
-
+          </View>
 
         </ScrollView>
 
@@ -494,31 +413,52 @@ const styles = {
     fontWeight: '600',
     marginBottom: 14,
   },
-  templateScroll: {
+  templateGrid: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 8,
+    gap: 8,
   },
-  templateButton: {
+  templateCard: {
+    flex: 1,
     backgroundColor: '#232323',
-    borderRadius: 16,
-    padding: 16,
-    marginRight: 12,
+    borderRadius: 12,
+    padding: 12,
     alignItems: 'center',
-    minWidth: 80,
     borderWidth: 2,
-    borderColor: '#444',
+    borderColor: 'transparent',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  selectedTemplate: {
-    backgroundColor: '#D4DE95',
+  selectedTemplateCard: {
     borderColor: '#D4DE95',
+    backgroundColor: '#2a2a2a',
+    transform: [{ scale: 1.02 }],
+  },
+  templateIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
   },
   templateText: {
     color: '#888',
-    fontSize: 14,
+    fontSize: 11,
     fontWeight: '500',
-    marginTop: 8,
+    textAlign: 'center',
   },
   selectedTemplateText: {
-    color: '#23272F',
+    color: '#D4DE95',
   },
   alignmentCategorySelector: {
     marginBottom: 24,
@@ -534,11 +474,11 @@ const styles = {
   },
   alignmentCategoryButton: {
     backgroundColor: '#232323',
-    borderRadius: 16,
-    padding: 16,
-    marginRight: 12,
+    borderRadius: 12,
+    padding: 12,
+    marginRight: 8,
     alignItems: 'center',
-    minWidth: 120,
+    minWidth: 100,
     borderWidth: 2,
     borderColor: '#444',
   },
@@ -548,40 +488,32 @@ const styles = {
   },
   alignmentCategoryText: {
     color: '#888',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '500',
-    marginTop: 8,
+    marginTop: 6,
   },
   selectedAlignmentCategoryText: {
     color: '#23272F',
   },
   previewContainer: {
-    marginBottom: 140,
+    marginBottom: 200,
   },
   previewTitle: {
     color: '#fff',
     fontSize: 20,
     fontWeight: '600',
-    marginBottom: 14,
+    marginBottom: 64,
   },
   previewWrapper: {
     alignItems: 'center',
   },
-    shareCard: {
-        backgroundColor: '#2B2B2B',
-        borderRadius: 16,
-        padding: 24,
-        width: 320, // Card width
-        aspectRatio: 9/16, // Phone screen aspect ratio (9:16)
-        justifyContent: 'space-between',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 8,
-        borderWidth: 1,
-        borderColor: '#444',
-      },
+                   shareCard: {
+          width: 280, // Slightly larger for better preview
+          aspectRatio: 9/16, // 9:16 aspect ratio to match capture dimensions
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginVertical: 16,
+        },
    // Story-optimized card for sharing
    storyCard: {
      width: 1080,
