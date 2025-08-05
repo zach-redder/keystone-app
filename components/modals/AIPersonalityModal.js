@@ -20,7 +20,7 @@ const AIPersonalityModal = ({ visible, onClose, onUpgradePress }) => {
   const basicPersonalities = [
     {
       name: 'Life Coach',
-      description: 'Professional and strategic. Structured approach to achieving your goals.',
+      description: 'Professional and strategic. Has a structured approach to achieving your goals.',
       icon: 'trophy-outline',
     },
     {
@@ -35,7 +35,7 @@ const AIPersonalityModal = ({ visible, onClose, onUpgradePress }) => {
     },
     {
       name: 'Supportive Friend',
-      description: 'Direct but caring truth-telling with steady accountability. Your honest friend who keeps you focused.',
+      description: 'Direct but caring with steady accountability keeping you focused.',
       icon: 'people-outline',
     },
     {
@@ -49,12 +49,12 @@ const AIPersonalityModal = ({ visible, onClose, onUpgradePress }) => {
   const advancedPersonalities = [
     {
       name: 'David Goggins',
-      description: 'Mental toughness and extreme discipline. "Stay hard" and push through any obstacle.',
+      description: 'Mental toughness and extreme no nonsense discipline. Stay hard and push through any obstacle.',
       icon: 'barbell-outline',
     },
     {
       name: 'Andrew Tate',
-      description: 'Unfiltered confidence and success mindset. Direct advice on winning and self-improvement.',
+      description: 'Arrogant confidence and achieving success no matter what. Strict rules and no excuses.',
       icon: 'diamond-outline',
     },
     {

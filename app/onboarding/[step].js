@@ -133,7 +133,7 @@ export default function OnboardingStep() {
   const nextStepMap = {
     FutureSelfVision: '/onboarding/LifeGoals',
     LifeGoals: '/onboarding/CoreValues',
-    CoreValues: '/onboarding/Animation'
+    CoreValues: '/onboarding/Progress'
   };
 
   const descriptions = {

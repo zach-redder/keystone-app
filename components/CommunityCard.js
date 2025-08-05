@@ -38,7 +38,7 @@ const CommunityCard = () => {
     try {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       // Replace with your actual Whop community link
-      const whopLink = 'https://whop.com/the-aligned-core';
+      const whopLink = 'https://discord.me/thealignedcore';
       await Linking.openURL(whopLink);
     } catch (error) {
       console.error('Error opening community link:', error);
@@ -90,7 +90,7 @@ const CommunityCard = () => {
          </TouchableOpacity>
 
         <Text style={styles.subtext}>
-          Creators in our community are getting paid for sharing their journey.
+          Creators in our community are getting paid for sharing their journey and clipping content.
         </Text>
       </View>
     </Animated.View>
