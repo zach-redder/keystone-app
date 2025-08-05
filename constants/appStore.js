@@ -16,5 +16,5 @@ export const APP_DOWNLOAD_URL = "https://thekeystoneapp.com";
 
 // App name and other constants
 export const APP_NAME = "Keystone";
-export const APP_TAGLINE = "Overcome Doubt";
+export const APP_TAGLINE = "Kill Doubt";
 export const APP_WEBSITE = "thekeystoneapp.com"; 
