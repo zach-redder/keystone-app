@@ -40,7 +40,7 @@ const QUIZ_QUESTIONS = [
     },
     {
         id: 4,
-        question: "Do you feel like your daily actions reflect who you really are?",
+        question: "How often do you avoid difficult conversations?",
         options: [
             "Always",
             "Often",
@@ -60,16 +60,6 @@ const QUIZ_QUESTIONS = [
     },
     {
         id: 6,
-        question: "How often do you think about what people think of you?",
-        options: [
-            "Always",
-            "Often",
-            "Sometimes",
-            "Never"
-        ]
-    },
-    {
-        id: 7,
         question: "How often do you doubt yourself?",
         options: [
             "Always",
@@ -145,7 +135,7 @@ export default function QuizQuestion() {
         setTimeout(() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             const nextQuestionNum = parseInt(questionNumber) + 1;
-            if (nextQuestionNum <= 7) {
+            if (nextQuestionNum <= 6) {
                 router.push(`/onboarding/Quiz/${nextQuestionNum}`);
             } else {
                 // Quiz completed, go to user info screen
@@ -193,7 +183,7 @@ export default function QuizQuestion() {
                 ]}
             >
                 <Text style={styles.quizQuestionNumber}>
-                    Question {questionNumber} of 7
+                    Question {questionNumber} of 6
                 </Text>
                 
                 <Text style={styles.quizQuestion}>

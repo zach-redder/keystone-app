@@ -29,7 +29,7 @@ export const handleNewUserEmailList = async (options: UserEmailListOptions) => {
 
 export const handleUserDeletion = async (email: string) => {
   try {
-    await removeFromEmailList(email);
+    await removeFromEmailList({ email });
     
     console.log('Successfully removed user from email list:', email);
     return { success: true };

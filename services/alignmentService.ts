@@ -246,53 +246,42 @@ export const calculateAlignmentScoresFromQuizAnswers = (quizAnswers: { [key: str
   if (quizAnswers['question_1_score'] !== undefined) {
     const score = quizAnswers['question_1_score'];
     // Higher scores (Always=3) indicate better alignment with core values
-    alignmentScores.core_values = 0.3 + (score * 0.2); // Maps 0->0.3, 3->0.9
+    alignmentScores.core_values = 0.25 + (score * 0.167); // Maps 0->0.3, 3->0.9
   }
 
   // Question 2: "How often do you say yes to people when you mean no?" -> Identity Traits
   if (quizAnswers['question_2_score'] !== undefined) {
     const score = quizAnswers['question_2_score'];
     // Lower scores (Never=0) indicate better authenticity
-    alignmentScores.identity_traits = 0.7 - (score * 0.2); // Maps 0->0.7, 3->0.1
+      alignmentScores.identity_traits = 0.75 - (score * 0.167); // Maps 0->0.7, 3->0.1
   }
 
   // Question 3: "How often do you keep your dreams & goals hidden?" -> Future Self Vision
   if (quizAnswers['question_3_score'] !== undefined) {
     const score = quizAnswers['question_3_score'];
     // Lower scores (Never=0) indicate better future self alignment
-    alignmentScores.future_self_vision = 0.7 - (score * 0.2); // Maps 0->0.7, 3->0.1
+    alignmentScores.future_self_vision = 0.25 + (score * 0.167); // Maps 0->0.7, 3->0.1
   }
 
-  // Question 4: "Do you feel like your daily actions reflect who you really are?" -> Core Values
+  // Question 4: "How often do you avoid difficult conversations?" -> Avoidances
   if (quizAnswers['question_4_score'] !== undefined) {
     const score = quizAnswers['question_4_score'];
-    // Higher scores (Always=3) indicate better alignment
-    const question4Score = 0.3 + (score * 0.2); // Maps 0->0.3, 3->0.9
-    // Average with previous core_values score
-    alignmentScores.core_values = (alignmentScores.core_values + question4Score) / 2;
+    // Lower scores (Never=0) indicate better conflict resolution
+    alignmentScores.avoidances = 0.75 - (score * 0.167); // Maps 0->0.7, 3->0.1
   }
 
   // Question 5: "When you fall off track what do you tend to do?" -> Motivations
   if (quizAnswers['question_5_score'] !== undefined) {
     const score = quizAnswers['question_5_score'];
     // "Get back up immediately" (0) is ideal, "Give up" (3) is deficient
-    alignmentScores.motivations = 0.7 - (score * 0.2); // Maps 0->0.7, 3->0.1
+    alignmentScores.motivations = 0.75 - (score * 0.167); // Maps 0->0.7, 3->0.1
   }
 
-  // Question 6: "How often do you think about what people think of you?" -> Identity Traits
+  // Question 6: "How often do you doubt yourself?" -> Life Goals
   if (quizAnswers['question_6_score'] !== undefined) {
     const score = quizAnswers['question_6_score'];
-    // Lower scores (Never=0) indicate better authenticity
-    const question6Score = 0.7 - (score * 0.2); // Maps 0->0.7, 3->0.1
-    // Average with previous identity_traits score
-    alignmentScores.identity_traits = (alignmentScores.identity_traits + question6Score) / 2;
-  }
-
-  // Question 7: "How often do you doubt yourself?" -> Life Goals
-  if (quizAnswers['question_7_score'] !== undefined) {
-    const score = quizAnswers['question_7_score'];
     // Lower scores (Never=0) indicate better vision and purpose
-    alignmentScores.life_goals = 0.7 - (score * 0.2); // Maps 0->0.7, 3->0.1
+    alignmentScores.life_goals = 0.75 - (score * 0.167); // Maps 0->0.7, 3->0.1
   }
 
   // Ensure all scores are within valid range (0-1)
@@ -329,53 +318,42 @@ export const calculateInitialAlignmentScores = async (quizAnswers: { [key: strin
     if (quizAnswers['question_1_score'] !== undefined) {
       const score = quizAnswers['question_1_score'];
       // Higher scores (Always=3) indicate better alignment with core values
-      alignmentScores.core_values = 0.3 + (score * 0.2); // Maps 0->0.3, 3->0.9
+      alignmentScores.core_values = 0.25 + (score * 0.167); // Maps 0->0.3, 3->0.9
     }
 
     // Question 2: "How often do you say yes to people when you mean no?" -> Identity Traits
     if (quizAnswers['question_2_score'] !== undefined) {
       const score = quizAnswers['question_2_score'];
       // Lower scores (Never=0) indicate better authenticity
-      alignmentScores.identity_traits = 0.7 - (score * 0.2); // Maps 0->0.7, 3->0.1
+        alignmentScores.identity_traits = 0.75 - (score * 0.167); // Maps 0->0.7, 3->0.1
     }
 
     // Question 3: "How often do you keep your dreams & goals hidden?" -> Future Self Vision
     if (quizAnswers['question_3_score'] !== undefined) {
       const score = quizAnswers['question_3_score'];
       // Lower scores (Never=0) indicate better future self alignment
-      alignmentScores.future_self_vision = 0.7 - (score * 0.2); // Maps 0->0.7, 3->0.1
+      alignmentScores.future_self_vision = 0.25 + (score * 0.167); // Maps 0->0.7, 3->0.1
     }
 
-    // Question 4: "Do you feel like your daily actions reflect who you really are?" -> Core Values
+    // Question 4: "How often do you avoid difficult conversations?" -> Avoidances
     if (quizAnswers['question_4_score'] !== undefined) {
       const score = quizAnswers['question_4_score'];
-      // Higher scores (Always=3) indicate better alignment
-      const question4Score = 0.3 + (score * 0.2); // Maps 0->0.3, 3->0.9
-      // Average with previous core_values score
-      alignmentScores.core_values = (alignmentScores.core_values + question4Score) / 2;
+      // Lower scores (Never=0) indicate better conflict resolution
+      alignmentScores.avoidances = 0.75 - (score * 0.167); // Maps 0->0.7, 3->0.1
     }
 
     // Question 5: "When you fall off track what do you tend to do?" -> Motivations
     if (quizAnswers['question_5_score'] !== undefined) {
       const score = quizAnswers['question_5_score'];
       // "Get back up immediately" (0) is ideal, "Give up" (3) is deficient
-      alignmentScores.motivations = 0.7 - (score * 0.2); // Maps 0->0.7, 3->0.1
+      alignmentScores.motivations = 0.75 - (score * 0.167); // Maps 0->0.7, 3->0.1
     }
 
-    // Question 6: "How often do you think about what people think of you?" -> Identity Traits
+    // Question 6: "How often do you doubt yourself?" -> Life Goals
     if (quizAnswers['question_6_score'] !== undefined) {
       const score = quizAnswers['question_6_score'];
-      // Lower scores (Never=0) indicate better authenticity
-      const question6Score = 0.7 - (score * 0.2); // Maps 0->0.7, 3->0.1
-      // Average with previous identity_traits score
-      alignmentScores.identity_traits = (alignmentScores.identity_traits + question6Score) / 2;
-    }
-
-    // Question 7: "How often do you doubt yourself?" -> Life Goals
-    if (quizAnswers['question_7_score'] !== undefined) {
-      const score = quizAnswers['question_7_score'];
       // Lower scores (Never=0) indicate better vision and purpose
-      alignmentScores.life_goals = 0.7 - (score * 0.2); // Maps 0->0.7, 3->0.1
+      alignmentScores.life_goals = 0.75 - (score * 0.167); // Maps 0->0.7, 3->0.1
     }
 
     // Store alignment scores in the users table

@@ -54,14 +54,14 @@ export default function IdentityScore() {
                 let doubtTotal = 0;
                 let questionCount = 0;
 
-                for (let i = 1; i <= 7; i++) {
+                for (let i = 1; i <= 6; i++) {
                     const score = answers[`question_${i}_score`];
                     if (score !== undefined) {
                         questionCount++;
                         
-                        // For questions 1, 4, 5 - higher score means better alignment
-                        // For questions 2, 3, 6, 7 - lower score means better alignment
-                        if ([1, 4, 5].includes(i)) {
+                        // For questions 1, 5 - higher score means better alignment
+                        // For questions 2, 3, 4, 6 - lower score means better alignment
+                        if ([1, 5].includes(i)) {
                             dreamTotal += (3 - score); // Invert so 0 becomes 3, 3 becomes 0
                         } else {
                             dreamTotal += score; // Keep as is

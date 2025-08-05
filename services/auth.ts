@@ -148,7 +148,16 @@ export const insertUserProfileAfterConfirmation = async (
     return true;
   }
 
-  console.log('Inserting user profile:', { userId, email: user.email });
+  // Get user name from AsyncStorage
+  let userName = '';
+  try {
+    userName = await AsyncStorage.getItem('@user_name') || '';
+    console.log('Retrieved user name from AsyncStorage:', userName);
+  } catch (error) {
+    console.error('Error retrieving user name from AsyncStorage:', error);
+  }
+
+  console.log('Inserting user profile:', { userId, email: user.email, name: userName });
 
   // Insert into users table
   console.log('insertUserProfileAfterConfirmation - Inserting user profile with onboarding_complete: true');
@@ -156,6 +165,7 @@ export const insertUserProfileAfterConfirmation = async (
     {
       id: userId,
       email: user.email,
+      name: userName.trim() || null, // Use null if name is empty
       is_pro: false,
       onboarding_complete: true,
     },
@@ -168,19 +178,23 @@ export const insertUserProfileAfterConfirmation = async (
   
   console.log('insertUserProfileAfterConfirmation - User profile inserted successfully');
 
-  // Add user to Resend email list
-  try {
-    if (user.email) {
-      console.log('Adding user to Resend email list:', user.email);
-      await handleNewUserEmailList({
-        email: user.email,
-        sendWelcome: true,
-      });
-    }
-  } catch (resendError) {
-    console.error('Error adding user to Resend email list:', resendError);
-    // Don't throw the error here - we don't want to fail user creation if email list fails
-    // You might want to log this to your error tracking service
+  // Add user to Resend email list (non-blocking)
+  if (user.email) {
+    const userEmail = user.email; // Store email to avoid TypeScript error
+    console.log('Adding user to Resend email list:', userEmail);
+    // Use setTimeout to make this non-blocking
+    setTimeout(async () => {
+      try {
+        await handleNewUserEmailList({
+          email: userEmail,
+          sendWelcome: true,
+        });
+      } catch (resendError) {
+        console.error('Error adding user to Resend email list:', resendError);
+        // Don't throw the error here - we don't want to fail user creation if email list fails
+        // You might want to log this to your error tracking service
+      }
+    }, 100); // Small delay to ensure user creation completes first
   }
 
   // Use provided preferences or fallback to defaults

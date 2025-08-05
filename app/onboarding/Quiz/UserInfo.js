@@ -50,7 +50,7 @@ export default function UserInfo() {
                 const quizScores = {};
                 
                 // Extract numeric scores from quiz answers
-                for (let i = 1; i <= 7; i++) {
+                for (let i = 1; i <= 6; i++) {
                     const scoreKey = `question_${i}_score`;
                     if (answers[scoreKey] !== undefined) {
                         quizScores[scoreKey] = answers[scoreKey];
