@@ -14,27 +14,15 @@ const MOTIVATIONAL_QUOTES = [
     },
     {
         id: 2,
-        name: 'Joe Rogan',
-        quote: 'The people who are worried about what other people think of them are being controlled by those people.',
-        image: require('../../assets/joe_rogan.png'), // Using placeholder for now
-    },
-    {
-        id: 3,
         name: 'Kevin Hart',
         quote: 'The minute you start caring about what other people think is the minute you stop being yourself.',
         image: require('../../assets/kevin_hart.jpg'), // Using placeholder for now
     },
     {
-        id: 4,
+        id: 3,
         name: 'David Goggins',
         quote: 'The biggest thing that holds people back is not even fear, it’s what other people think.',
         image: require('../../assets/david_goggins.jpg'), // Using placeholder for now
-    },
-    {
-        id: 5,
-        name: 'Kai Cenat',
-        quote: 'You gotta believe in your vision when nobody else does.',
-        image: require('../../assets/kai_cenat.jpg'), // Using placeholder for now
     },
 ];
 
