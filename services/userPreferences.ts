@@ -389,3 +389,108 @@ export const clearAllAsyncStorageData = async (): Promise<boolean> => {
     return false;
   }
 };
+
+export const getUserActiveDays = async (): Promise<string[]> => {
+  try {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) return [];
+
+    // Get all action logs for the user
+    const { data: actionLogs, error: actionLogsError } = await supabase
+      .from('action_logs')
+      .select('created_at')
+      .eq('user_id', user.id);
+    
+    if (actionLogsError) {
+      console.error('Error fetching action logs:', actionLogsError);
+      return [];
+    }
+
+    // Get all ai_chat_logs for the user
+    const { data: aiChatLogs, error: aiChatLogsError } = await supabase
+      .from('ai_chat_logs')
+      .select('created_at')
+      .eq('user_id', user.id);
+    
+    if (aiChatLogsError) {
+      console.error('Error fetching AI chat logs:', aiChatLogsError);
+      return [];
+    }
+
+    // Build a set of unique days (YYYY-MM-DD) with at least one log from either table
+    const activeDays = new Set<string>();
+    
+    if (Array.isArray(actionLogs)) {
+      actionLogs.forEach(log => {
+        const dayStr = log.created_at.slice(0, 10);
+        activeDays.add(dayStr);
+      });
+    }
+    
+    if (Array.isArray(aiChatLogs)) {
+      aiChatLogs.forEach(log => {
+        const dayStr = log.created_at.slice(0, 10);
+        activeDays.add(dayStr);
+      });
+    }
+
+    // Convert to array and sort
+    return Array.from(activeDays).sort();
+  } catch (error) {
+    console.error('Error getting user active days:', error);
+    return [];
+  }
+};
+
+export const getUserDailyActivityCounts = async (): Promise<Record<string, number>> => {
+  try {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) return {};
+
+    // Get all action logs for the user
+    const { data: actionLogs, error: actionLogsError } = await supabase
+      .from('action_logs')
+      .select('created_at')
+      .eq('user_id', user.id);
+    
+    if (actionLogsError) {
+      console.error('Error fetching action logs:', actionLogsError);
+      return {};
+    }
+
+    // Get all ai_chat_logs for the user
+    const { data: aiChatLogs, error: aiChatLogsError } = await supabase
+      .from('ai_chat_logs')
+      .select('created_at')
+      .eq('user_id', user.id);
+    
+    if (aiChatLogsError) {
+      console.error('Error fetching AI chat logs:', aiChatLogsError);
+      return {};
+    }
+
+    // Build a map of daily activity counts
+    const dailyCounts: Record<string, number> = {};
+    
+    // Count action logs per day
+    if (Array.isArray(actionLogs)) {
+      actionLogs.forEach(log => {
+        const dayStr = log.created_at.slice(0, 10);
+        dailyCounts[dayStr] = (dailyCounts[dayStr] || 0) + 1;
+      });
+    }
+    
+    // Count AI chat logs per day
+    if (Array.isArray(aiChatLogs)) {
+      aiChatLogs.forEach(log => {
+        const dayStr = log.created_at.slice(0, 10);
+        dailyCounts[dayStr] = (dailyCounts[dayStr] || 0) + 1;
+      });
+    }
+
+    return dailyCounts;
+  } catch (error) {
+    console.error('Error getting user daily activity counts:', error);
+    return {};
+  }
+};

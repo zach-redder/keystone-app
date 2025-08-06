@@ -52,11 +52,11 @@ const AIPersonalityModal = ({ visible, onClose, onUpgradePress }) => {
       description: 'Mental toughness and extreme no nonsense discipline. Stay hard and push through any obstacle.',
       icon: 'barbell-outline',
     },
-    {
-      name: 'Andrew Tate',
-      description: 'Arrogant confidence and achieving success no matter what. Strict rules and no excuses.',
-      icon: 'diamond-outline',
-    },
+    // {
+    //   name: 'Andrew Tate',
+    //   description: 'Arrogant confidence and achieving success no matter what. Strict rules and no excuses.',
+    //   icon: 'diamond-outline',
+    // },
     {
       name: 'Socrates',
       description: 'Questioning wisdom and self-discovery. "The only true wisdom is knowing you know nothing."',

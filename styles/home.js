@@ -55,6 +55,7 @@ const homeStyles = StyleSheet.create({
     backgroundColor: '#3C3C3C',
     borderRadius: 16,
     padding: 20,
+    marginTop: 0,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.10,
@@ -546,6 +547,7 @@ const homeStyles = StyleSheet.create({
   analyticsRow: {
     flexDirection: 'row',
     marginBottom: 16,
+    marginTop: 16,
     gap: 12,
   },
   analyticsCard: {
@@ -554,6 +556,9 @@ const homeStyles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 100,
+    maxHeight: 120,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.10,

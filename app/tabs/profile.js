@@ -9,7 +9,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { signOutUser } from '../../services/auth';
 // Removed checkUserProStatus import - app is now fully paid-only
 import { fetchIdentityKeys } from '../../services/userKeys';
-import { getPreferredAiPersona, updateNotificationOptIn, getUserEmail, getPreferredReminderTime, getUserDayStreak} from '../../services/userPreferences';
+import { getPreferredAiPersona, updateNotificationOptIn, getUserEmail, getPreferredReminderTime, getUserDayStreak, getUserLongestStreak} from '../../services/userPreferences';
 import { getUserSubscriptionDetails } from '../../services/referralService';
 import { getAppStoreLink, APP_NAME } from '../../constants/appStore';
 import profileStyles from '../../styles/profile';
@@ -48,6 +48,7 @@ export default function ProfileScreen() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [reminderTime, setReminderTime] = useState('9:00 AM');
   const [dayStreak, setDayStreak] = useState(0);
+  const [longestStreak, setLongestStreak] = useState(0);
   const [userEmail, setUserEmail] = useState('');
 
   useEffect(() => {
@@ -57,6 +58,7 @@ export default function ProfileScreen() {
     loadAiPersona();
     loadReminderTime();
     loadDayStreak();
+    loadLongestStreak();
     checkNotificationPermissions();
     loadUserEmail();
   }, []);
@@ -81,6 +83,7 @@ export default function ProfileScreen() {
       loadAiPersona();
       loadReminderTime();
       loadDayStreak();
+      loadLongestStreak();
       loadSubscriptionDetails();
       checkAndUpdateNotificationPermissions();
     }, [])
@@ -127,6 +130,16 @@ export default function ProfileScreen() {
     } catch (error) {
       console.error('Error loading day streak:', error);
       setDayStreak(0);
+    }
+  };
+
+  const loadLongestStreak = async () => {
+    try {
+      const longest = await getUserLongestStreak();
+      setLongestStreak(longest);
+    } catch (error) {
+      console.error('Error loading longest streak:', error);
+      setLongestStreak(0);
     }
   };
 
@@ -350,8 +363,8 @@ export default function ProfileScreen() {
                 end={{ x: 1, y: 1 }}
                 style={profileStyles.statItemGlow}
               />
-              <Text style={profileStyles.statNumber}>{dayStreak}</Text>
-              <Text style={profileStyles.statLabel}>Day Streak</Text>
+              <Text style={profileStyles.statNumber}>{longestStreak}</Text>
+              <Text style={profileStyles.statLabel}>Best Streak</Text>
             </View>
           </View>
 

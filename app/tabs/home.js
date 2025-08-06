@@ -14,7 +14,7 @@ import ShareProgressModal from '../../components/modals/ShareProgressModal';
 import CommunityCard from '../../components/CommunityCard';
 // Removed ReferralModal - now using direct app sharing
 // Removed checkUserProStatus import - app is now fully paid-only
-import { fetchRecentActionLog, fetchActionLogs } from '../../services/actionLogs';
+import { fetchRecentActionLog, fetchActionLogs, fetchCurrentWeekActionLogs } from '../../services/actionLogs';
 import { getAppStoreLink, APP_NAME } from '../../constants/appStore';
 import { fetchTodayReminder, setupReminderNotifications } from '../../services/reminderService';
 import { 
@@ -25,12 +25,14 @@ import {
   getScoreLabel,
   getScoreColor
 } from '../../services/alignmentService';
-import { getUserDayStreak, getUserLongestStreak } from '../../services/userPreferences';
+import { getUserDayStreak, getUserLongestStreak, getUserActiveDays, getUserDailyActivityCounts } from '../../services/userPreferences';
 import { checkForStreakMilestone, markMilestoneAsShown } from '../../services/streakRewardsService';
+import { fetchTotalAIChatMessagePairCount, fetchCurrentWeekAIChatMessagePairCount } from '../../services/affirmationService';
 import * as Haptics from 'expo-haptics';
 import ActionLogResultModal from '../../components/modals/ActionLogResultModal';
 import AffirmIdentityModal from '../../components/modals/AffirmIdentityModal';
 import StreakRewardModal from '../../components/modals/StreakRewardModal';
+import StreakCounter from '../../components/StreakCounter';
 
 export default function HomeScreen() {
   // Removed proModalVisible state - no longer needed in paid-only app
@@ -61,6 +63,11 @@ export default function HomeScreen() {
   // New analytics state
   const [weeklyLogCount, setWeeklyLogCount] = useState(0);
   const [alignmentTrend, setAlignmentTrend] = useState(null);
+  const [activeDays, setActiveDays] = useState([]);
+  const [dailyActivityCounts, setDailyActivityCounts] = useState({});
+  const [aiChatCount, setAiChatCount] = useState(0);
+  const [currentWeekLogCount, setCurrentWeekLogCount] = useState(0);
+  const [currentWeekAiChatCount, setCurrentWeekAiChatCount] = useState(0);
 
   const HIGH_VALUE = 0.7; // Threshold for excessive alignment
   const LOW_VALUE = 0.3; // Threshold for deficient alignment
@@ -99,6 +106,11 @@ export default function HomeScreen() {
       loadWeeklySnapshot();
       loadAlignmentScoreChange();
       loadAnalyticsData();
+      loadActiveDays();
+      loadDailyActivityCounts();
+      loadAiChatCount();
+      loadCurrentWeekLogCount();
+      loadCurrentWeekAiChatCount();
       setupReminderNotifications().catch(console.error);
       loadRecentActionLogs();
       return () => {
@@ -202,6 +214,56 @@ export default function HomeScreen() {
     } catch (error) {
       console.error('Error loading longest streak:', error);
       setLongestStreak(0);
+    }
+  };
+
+  const loadActiveDays = async () => {
+    try {
+      const days = await getUserActiveDays();
+      setActiveDays(days);
+    } catch (error) {
+      console.error('Error loading active days:', error);
+      setActiveDays([]);
+    }
+  };
+
+  const loadDailyActivityCounts = async () => {
+    try {
+      const counts = await getUserDailyActivityCounts();
+      setDailyActivityCounts(counts);
+    } catch (error) {
+      console.error('Error loading daily activity counts:', error);
+      setDailyActivityCounts({});
+    }
+  };
+
+  const loadAiChatCount = async () => {
+    try {
+      const count = await fetchTotalAIChatMessagePairCount();
+      setAiChatCount(count);
+    } catch (error) {
+      console.error('Error loading AI chat count:', error);
+      setAiChatCount(0);
+    }
+  };
+
+  const loadCurrentWeekLogCount = async () => {
+    try {
+      const count = await fetchCurrentWeekActionLogs();
+      setCurrentWeekLogCount(count);
+    } catch (error) {
+      console.error('Error loading current week log count:', error);
+      setCurrentWeekLogCount(0);
+    }
+  };
+
+  const loadCurrentWeekAiChatCount = async () => {
+    try {
+      const count = await fetchCurrentWeekAIChatMessagePairCount();
+      setCurrentWeekAiChatCount(count);
+    } catch (error) {
+      console.error('Error loading current week AI chat count:', error);
+      setCurrentWeekAiChatCount(0);
     }
   };
 
@@ -359,33 +421,36 @@ export default function HomeScreen() {
             </View>
           </View>
 
-                     {/* Analytics & Progress Section */}
-           <View style={homeStyles.sectionContainer}>
-             <Text style={homeStyles.sectionTitle}>Current Alignment</Text>
-             
-             {/* Row */}
-             <View style={homeStyles.analyticsRow}>
-               <View style={homeStyles.analyticsCard}>
-                 <View style={homeStyles.analyticsHeader}>
-                   <Ionicons name="trophy" size={20} color="#D4DE95" />
-                   <Text style={homeStyles.analyticsCardTitle}>Longest Streak</Text>
-                 </View>
-                 <Text style={homeStyles.analyticsNumber}>{longestStreak}</Text>
-                 <Text style={homeStyles.analyticsLabel}>days</Text>
-               </View>
+                     {/* My Alignment Section */}
+                     <View style={homeStyles.sectionContainer}>
+                       <Text style={homeStyles.sectionTitle}>My Alignment</Text>
+                       
+                       {/* Activity Calendar */}
+                       <StreakCounter activeDays={activeDays} dailyActivityCounts={dailyActivityCounts} />
+                       
+                       {/* Analytics Row */}
+                       <View style={homeStyles.analyticsRow}>
+                         <View style={homeStyles.analyticsCard}>
+                           <View style={homeStyles.analyticsHeader}>
+                             <Ionicons name="chatbubbles" size={20} color="#D4DE95" />
+                             <Text style={homeStyles.analyticsCardTitle}>Chats</Text>
+                           </View>
+                           <Text style={homeStyles.analyticsNumber}>{currentWeekAiChatCount}</Text>
+                           <Text style={homeStyles.analyticsLabel}>this week</Text>
+                         </View>
 
-              <View style={homeStyles.analyticsCard}>
-                <View style={homeStyles.analyticsHeader}>
-                  <Ionicons name="trending-up" size={20} color="#4CAF50" />
-                  <Text style={homeStyles.analyticsCardTitle}>This Week</Text>
-                </View>
-                <Text style={homeStyles.analyticsNumber}>{weeklyLogCount}</Text>
-                <Text style={homeStyles.analyticsLabel}>actions logged</Text>
-              </View>
-             </View>
+                        <View style={homeStyles.analyticsCard}>
+                          <View style={homeStyles.analyticsHeader}>
+                            <Ionicons name="trending-up" size={20} color="#4CAF50" />
+                            <Text style={homeStyles.analyticsCardTitle}>Actions</Text>
+                          </View>
+                          <Text style={homeStyles.analyticsNumber}>{currentWeekLogCount}</Text>
+                          <Text style={homeStyles.analyticsLabel}>this week</Text>
+                        </View>
+                       </View>
 
-             {/* Alignment Chart */}
-             <View style={homeStyles.trendsContainer}>
+                       {/* Alignment Chart */}
+                       <View style={homeStyles.trendsContainer}>
                <View style={{ minHeight: 130, height: 130, justifyContent: 'center' }}>
                  {alignmentValue === null ? (
                    <View style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }}>
