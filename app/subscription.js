@@ -5,7 +5,8 @@ import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { upgradeUserToPro, downgradeUserToFree } from '../services/auth';
-import { triggerPaywallEvent, checkSubscriptionStatus, handlePurchase, restorePurchases } from '../services/superwallService';
+// Legacy Superwall wrappers are now no-ops; this screen remains as fallback
+import { restorePurchases } from '../services/superwallService';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -68,41 +69,20 @@ export default function SubscriptionScreen() {
     lifetime: 'com.reddermedia.keystone.life'
   };
 
-  // Fetch available products and trigger paywall event
+  // Static product list for fallback Subscribe screen
   useEffect(() => {
-    const initializePaywall = async () => {
-      try {
-        // Trigger the paywall presented event for Superwall tracking
-        await triggerPaywallEvent();
-        
-        // For now, we'll use mock products since Superwall.getProducts() might not be available
-        const mockProducts = [
-          { id: 'com.reddermedia.keystone.monthly', price: '$9.99/month' },
-          { id: 'com.reddermedia.keystone.yearly', price: '$29.99/year' },
-          { id: 'com.reddermedia.keystone.life', price: '$99.99' }
-        ];
-        setProducts(mockProducts);
-        console.log('Available products:', mockProducts);
-      } catch (error) {
-        console.error('Failed to initialize paywall:', error);
-      }
-    };
-
-    initializePaywall();
+    const mockProducts = [
+      { id: 'com.reddermedia.keystone.monthly', price: '$9.99/month' },
+      { id: 'com.reddermedia.keystone.yearly', price: '$29.99/year' },
+      { id: 'com.reddermedia.keystone.life', price: '$99.99' }
+    ];
+    setProducts(mockProducts);
   }, []);
 
   // Check subscription status
   const checkUserSubscriptionStatus = async () => {
-    try {
-      const isSubscribed = await checkSubscriptionStatus();
-      if (isSubscribed) {
-        await upgradeUserToPro();
-      } else {
-        await downgradeUserToFree();
-      }
-    } catch (err) {
-      console.warn('Error checking subscription status:', err);
-    }
+    // In fallback, assume not subscribed; entitlements refresh occurs in native flow
+    try { await downgradeUserToFree(); } catch {}
   };
 
   useEffect(() => {
@@ -116,16 +96,8 @@ export default function SubscriptionScreen() {
   );
 
   const handlePurchaseProduct = async (productId) => {
-    try {
-      const result = await handlePurchase(productId);
-      if (result.purchased) {
-        await upgradeUserToPro();
-        Alert.alert('Success', 'Welcome to Keystone Pro!');
-      }
-    } catch (error) {
-      console.error('Failed to handle purchase:', error);
-      Alert.alert('Error', 'Purchase failed. Please try again.');
-    }
+    // This screen should be used only when Superwall paywall didnt present
+    Alert.alert('Subscribe', 'Purchases are handled via the Superwall paywall when available.');
   };
 
   // Auto-slide functionality

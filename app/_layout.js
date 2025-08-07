@@ -5,24 +5,15 @@ import * as Linking from 'expo-linking';
 import { supabase } from '../lib/supabase';
 import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { initializeSuperwall, registerSuperwallEvents } from '../services/superwallService';
+import Constants from 'expo-constants';
+import { useSuperwallAnalytics } from '../src/paywall/superwallEvents';
+import { SuperwallAdapter as SW } from '../src/paywall/superwallAdapter';
 
-export default function RootLayout() {
+function RootShell() {
   const router = useRouter();
 
-  // Initialize Superwall on app start
-  useEffect(() => {
-    const initSuperwall = async () => {
-      try {
-        await initializeSuperwall();
-        registerSuperwallEvents();
-      } catch (error) {
-        console.error('Failed to initialize Superwall:', error);
-      }
-    };
-    
-    initSuperwall();
-  }, []);
+  // Initialize Superwall listeners once
+  useSuperwallAnalytics();
 
   useEffect(() => {
     const handleDeepLink = async (event) => {
@@ -107,4 +98,16 @@ export default function RootLayout() {
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
+}
+
+export default function RootLayout() {
+  const apiKey = Constants.expoConfig?.extra?.superwallApiKey;
+
+  useEffect(() => {
+    if (apiKey) {
+      SW.configure({ apiKey, logging: __DEV__ ? 'debug' : 'error' });
+    }
+  }, [apiKey]);
+
+  return <RootShell />;
 }

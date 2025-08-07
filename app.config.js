@@ -18,6 +18,17 @@ module.exports = ({ config }) => {
           origin: "https://thekeystoneapp.com",
         },
       ],
+      [
+        "expo-build-properties",
+        {
+          android: {
+            minSdkVersion: 26,
+          },
+          ios: {
+            deploymentTarget: "15.1",
+          },
+        },
+      ],
     ],
   };
 }; 
