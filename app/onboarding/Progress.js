@@ -32,13 +32,14 @@ export default function Progress() {
             useNativeDriver: true,
         }).start();
 
-        // Start progress animation after a brief delay
-        setTimeout(() => {
-            startProgressAnimation();
-        }, 800);
+        // Start progress animation immediately with haptics
+        startProgressAnimation();
     }, []);
 
     const startProgressAnimation = () => {
+        // Initial haptic feedback to start the experience
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        
         // Animate progress from 0 to 100
         Animated.timing(progressValue, {
             toValue: 100,
@@ -224,7 +225,7 @@ export default function Progress() {
                             borderColor: '#3c3c3c',
                         }} />
                         
-                        {/* SVG Progress Circle with Smooth Fill */}
+                        {/* SVG Progress Circle with Smooth Fill and Glow */}
                         <View style={{ position: 'relative', width: 280, height: 280 }}>
                             <Animated.View style={{ transform: [{ scale: scaleValue }] }}>
                                 <Svg width="280" height="280" viewBox="0 0 280 280">
@@ -239,7 +240,26 @@ export default function Progress() {
                                         strokeLinecap="round"
                                     />
                                     
-                                    {/* Progress Circle */}
+                                    {/* Glow Effect for Progress Circle */}
+                                    <AnimatedCircle
+                                        cx="140"
+                                        cy="140"
+                                        r="131"
+                                        stroke="#D4DE95"
+                                        strokeWidth="22"
+                                        fill="transparent"
+                                        strokeLinecap="round"
+                                        strokeDasharray={`${2 * Math.PI * 131}`}
+                                        strokeDashoffset={progressValue.interpolate({
+                                            inputRange: [0, 100],
+                                            outputRange: [2 * Math.PI * 131, 0],
+                                            extrapolate: 'clamp',
+                                        })}
+                                        transform="rotate(-90 140 140)"
+                                        opacity="0.3"
+                                    />
+                                    
+                                    {/* Main Progress Circle */}
                                     <AnimatedCircle
                                         cx="140"
                                         cy="140"
@@ -287,7 +307,11 @@ export default function Progress() {
                 </View>
 
                 <Animated.View style={{ opacity: textFadeValue }}>
-                    <Text style={styles.progressLabel}>
+                    <Text style={[styles.progressLabel, {
+                        color: '#ffffff',
+                        fontWeight: '600',
+                        fontSize: 16,
+                    }]}>
                         {analysisTexts[currentTextIndex]}
                     </Text>
                 </Animated.View>

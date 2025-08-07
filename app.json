@@ -22,12 +22,6 @@
             "CFBundleURLSchemes": [
               "keystone"
             ]
-          },
-          {
-            "CFBundleURLName": "com.reddermedia.keystone",
-            "CFBundleURLSchemes": [
-              "keystone"
-            ]
           }
         ],
         "ITSAppUsesNonExemptEncryption": false

@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Dimensions, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as RNIap from 'react-native-iap';
 import * as Haptics from 'expo-haptics';
 import { upgradeUserToPro, downgradeUserToFree } from '../services/auth';
+import { triggerPaywallEvent, checkSubscriptionStatus, handlePurchase, restorePurchases } from '../services/superwallService';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -49,26 +49,53 @@ const features = [
   }
 ];
 
-const productIds = ['your_subscription_id'];
-
 export default function SubscriptionScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const scrollViewRef = useRef(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isUserScrolling, setIsUserScrolling] = useState(false);
-  const [selectedSubscription, setSelectedSubscription] = useState('yearly'); // Default to yearly
+  const [selectedSubscription, setSelectedSubscription] = useState('yearly');
+  const [isLoading, setIsLoading] = useState(false);
+  const [products, setProducts] = useState([]);
 
   const insets = useSafeAreaInsets();
 
-  const checkSubscriptionStatus = async () => {
+  // Product IDs mapping
+  const productIds = {
+    monthly: 'com.reddermedia.keystone.monthly',
+    yearly: 'com.reddermedia.keystone.yearly',
+    lifetime: 'com.reddermedia.keystone.life'
+  };
+
+  // Fetch available products and trigger paywall event
+  useEffect(() => {
+    const initializePaywall = async () => {
+      try {
+        // Trigger the paywall presented event for Superwall tracking
+        await triggerPaywallEvent();
+        
+        // For now, we'll use mock products since Superwall.getProducts() might not be available
+        const mockProducts = [
+          { id: 'com.reddermedia.keystone.monthly', price: '$9.99/month' },
+          { id: 'com.reddermedia.keystone.yearly', price: '$29.99/year' },
+          { id: 'com.reddermedia.keystone.life', price: '$99.99' }
+        ];
+        setProducts(mockProducts);
+        console.log('Available products:', mockProducts);
+      } catch (error) {
+        console.error('Failed to initialize paywall:', error);
+      }
+    };
+
+    initializePaywall();
+  }, []);
+
+  // Check subscription status
+  const checkUserSubscriptionStatus = async () => {
     try {
-      const purchases = await RNIap.getAvailablePurchases();
-      // Replace 'your_subscription_id' with your actual product id(s)
-      const hasActivePro = purchases.some(
-        (purchase) => purchase.productId === productIds[0] && !purchase.isExpired
-      );
-      if (hasActivePro) {
+      const isSubscribed = await checkSubscriptionStatus();
+      if (isSubscribed) {
         await upgradeUserToPro();
       } else {
         await downgradeUserToFree();
@@ -79,19 +106,26 @@ export default function SubscriptionScreen() {
   };
 
   useEffect(() => {
-    checkSubscriptionStatus();
+    checkUserSubscriptionStatus();
   }, []);
 
   useFocusEffect(
     React.useCallback(() => {
-      checkSubscriptionStatus();
+      checkUserSubscriptionStatus();
     }, [])
   );
 
-  const handlePurchase = async (purchase) => {
-    // You should validate the purchase with your backend for security
-    // For demo, we just upgrade immediately
-    await upgradeUserToPro();
+  const handlePurchaseProduct = async (productId) => {
+    try {
+      const result = await handlePurchase(productId);
+      if (result.purchased) {
+        await upgradeUserToPro();
+        Alert.alert('Success', 'Welcome to Keystone Pro!');
+      }
+    } catch (error) {
+      console.error('Failed to handle purchase:', error);
+      Alert.alert('Error', 'Purchase failed. Please try again.');
+    }
   };
 
   // Auto-slide functionality
@@ -152,10 +186,45 @@ export default function SubscriptionScreen() {
 
   const handleStartFreeTrial = async () => {
     try {
-      const purchase = await RNIap.requestSubscription(productIds[0]);
-      await handlePurchase(purchase);
+      setIsLoading(true);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      
+      // Get the selected product ID
+      const productId = productIds[selectedSubscription];
+      
+      if (!productId) {
+        Alert.alert('Error', 'Invalid subscription type selected.');
+        return;
+      }
+
+      // Purchase the selected product
+      await handlePurchaseProduct(productId);
     } catch (err) {
-      console.warn(err);
+      console.warn('Failed to start free trial:', err);
+      Alert.alert('Error', 'Failed to start free trial. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRestorePurchases = async () => {
+    try {
+      setIsLoading(true);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      
+      const result = await restorePurchases();
+      
+      if (result.restored) {
+        await upgradeUserToPro();
+        Alert.alert('Success', 'Purchases restored successfully!');
+      } else {
+        Alert.alert('No Purchases', 'No previous purchases found to restore.');
+      }
+    } catch (err) {
+      console.warn('Failed to restore purchases:', err);
+      Alert.alert('Error', 'Failed to restore purchases. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };  
 
@@ -263,14 +332,29 @@ export default function SubscriptionScreen() {
               >
                 <View style={styles.subscriptionOptionContent}>
                   <Text style={styles.subscriptionTitle}>Lifetime</Text>
-                  <Text style={styles.subscriptionPrice}>$119.99 after trial ends</Text>
+                  <Text style={styles.subscriptionPrice}>$99.99 after trial ends</Text>
                 </View>
               </TouchableOpacity>
             </View>
 
             {/* Start Free Trial button */}
-            <TouchableOpacity style={styles.trialButton} onPress={handleStartFreeTrial}>
-              <Text style={styles.trialButtonText}>Start Free Trial</Text>
+            <TouchableOpacity 
+              style={[styles.trialButton, isLoading && styles.disabledButton]} 
+              onPress={handleStartFreeTrial}
+              disabled={isLoading}
+            >
+              <Text style={styles.trialButtonText}>
+                {isLoading ? 'Processing...' : 'Start Free Trial'}
+              </Text>
+            </TouchableOpacity>
+
+            {/* Restore Purchases button */}
+            <TouchableOpacity 
+              style={styles.restoreButton} 
+              onPress={handleRestorePurchases}
+              disabled={isLoading}
+            >
+              <Text style={styles.restoreButtonText}>Restore Purchases</Text>
             </TouchableOpacity>
 
             {/* No payment text */}
@@ -439,6 +523,25 @@ const styles = {
     textAlign: 'center',
     fontStyle: 'italic',
     width: '100%',
+  },
+  disabledButton: {
+    opacity: 0.6,
+  },
+  restoreButton: {
+    backgroundColor: 'transparent',
+    borderRadius: 35,
+    paddingVertical: 15,
+    paddingHorizontal: 40,
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#fff',
+  },
+  restoreButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
   },
   carousel: {
     flex: 0,

@@ -2,25 +2,26 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
 const StreakCounter = ({ activeDays = [], dailyActivityCounts = {} }) => {
-  // Generate the last 6 months (approximately 168 days to ensure exactly 6 months)
-  const generateDays = () => {
-    const days = [];
-    const today = new Date();
-    
-    for (let i = 188; i >= 0; i--) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
-      const dayStr = date.toISOString().slice(0, 10);
-      const activityCount = dailyActivityCounts[dayStr] || 0;
-      days.push({
-        date: dayStr,
-        isActive: activeDays.includes(dayStr),
-        activityCount: activityCount
-      });
-    }
-    
-    return days;
-  };
+     // Generate exactly 6 months (approximately 180 days)
+   const generateDays = () => {
+     const days = [];
+     const today = new Date();
+     
+     // Generate exactly 180 days (6 months)
+     for (let i = 181; i >= 0; i--) {
+       const date = new Date(today);
+       date.setDate(date.getDate() - i);
+       const dayStr = date.toISOString().slice(0, 10);
+       const activityCount = dailyActivityCounts[dayStr] || 0;
+       days.push({
+         date: dayStr,
+         isActive: activeDays.includes(dayStr),
+         activityCount: activityCount
+       });
+     }
+     
+     return days;
+   };
 
   const days = generateDays();
   
@@ -34,29 +35,31 @@ const StreakCounter = ({ activeDays = [], dailyActivityCounts = {} }) => {
     weeks.push(weekDays);
   }
 
-  // Get month labels positioned correctly for the grid
-  const getMonthLabels = () => {
-    const months = [];
-    let currentMonth = '';
-    
-    // Find the first occurrence of each month
-    days.forEach((day, index) => {
-      const date = new Date(day.date);
-      const month = date.toLocaleDateString('en-US', { month: 'short' });
-      
-      if (month !== currentMonth) {
-        currentMonth = month;
-        // Calculate position based on the column index
-        const columnIndex = Math.floor(index / 7);
-        months.push({ 
-          month, 
-          columnIndex,
-          position: columnIndex
-        });
-      }
-    });
-    return months;
-  };
+     // Get month labels positioned correctly for the grid
+   const getMonthLabels = () => {
+     const months = [];
+     let currentMonth = '';
+     
+     // Find the first occurrence of each month
+     days.forEach((day, index) => {
+       const date = new Date(day.date);
+       const month = date.toLocaleDateString('en-US', { month: 'short' });
+       
+       if (month !== currentMonth) {
+         currentMonth = month;
+         // Calculate position based on the column index
+         const columnIndex = Math.floor(index / 7);
+         months.push({ 
+           month, 
+           columnIndex,
+           position: columnIndex
+         });
+       }
+     });
+     
+           // Return all months since we're generating exactly 6 months
+      return months.slice(-6);
+   };
 
   // Get the appropriate color based on activity count
   const getActivityColor = (day) => {
@@ -75,39 +78,39 @@ const StreakCounter = ({ activeDays = [], dailyActivityCounts = {} }) => {
     <View style={styles.container}>
       <Text style={styles.title}>Activity Calendar</Text>
       
-      {/* Month labels positioned above the grid */}
-      <View style={styles.monthLabelsContainer}>
-        {monthLabels.map((label, index) => {
-          // Calculate position based on the actual grid columns
-          const totalColumns = weeks[0]?.length || 1;
-          const columnWidth = 100 / totalColumns;
-          
-          // Adjust positioning for better visual alignment
-          let percentagePosition;
-          if (index === monthLabels.length - 1) {
-            // Last month: position it to align with the right edge of the grid
-            percentagePosition = 100 - (columnWidth / 2);
-          } else {
-            // Other months: center on their column
-            percentagePosition = (label.position + 0.5) * columnWidth;
-          }
-          
-          return (
-            <Text 
-              key={index} 
-              style={[
-                styles.monthLabel,
-                { 
-                  left: `${percentagePosition}%`,
-                  transform: [{ translateX: -50 }] // Center the text on its position
-                }
-              ]}
-            >
-              {label.month}
-            </Text>
-          );
-        })}
-      </View>
+             {/* Month labels positioned above the grid */}
+       <View style={styles.monthLabelsContainer}>
+         {monthLabels.map((label, index) => {
+           // Calculate position based on the actual grid columns
+           const totalColumns = weeks[0]?.length || 1;
+           const columnWidth = 100 / totalColumns;
+           
+           // Position each month label with proper spacing
+           let percentagePosition;
+           if (index === monthLabels.length - 1) {
+             // Last month: ensure it stays within the card margins
+             percentagePosition = Math.min(91, label.position * columnWidth);
+           } else {
+             // Other months: position at the start of their column
+             percentagePosition = label.position * columnWidth;
+           }
+           
+           return (
+             <Text 
+               key={index} 
+               style={[
+                 styles.monthLabel,
+                 { 
+                   left: `${percentagePosition}%`,
+                   transform: [{ translateX: 0 }] // Align to the start of the column
+                 }
+               ]}
+             >
+               {label.month}
+             </Text>
+           );
+         })}
+       </View>
       
       {/* Calendar grid */}
       <View style={styles.calendarContainer}>
@@ -171,14 +174,14 @@ const styles = StyleSheet.create({
     transform: [{ translateX: -50 }], // Center the text on its position
     whiteSpace: 'nowrap', // Prevent text wrapping
   },
-  calendarContainer: {
-    alignItems: 'flex-start',
-    justifyContent: 'flex-start',
-  },
-  grid: {
-    alignItems: 'flex-start',
-    justifyContent: 'flex-start',
-  },
+     calendarContainer: {
+     alignItems: 'center',
+     justifyContent: 'center',
+   },
+   grid: {
+     alignItems: 'center',
+     justifyContent: 'center',
+   },
   week: {
     flexDirection: 'row',
     marginBottom: 2,

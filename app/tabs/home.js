@@ -423,7 +423,7 @@ export default function HomeScreen() {
 
                      {/* My Alignment Section */}
                      <View style={homeStyles.sectionContainer}>
-                       <Text style={homeStyles.sectionTitle}>My Alignment</Text>
+                       <Text style={homeStyles.sectionTitle}>Alignment Stats</Text>
                        
                        {/* Activity Calendar */}
                        <StreakCounter activeDays={activeDays} dailyActivityCounts={dailyActivityCounts} />

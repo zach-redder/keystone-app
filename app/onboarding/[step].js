@@ -1,9 +1,10 @@
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { View, Text, TouchableOpacity, Animated, TextInput } from 'react-native';
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { styles } from '../../styles/onboarding';
 import * as Haptics from 'expo-haptics';
 import OnboardingProgressHeader from './OnboardingProgressHeader';
+import OnboardingHeader from './OnboardingHeader';
 import { Gesture, GestureDetector, ScrollView as GestureScrollView } from 'react-native-gesture-handler';
 import * as Notifications from 'expo-notifications';
 import CustomTimePicker from './CustomTimePicker';
@@ -35,6 +36,24 @@ export default function OnboardingStep() {
   });
 
   const [customOptions, setCustomOptions] = useState([]);
+
+  // Debounced save function to prevent race conditions
+  const debouncedSave = useCallback(
+    (() => {
+      let timeoutId;
+      return (key, data) => {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(async () => {
+          try {
+            await AsyncStorage.setItem(key, JSON.stringify(data));
+          } catch (error) {
+            console.error('Error saving to AsyncStorage:', error);
+          }
+        }, 100);
+      };
+    })(),
+    []
+  );
 
   // Load preferences from AsyncStorage on mount
   useEffect(() => {
@@ -82,15 +101,8 @@ export default function OnboardingStep() {
 
   // Save preferences to AsyncStorage whenever they change
   useEffect(() => {
-    const savePreferences = async () => {
-      try {
-        await AsyncStorage.setItem('user_preferences', JSON.stringify(preferences));
-      } catch (error) {
-        console.error('Error saving preferences:', error);
-      }
-    };
-    savePreferences();
-  }, [preferences]);
+    debouncedSave('user_preferences', preferences);
+  }, [preferences, debouncedSave]);
 
   const onTimeChange = (event, selectedTime) => {
     const currentTime = selectedTime || time;
@@ -101,195 +113,122 @@ export default function OnboardingStep() {
     }));
   };
 
-  const [notificationPermissionShown, setNotificationPermissionShown] = useState(false);
-
-  useEffect(() => {
-    if (step === 'NotificationOptIn' && !notificationPermissionShown) {
-      const askPermission = async () => {
-        const { status } = await Notifications.getPermissionsAsync();
-        if (status !== 'granted') {
-          const { status: newStatus } = await Notifications.requestPermissionsAsync();
-          setPreferences(prev => ({
-            ...prev,
-            notification_opt_in: newStatus === 'granted',
-          }));
-        }
-        await AsyncStorage.setItem('notificationPermissionShown', 'true');
-        setNotificationPermissionShown(true);
-        handleNext();
-      };
-
-      askPermission();
-    }
-  }, [step, notificationPermissionShown]);
-
-  const swipeGesture = Gesture.Pan()
-    .onUpdate((event) => {
-      if (event.translationX > 50) {
-        handleBack();
+  const askPermission = async () => {
+    try {
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+      if (existingStatus !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
       }
-    });
-
-  const nextStepMap = {
-    FutureSelfVision: '/onboarding/LifeGoals',
-    LifeGoals: '/onboarding/CoreValues',
-    CoreValues: '/onboarding/Progress'
-  };
-
-  const descriptions = {
-    'Gentle Guide': "Kind and encouraging. Offers gentle support when you need it most.",
-    'Supportive Friend': "Direct but caring with steady accountability keeping you focused.",
-    'Disciplined Mentor': "No excuses. Sharp, intense, and built to push you beyond your limits.",
-  };
-
-  // Add a mapping for display labels
-  const personaOptions = [
-    {
-      value: 'Gentle Guide',
-      label: 'Gentle Guide: Kind and encouraging. Offers gentle support when you need it most.'
-    },
-    {
-      value: 'Supportive Friend',
-      label: 'Supportive Friend: Direct but caring with steady accountability keeping you focused.'
-    },
-    {
-      value: 'Disciplined Mentor',
-      label: 'Disciplined Mentor: No excuses. Sharp, intense, and built to push you beyond your limits.'
+      if (finalStatus !== 'granted') {
+        alert('Failed to get push token for push notification!');
+        return;
+      }
+    } catch (error) {
+      console.error('Error requesting notification permissions:', error);
     }
-  ];
-
-  const pulseValue = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseValue, {
-          toValue: 1.05,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseValue, {
-          toValue: 1,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-  }, [step]);
+  };
 
   const handleNext = async () => {
-    const nextStep = nextStepMap[step];
-    if (nextStep) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      // Haptic feedback for Next button
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       
-      // Save the current step's selections to AsyncStorage
-      try {
-        if (step === 'FutureSelfVision') {
-          console.log('Saving FutureSelfVision selections:', selectedOptions);
-          await AsyncStorage.setItem('future_self_vision', JSON.stringify(selectedOptions));
-        } else if (step === 'LifeGoals') {
-          console.log('Saving LifeGoals selections:', selectedOptions);
-          await AsyncStorage.setItem('life_goals', JSON.stringify(selectedOptions));
-        } else if (step === 'CoreValues') {
-          console.log('Saving CoreValues selections:', selectedOptions);
-          await AsyncStorage.setItem('core_values', JSON.stringify(selectedOptions));
-        } else if (step === 'AIPersonality') {
-          console.log('Saving AIPersonality selections:', selectedOptions);
-          await AsyncStorage.setItem('ai_personality', JSON.stringify(selectedOptions));
-        }
-        
-        // Also save any custom options that were added
-        if (customOptions.length > 0) {
-          console.log('Saving custom options for', step, ':', customOptions);
-          await AsyncStorage.setItem(`${step.toLowerCase()}_custom_options`, JSON.stringify(customOptions));
-        }
-      } catch (error) {
-        console.error('Error saving selections:', error);
+      // Save current step selections
+      let stepKey;
+      if (step === 'FutureSelfVision') {
+        stepKey = 'future_self_vision';
+      } else if (step === 'LifeGoals') {
+        stepKey = 'life_goals';
+      } else if (step === 'CoreValues') {
+        stepKey = 'core_values';
+      } else if (step === 'AIPersonality') {
+        stepKey = 'ai_personality';
       }
-      
-      // If this is the last step, save final preferences
-      if (nextStep === '/register') {
-        console.log('Saving final preferences before registration:', preferences);
-        await AsyncStorage.setItem('final_preferences', JSON.stringify(preferences));
-        
-        // Debug: Let's also check what's currently in AsyncStorage
-        const debugData = {
-          future_self_vision: await AsyncStorage.getItem('future_self_vision'),
-          life_goals: await AsyncStorage.getItem('life_goals'),
-          core_values: await AsyncStorage.getItem('core_values'),
-          ai_personality: await AsyncStorage.getItem('ai_personality'),
-        };
-        console.log('Current AsyncStorage data before registration:', debugData);
+
+      if (stepKey) {
+        await AsyncStorage.setItem(stepKey, JSON.stringify(selectedOptions));
+        await AsyncStorage.setItem(`${step.toLowerCase()}_custom_options`, JSON.stringify(customOptions));
       }
-      
-      router.push(nextStep);
+
+      const currentIndex = steps.indexOf(step);
+      if (currentIndex < steps.length - 1) {
+        router.push(`/onboarding/${steps[currentIndex + 1]}`);
+      } else {
+        router.push('/onboarding/Progress');
+      }
+    } catch (error) {
+      console.error('Error in handleNext:', error);
     }
   };
 
   const handleBack = () => {
-    const prevStep = getPreviousStep(step);
-    if (prevStep) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      router.push(`/onboarding/${prevStep}`);
+    try {
+      const currentIndex = steps.indexOf(step);
+      if (currentIndex > 0) {
+        router.push(`/onboarding/${steps[currentIndex - 1]}`);
+      } else {
+        router.back();
+      }
+    } catch (error) {
+      console.error('Error in handleBack:', error);
     }
   };
 
   const getPreviousStep = (currentStep) => {
-    const stepIndex = steps.indexOf(currentStep);
-    if (currentStep === 'NotificationTime') {
-      return 'AIPersonality'; // Skip NotificationOptIn when going back
-    }
-    return stepIndex > 0 ? steps[stepIndex - 1] : null;
+    const currentIndex = steps.indexOf(currentStep);
+    return currentIndex > 0 ? steps[currentIndex - 1] : null;
   };
 
   const handlePersonalitySelect = (personality) => {
-    let saveValue = personality;
-    if (personality === 'Disciplined Mentor') {
-      saveValue = 'Disciplined Mentor: No excuses. Sharp, intense, and built to push you beyond your limits.';
-    }
-    if (personality === 'Gentle Guide') {
-      saveValue = 'Gentle Guide: Kind and encouraging. Offers gentle support when you need it most.';
-    }
-    if (personality === 'Supportive Friend') {
-      saveValue = 'Supportive Friend: Direct but caring with steady accountability keeping you focused.';
-    }
-    setPreferences(prev => ({
-      ...prev,
-      preferred_ai_persona: saveValue,
-    }));
-    setSelectedOptions([personality]);
     try {
-      AsyncStorage.setItem('ai_personality', JSON.stringify([saveValue]));
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      const saveValue = personality;
+      setSelectedOptions([personality]);
+      debouncedSave('ai_personality', [saveValue]);
       console.log('Saved AI personality to AsyncStorage:', [saveValue]);
     } catch (error) {
       console.error('Error saving AI personality:', error);
     }
   };
 
-  const toggleOption = (option) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setSelectedOptions((prevSelected) => {
-      if (prevSelected.includes(option)) {
-        return prevSelected.filter((item) => item !== option);
-      } else if (prevSelected.length < 5) {
-        return [...prevSelected, option];
-      }
-      return prevSelected;
-    });
-  };
+  const toggleOption = useCallback((option) => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setSelectedOptions((prevSelected) => {
+        if (prevSelected.includes(option)) {
+          return prevSelected.filter((item) => item !== option);
+        } else if (prevSelected.length < 5) {
+          return [...prevSelected, option];
+        }
+        return prevSelected;
+      });
+    } catch (error) {
+      console.error('Error in toggleOption:', error);
+    }
+  }, []);
 
   const handleCustomInputSubmit = () => {
-    if (customInputValue.trim()) {
-      const newOption = customInputValue.trim();
-      setCustomOptions(prev => [...prev, newOption]);
-      toggleOption(newOption);
-      setCustomInputValue('');
-      setShowCustomInput(false);
+    try {
+      if (customInputValue.trim()) {
+        const newOption = customInputValue.trim();
+        setCustomOptions(prev => [...prev, newOption]);
+        toggleOption(newOption);
+        setCustomInputValue('');
+        setShowCustomInput(false);
+      }
+    } catch (error) {
+      console.error('Error in handleCustomInputSubmit:', error);
     }
   };
 
   const handleShowCustomInput = () => {
-    setShowCustomInput(true);
+    try {
+      setShowCustomInput(true);
+    } catch (error) {
+      console.error('Error in handleShowCustomInput:', error);
+    }
   };
 
   const renderCustomSection = () => (
@@ -301,6 +240,7 @@ export default function OnboardingStep() {
               key={option}
               style={selectedOptions.includes(option) ? styles.selectedMultiSelectButton : styles.multiSelectButton}
               onPress={() => toggleOption(option)}
+              activeOpacity={0.7}
             >
               <Text style={styles.multiSelectButtonText}>{option}</Text>
             </TouchableOpacity>
@@ -327,6 +267,7 @@ export default function OnboardingStep() {
           <TouchableOpacity
             style={styles.addCustomButton}
             onPress={handleShowCustomInput}
+            activeOpacity={0.7}
           >
             <Text style={styles.addCustomButtonText}>+ Add</Text>
           </TouchableOpacity>
@@ -339,7 +280,7 @@ export default function OnboardingStep() {
       case 'FutureSelfVision':
         return (
           <LinearGradient
-                            colors={['#2B2B2B', '#2F2F2C', '#2B2B2B']}
+            colors={['#2B2B2B', '#2F2F2C', '#2B2B2B']}
             style={styles.gradientContainer}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
@@ -351,33 +292,15 @@ export default function OnboardingStep() {
             <GestureScrollView 
               style={{ flex: 1, width: '100%' }}
               keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
             >
               {renderCustomSection()}
-              {/* <View style={styles.categoryContainer}>
-                <Text style={styles.categoryTitle}>Popular</Text>
-                <GestureScrollView 
-                  horizontal 
-                  style={styles.scrollView}
-                  simultaneousHandlers={verticalScrollRef}
-                >
-                  <View style={[styles.optionsContainer, { maxWidth: 800 }]}>
-                    {['Gym Goer', 'Business Owner', 'Software Developer', 'Runner', 'Professional Athlete', 'Pastor', 'Engineer', 'Doctor', 'Lawyer', 'Parent', 'Grandparent', 'Traveler'].map((option) => (
-                      <TouchableOpacity
-                        key={option}
-                        style={selectedOptions.includes(option) ? styles.selectedMultiSelectButton : styles.multiSelectButton}
-                        onPress={() => toggleOption(option)}
-                      >
-                        <Text style={styles.multiSelectButtonText}>{option}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </GestureScrollView>
-              </View> */}
               <View style={styles.categoryContainer}>
                 <Text style={styles.categoryTitle}>Career</Text>
                 <GestureScrollView 
                   horizontal 
                   style={styles.scrollView}
+                  showsHorizontalScrollIndicator={false}
                 >
                   <View style={[styles.optionsContainer, { maxWidth: 800 }]}>
                     {['Software Developer', 'Business Owner', 'Pastor', 'Engineer', 'Doctor', 'Artist', 'Lawyer', 'Nurse', 'Personal Trainer', 'Influencer', 'Therapist', 'Writer', 'Chef'].map((option) => (
@@ -385,6 +308,7 @@ export default function OnboardingStep() {
                         key={option}
                         style={selectedOptions.includes(option) ? styles.selectedMultiSelectButton : styles.multiSelectButton}
                         onPress={() => toggleOption(option)}
+                        activeOpacity={0.7}
                       >
                         <Text style={styles.multiSelectButtonText}>{option}</Text>
                       </TouchableOpacity>
@@ -397,7 +321,7 @@ export default function OnboardingStep() {
                 <GestureScrollView 
                   horizontal 
                   style={styles.scrollView}
-                  simultaneousHandlers={verticalScrollRef}
+                  showsHorizontalScrollIndicator={false}
                 >
                   <View style={[styles.optionsContainer, { maxWidth: 500 }]}>
                     {['Gym Goer', 'Runner', 'Professional Athlete', 'Power Lifter', 'Bodybuilder', 'Boxer'].map((option) => (
@@ -405,6 +329,7 @@ export default function OnboardingStep() {
                         key={option}
                         style={selectedOptions.includes(option) ? styles.selectedMultiSelectButton : styles.multiSelectButton}
                         onPress={() => toggleOption(option)}
+                        activeOpacity={0.7}
                       >
                         <Text style={styles.multiSelectButtonText}>{option}</Text>
                       </TouchableOpacity>
@@ -417,7 +342,7 @@ export default function OnboardingStep() {
                 <GestureScrollView 
                   horizontal 
                   style={styles.scrollView}
-                  simultaneousHandlers={verticalScrollRef}
+                  showsHorizontalScrollIndicator={false}
                 >
                   <View style={[styles.optionsContainer, { maxWidth: 500 }]}>
                     {['Father', 'Mother', 'Grandparent', 'Pet Owner', 'Husband', 'Wife', 'Adoptive Parent', 'Parent'].map((option) => (
@@ -425,6 +350,7 @@ export default function OnboardingStep() {
                         key={option}
                         style={selectedOptions.includes(option) ? styles.selectedMultiSelectButton : styles.multiSelectButton}
                         onPress={() => toggleOption(option)}
+                        activeOpacity={0.7}
                       >
                         <Text style={styles.multiSelectButtonText}>{option}</Text>
                       </TouchableOpacity>
@@ -437,7 +363,7 @@ export default function OnboardingStep() {
                 <GestureScrollView 
                   horizontal 
                   style={styles.scrollView}
-                  simultaneousHandlers={verticalScrollRef}
+                  showsHorizontalScrollIndicator={false}
                 >
                   <View style={[styles.optionsContainer, { maxWidth: 400 }]}>
                     {['Traveler', 'Soloprenuer', 'Freelancer', 'Minimalist', 'Stoic', 'Mindful'].map((option) => (
@@ -445,19 +371,20 @@ export default function OnboardingStep() {
                         key={option}
                         style={selectedOptions.includes(option) ? styles.selectedMultiSelectButton : styles.multiSelectButton}
                         onPress={() => toggleOption(option)}
+                        activeOpacity={0.7}
                       >
                         <Text style={styles.multiSelectButtonText}>{option}</Text>
                       </TouchableOpacity>
                     ))}
                   </View>
-                </GestureScrollView>
-              </View>
-            </GestureScrollView>
-            <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
-              <Text style={styles.buttonText}>Next</Text>
-            </TouchableOpacity>
-          </LinearGradient>
-        );        
+                                 </GestureScrollView>
+               </View>
+             </GestureScrollView>
+             <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
+               <Text style={styles.buttonText}>Next</Text>
+             </TouchableOpacity>
+           </LinearGradient>
+         );        
         case 'LifeGoals':
           return (
             <LinearGradient
@@ -540,7 +467,7 @@ export default function OnboardingStep() {
                   <GestureScrollView 
                     horizontal 
                     style={styles.scrollView}
-                    simultaneousHandlers={verticalScrollRef}
+                    showsHorizontalScrollIndicator={false}
                   >
                     <View style={[styles.optionsContainer, { maxWidth: 500 }]}>
                       {['Get Married', 'Have Family', 'Own House', 'Retire Parents', 'Family Vacation Home'].map((option) => (
@@ -548,6 +475,7 @@ export default function OnboardingStep() {
                           key={option}
                           style={selectedOptions.includes(option) ? styles.selectedMultiSelectButton : styles.multiSelectButton}
                           onPress={() => toggleOption(option)}
+                          activeOpacity={0.7}
                         >
                           <Text style={styles.multiSelectButtonText}>{option}</Text>
                         </TouchableOpacity>
@@ -560,7 +488,7 @@ export default function OnboardingStep() {
                   <GestureScrollView 
                     horizontal 
                     style={styles.scrollView}
-                    simultaneousHandlers={verticalScrollRef}
+                    showsHorizontalScrollIndicator={false}
                   >
                     <View style={[styles.optionsContainer, { maxWidth: 500 }]}>
                       {['Travel World', 'Live Abroad', 'Learn Language', 'Write Book', 'Start Podcast', 'Learn Instrument'].map((option) => (
@@ -568,6 +496,7 @@ export default function OnboardingStep() {
                           key={option}
                           style={selectedOptions.includes(option) ? styles.selectedMultiSelectButton : styles.multiSelectButton}
                           onPress={() => toggleOption(option)}
+                          activeOpacity={0.7}
                         >
                           <Text style={styles.multiSelectButtonText}>{option}</Text>
                         </TouchableOpacity>
@@ -623,7 +552,7 @@ export default function OnboardingStep() {
                 <GestureScrollView 
                   horizontal 
                   style={styles.scrollView}
-                  simultaneousHandlers={verticalScrollRef}
+                  showsHorizontalScrollIndicator={false}
                 >
                   <View style={[styles.optionsContainer, { maxWidth: 700 }]}>
                     {['Mastery', 'Ambition', 'Success', 'Legacy', 'Purpose', 'Wisdom', 'Innovation', 'Curiosity', 'Balance', 'Leadership', 'Influence'].map((option) => (
@@ -631,6 +560,7 @@ export default function OnboardingStep() {
                         key={option}
                         style={selectedOptions.includes(option) ? styles.selectedMultiSelectButton : styles.multiSelectButton}
                         onPress={() => toggleOption(option)}
+                        activeOpacity={0.7}
                       >
                         <Text style={styles.multiSelectButtonText}>{option}</Text>
                       </TouchableOpacity>
@@ -643,7 +573,7 @@ export default function OnboardingStep() {
                 <GestureScrollView 
                   horizontal 
                   style={styles.scrollView}
-                  simultaneousHandlers={verticalScrollRef}
+                  showsHorizontalScrollIndicator={false}
                 >
                   <View style={[styles.optionsContainer, { maxWidth: 700 }]}>
                     {['Health', 'Strength', 'Speed', 'Endurance', 'Flexibility', 'Balance', 'Agility', 'Coordination', 'Power', 'Stamina', 'Focus', 'Perseverance'].map((option) => (
@@ -651,6 +581,7 @@ export default function OnboardingStep() {
                         key={option}
                         style={selectedOptions.includes(option) ? styles.selectedMultiSelectButton : styles.multiSelectButton}
                         onPress={() => toggleOption(option)}
+                        activeOpacity={0.7}
                       >
                         <Text style={styles.multiSelectButtonText}>{option}</Text>
                       </TouchableOpacity>
@@ -663,7 +594,7 @@ export default function OnboardingStep() {
                 <GestureScrollView 
                   horizontal 
                   style={styles.scrollView}
-                  simultaneousHandlers={verticalScrollRef}
+                  showsHorizontalScrollIndicator={false}
                 >
                   <View style={[styles.optionsContainer, { maxWidth: 650 }]}>
                     {['Love', 'Kindness', 'Compassion', 'Joy', 'Loyalty', 'Dependability', 'Support', 'Patience','Listening', 'Forgiveness', 'Inclusivity'].map((option) => (
@@ -671,6 +602,7 @@ export default function OnboardingStep() {
                         key={option}
                         style={selectedOptions.includes(option) ? styles.selectedMultiSelectButton : styles.multiSelectButton}
                         onPress={() => toggleOption(option)}
+                        activeOpacity={0.7}
                       >
                         <Text style={styles.multiSelectButtonText}>{option}</Text>
                       </TouchableOpacity>
@@ -683,7 +615,7 @@ export default function OnboardingStep() {
                 <GestureScrollView 
                   horizontal 
                   style={styles.scrollView}
-                  simultaneousHandlers={verticalScrollRef}
+                  showsHorizontalScrollIndicator={false}
                 >
                   <View style={[styles.optionsContainer, { maxWidth: 600 }]}>
                     {['Open-Minded', 'Faith', 'Peace', 'Stability', 'Intentionality', 'Creativity', 'Self-Care', 'Longevity', 'Aesthetics'].map((option) => (
@@ -691,6 +623,7 @@ export default function OnboardingStep() {
                         key={option}
                         style={selectedOptions.includes(option) ? styles.selectedMultiSelectButton : styles.multiSelectButton}
                         onPress={() => toggleOption(option)}
+                        activeOpacity={0.7}
                       >
                         <Text style={styles.multiSelectButtonText}>{option}</Text>
                       </TouchableOpacity>
@@ -710,18 +643,23 @@ export default function OnboardingStep() {
              <OnboardingHeader />
              <Text style={styles.secondaryHeader}>Choose your AI personality.</Text>
              <View style={styles.buttonContainer}>
-               {personaOptions.map((option) => (
+               {[
+                 { value: 'Gentle Guide', label: 'Gentle Guide: Kind and encouraging.' },
+                 { value: 'Supportive Friend', label: 'Supportive Friend: Direct but caring.' },
+                 { value: 'Disciplined Mentor', label: 'Disciplined Mentor: No excuses.' }
+               ].map((option) => (
                  <TouchableOpacity
                    key={option.value}
                    style={selectedOptions.includes(option.value) ? styles.selectedOptionButton : styles.optionButton}
                    onPress={() => handlePersonalitySelect(option.value)}
+                   activeOpacity={0.7}
                  >
                    <Text style={styles.optionText}>{option.value}</Text>
                  </TouchableOpacity>
                ))}
              </View>
              <Text style={styles.description}>
-               {descriptions[selectedOptions[0]] || 'Select an option to see the description.'}
+               Select an option to see the description.
              </Text>
              <TouchableOpacity
                style={selectedOptions.length > 0 ? styles.nextButton : styles.disabledButton}
@@ -746,11 +684,9 @@ export default function OnboardingStep() {
             <OnboardingHeader />
             <Text style={styles.reminderTimeHeader}>When should your AI send a reminder?</Text>
             <CustomTimePicker selectedTime={time} onTimeChange={onTimeChange} />
-            <Animated.View style={{ transform: [{ scale: pulseValue }] }}>
-              <TouchableOpacity style={styles.glowingButton} onPress={handleNext}>
-                <Text style={styles.buttonText}>Finish</Text>
-              </TouchableOpacity>
-            </Animated.View>
+            <TouchableOpacity style={styles.glowingButton} onPress={handleNext}>
+              <Text style={styles.buttonText}>Finish</Text>
+            </TouchableOpacity>
           </View>
         );
       default:
@@ -759,8 +695,8 @@ export default function OnboardingStep() {
   };
 
   return (      
-    <GestureDetector gesture={swipeGesture}>
+    <View style={{ flex: 1 }}>
       {renderStep()}
-    </GestureDetector>
+    </View>
   );
 }
