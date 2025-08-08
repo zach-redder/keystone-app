@@ -5,6 +5,7 @@ import * as Haptics from 'expo-haptics';
 import React, { useState, useRef, useEffect } from 'react';
 import keysStyles from '../../styles/keys';
 import AlignModal from '../../components/modals/AlignModal';
+import ActionLogResultModal from '../../components/modals/ActionLogResultModal';
 import AlignButton from '../../components/buttons/AlignButton';
 import Menu from '../../components/forms/Menu';
 import InfoModal from '../../components/modals/InfoModal';
@@ -138,6 +139,8 @@ export default function Keys() {
   const [affirmIdentityModalVisible, setAffirmIdentityModalVisible] = useState(false);
   const [shareProgressModalVisible, setShareProgressModalVisible] = useState(false);
   // Removed referralModalVisible - now using direct app sharing
+  const [resultModalVisible, setResultModalVisible] = useState(false);
+  const [resultLog, setResultLog] = useState(null);
 
   const scrollViewRef = useRef(null);
 
@@ -481,14 +484,18 @@ export default function Keys() {
         onAffirmIdentity={handleAffirmIdentity}
         onLogActionResult={(log) => {
           // Automatically show result modal after successful log action
-          // For keys page, we'll need to add the result modal states if not present
-          console.log('Log action completed:', log);
-          // TODO: Add result modal handling to keys page if needed
+          setResultLog(log);
+          setResultModalVisible(true);
         }}
       />
       <AffirmIdentityModal
         visible={affirmIdentityModalVisible}
         onClose={() => setAffirmIdentityModalVisible(false)}
+      />
+      <ActionLogResultModal
+        visible={resultModalVisible}
+        onClose={() => setResultModalVisible(false)}
+        log={resultLog}
       />
         <ShareProgressModal
           visible={shareProgressModalVisible}

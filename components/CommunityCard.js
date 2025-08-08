@@ -117,7 +117,7 @@ const styles = {
     fontWeight: '500',
   },
   exploreButton: {
-    backgroundColor: '#D4DE95',
+    backgroundColor: '#B9C096',
     borderRadius: 12,
     paddingVertical: 16,
     paddingHorizontal: 24,

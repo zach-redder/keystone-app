@@ -144,7 +144,7 @@ export default function StreakRewardModal({ visible, milestone, onClose }) {
 
   if (!milestone) return null;
 
-  const confettiColors = ['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7'];
+  const confettiColors = ['#D4DE95', '#6A7A5A', '#A1A1AA', '#5E5E5E', '#3C3C3C', '#9AA484'];
 
   return (
     <Modal
@@ -215,12 +215,12 @@ export default function StreakRewardModal({ visible, milestone, onClose }) {
           </Animated.View>
 
           {/* Title */}
-          <Text style={[styles.title, { color: milestone.color }]}>
+          <Text style={styles.title}>
             {milestone.title}
           </Text>
 
           {/* Days streak */}
-          <View style={[styles.streakBadge, { backgroundColor: milestone.color }]}>
+          <View style={styles.streakBadge}>
             <Text style={styles.streakText}>{milestone.days} Day Streak!</Text>
           </View>
 
@@ -229,10 +229,10 @@ export default function StreakRewardModal({ visible, milestone, onClose }) {
 
           {/* Continue button */}
           <TouchableOpacity 
-            style={[styles.continueButton, { backgroundColor: milestone.color }]}
+            style={styles.continueButton}
             onPress={handleClose}
           >
-            <Text style={styles.continueButtonText}>Keep Going! 🚀</Text>
+            <Text style={styles.continueButtonText}>Keep Going!</Text>
           </TouchableOpacity>
         </Animated.View>
       </Animated.View>
@@ -249,7 +249,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   container: {
-    backgroundColor: '#fff',
+    backgroundColor: '#2B2B2B',
     borderRadius: 25,
     padding: 30,
     alignItems: 'center',
@@ -264,7 +264,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1,
@@ -280,6 +280,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '800',
+    color: '#fff',
     textAlign: 'center',
     marginBottom: 15,
   },
@@ -288,9 +289,12 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
     marginBottom: 20,
+    backgroundColor: '#1E1E1E',
+    borderWidth: 2,
+    borderColor: '#D4DE95',
   },
   streakText: {
-    color: '#fff',
+    color: '#D4DE95',
     fontSize: 16,
     fontWeight: '700',
   },
@@ -298,7 +302,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
     lineHeight: 24,
-    color: '#333',
+    color: '#A1A1AA',
     marginBottom: 30,
   },
   continueButton: {
@@ -306,9 +310,15 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     borderRadius: 25,
     minWidth: 200,
+    backgroundColor: '#D4DE95',
+    shadowColor: '#D4DE95',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.7,
+    shadowRadius: 8,
+    elevation: 8,
   },
   continueButtonText: {
-    color: '#fff',
+    color: '#2B2B2B',
     fontSize: 18,
     fontWeight: '700',
     textAlign: 'center',
