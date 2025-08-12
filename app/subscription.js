@@ -5,8 +5,7 @@ import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { upgradeUserToPro, downgradeUserToFree } from '../services/auth';
-// Legacy Superwall wrappers are now no-ops; this screen remains as fallback
-import { restorePurchases } from '../services/superwallService';
+import { useUpgradeGateway } from '../src/paywall/upgradeGateway';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -61,6 +60,8 @@ export default function SubscriptionScreen() {
   const [products, setProducts] = useState([]);
 
   const insets = useSafeAreaInsets();
+  const { openUpgradeGateway } = useUpgradeGateway();
+  const hasAttemptedPaywallRef = useRef(false);
 
   // Product IDs mapping
   const productIds = {
@@ -87,6 +88,13 @@ export default function SubscriptionScreen() {
 
   useEffect(() => {
     checkUserSubscriptionStatus();
+    // Attempt to present native paywall immediately so reviewers always see IAP
+    if (!hasAttemptedPaywallRef.current) {
+      hasAttemptedPaywallRef.current = true;
+      setTimeout(() => {
+        openUpgradeGateway(router, { returnTo: params.returnTo || 'home' });
+      }, 250);
+    }
   }, []);
 
   useFocusEffect(
@@ -95,9 +103,9 @@ export default function SubscriptionScreen() {
     }, [])
   );
 
-  const handlePurchaseProduct = async (productId) => {
-    // This screen should be used only when Superwall paywall didnt present
-    Alert.alert('Subscribe', 'Purchases are handled via the Superwall paywall when available.');
+  const handlePurchaseProduct = async () => {
+    // Always route purchases through native IAP paywall
+    await openUpgradeGateway(router, { returnTo: params.returnTo || 'home', intent: 'purchase' });
   };
 
   // Auto-slide functionality
@@ -161,16 +169,8 @@ export default function SubscriptionScreen() {
       setIsLoading(true);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       
-      // Get the selected product ID
-      const productId = productIds[selectedSubscription];
-      
-      if (!productId) {
-        Alert.alert('Error', 'Invalid subscription type selected.');
-        return;
-      }
-
-      // Purchase the selected product
-      await handlePurchaseProduct(productId);
+      // Route to native paywall (handles product selection inside paywall)
+      await handlePurchaseProduct();
     } catch (err) {
       console.warn('Failed to start free trial:', err);
       Alert.alert('Error', 'Failed to start free trial. Please try again.');
@@ -183,15 +183,8 @@ export default function SubscriptionScreen() {
     try {
       setIsLoading(true);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      
-      const result = await restorePurchases();
-      
-      if (result.restored) {
-        await upgradeUserToPro();
-        Alert.alert('Success', 'Purchases restored successfully!');
-      } else {
-        Alert.alert('No Purchases', 'No previous purchases found to restore.');
-      }
+      // Present native paywall which includes restore option via StoreKit
+      await openUpgradeGateway(router, { returnTo: params.returnTo || 'home', intent: 'restore' });
     } catch (err) {
       console.warn('Failed to restore purchases:', err);
       Alert.alert('Error', 'Failed to restore purchases. Please try again.');

@@ -3,7 +3,9 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
 import * as Linking from 'expo-linking';
 import { supabase } from '../lib/supabase';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
+import { AppState } from 'react-native';
+import { setupReminderNotifications } from '../services/reminderService';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
 import { useSuperwallAnalytics } from '../src/paywall/superwallEvents';
@@ -11,9 +13,49 @@ import { SuperwallAdapter as SW } from '../src/paywall/superwallAdapter';
 
 function RootShell() {
   const router = useRouter();
+  const appState = useRef(AppState.currentState);
+  const midnightTimeoutRef = useRef(null);
 
   // Initialize Superwall listeners once
   useSuperwallAnalytics();
+
+  useEffect(() => {
+    // Initial schedule of reminder notifications on app start
+    setupReminderNotifications().catch(console.error);
+
+    // Re-schedule when app returns to foreground
+    const sub = AppState.addEventListener('change', (nextState) => {
+      if (appState.current.match(/inactive|background/) && nextState === 'active') {
+        setupReminderNotifications().catch(console.error);
+      }
+      appState.current = nextState;
+    });
+
+    // Schedule a refresh shortly after local midnight to pick up the new daily reminder
+    const scheduleMidnightRefresh = () => {
+      const now = new Date();
+      const nextMidnight = new Date(now);
+      nextMidnight.setDate(now.getDate() + 1);
+      nextMidnight.setHours(0, 1, 0, 0); // 00:01 local time
+      const delay = Math.max(1000, nextMidnight.getTime() - now.getTime());
+      midnightTimeoutRef.current = setTimeout(async () => {
+        try {
+          await setupReminderNotifications();
+        } catch (e) {
+          console.error('Midnight reminder reschedule failed:', e);
+        } finally {
+          scheduleMidnightRefresh();
+        }
+      }, delay);
+    };
+
+    scheduleMidnightRefresh();
+
+    return () => {
+      sub.remove();
+      if (midnightTimeoutRef.current) clearTimeout(midnightTimeoutRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     const handleDeepLink = async (event) => {

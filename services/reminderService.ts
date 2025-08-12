@@ -42,12 +42,16 @@ export const createFirstReminder = async () => {
 
 export const fetchTodayReminder = async () => {
   try {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) throw userError;
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     const { data, error } = await supabase
       .from('user_daily_reminders')
       .select('message, created_at')
+      .eq('user_id', user.id)
       .gte('created_at', today.toISOString())
       .order('created_at', { ascending: false })
       .limit(1);
@@ -63,6 +67,43 @@ export const fetchTodayReminder = async () => {
   } catch (error) {
     console.error('Error fetching daily reminder:', error);
     return DEFAULT_REMINDERS[0]; // Fallback to first default reminder
+  }
+};
+
+/**
+ * Fetch the reminder for a specific local date. Uses an inclusive lower bound
+ * and exclusive upper bound to avoid cross-day bleed due to timezones.
+ */
+export const fetchReminderForDate = async (date: Date) => {
+  try {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) throw userError;
+
+    const start = new Date(date);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 1);
+
+    const { data, error } = await supabase
+      .from('user_daily_reminders')
+      .select('message, created_at')
+      .eq('user_id', user.id)
+      .gte('created_at', start.toISOString())
+      .lt('created_at', end.toISOString())
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (error) throw error;
+
+    if (data && data.length > 0) {
+      return data[0].message as string;
+    } else {
+      // Fallback to a deterministic default for that day
+      return DEFAULT_REMINDERS[Math.floor(Math.random() * DEFAULT_REMINDERS.length)];
+    }
+  } catch (error) {
+    console.error('Error fetching reminder for date:', error);
+    return DEFAULT_REMINDERS[0];
   }
 };
 
@@ -106,8 +147,8 @@ export const setupReminderNotifications = async () => {
     // Cancel any existing scheduled notifications
     await Notifications.cancelAllScheduledNotificationsAsync();
 
-    // Fetch the latest reminder for today (or tomorrow if after the time)
-    const message = await fetchTodayReminder();
+    // Fetch the reminder for the day we're scheduling the notification for
+    const message = await fetchReminderForDate(nextNotification);
 
     // Schedule a one-time notification for the next occurrence
     await Notifications.scheduleNotificationAsync({
