@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as RNIap from 'react-native-iap';
+import { supabase } from '../lib/supabase';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -58,6 +59,8 @@ export default function SubscriptionScreen() {
   const [selectedSubscription, setSelectedSubscription] = useState('yearly'); // Default to yearly
 
   const insets = useSafeAreaInsets();
+  const purchaseUpdateSubscription = useRef(null);
+  const purchaseErrorSubscription = useRef(null);
 
   // Auto-slide functionality
   useEffect(() => {
@@ -73,6 +76,57 @@ export default function SubscriptionScreen() {
 
     return () => clearInterval(interval);
   }, [isUserScrolling]);
+
+  useEffect(() => {
+    async function initIAP() {
+      try {
+        await RNIap.initConnection();
+        await RNIap.flushFailedPurchasesCachedAsPendingAndroid?.();
+      } catch (e) {
+        console.warn('IAP init error', e);
+      }
+    }
+    initIAP();
+
+    purchaseUpdateSubscription.current = RNIap.purchaseUpdatedListener(async (purchase) => {
+      try {
+        const receipt = purchase.transactionReceipt;
+        if (receipt) {
+          // Get current user id
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) return;
+          // Send to edge function for validation
+          const { data, error } = await supabase.functions.invoke('validate-apple-receipt', {
+            body: { receiptData: receipt, userId: user.id }
+          });
+          if (error) {
+            console.warn('Validation error', error);
+          } else if (data?.is_pro) {
+            console.log('User upgraded to pro via receipt validation');
+          }
+          // Finish transaction (iOS)
+          if (purchase.transactionId) {
+            await RNIap.finishTransaction({ purchase, isConsumable: false });
+          }
+        } else {
+          // Explicitly log missing receipt case
+          console.warn('Purchase update received without a transactionReceipt', purchase?.productId);
+        }
+      } catch (err) {
+        console.warn('purchaseUpdatedListener error', err);
+      }
+    });
+
+    purchaseErrorSubscription.current = RNIap.purchaseErrorListener((error) => {
+      console.warn('purchase error', error);
+    });
+
+    return () => {
+      try { purchaseUpdateSubscription.current?.remove(); } catch {}
+      try { purchaseErrorSubscription.current?.remove(); } catch {}
+      RNIap.endConnection();
+    };
+  }, []);
 
   const scrollToIndex = (index) => {
     if (scrollViewRef.current) {
