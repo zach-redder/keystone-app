@@ -3,45 +3,112 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
 import * as Linking from 'expo-linking';
 import { supabase } from '../lib/supabase';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
+import { AppState } from 'react-native';
+import { setupReminderNotifications } from '../services/reminderService';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import Constants from 'expo-constants';
 
-export default function RootLayout() {
+function RootShell() {
   const router = useRouter();
+  const appState = useRef(AppState.currentState);
+  const midnightTimeoutRef = useRef(null);
+
+  useEffect(() => {
+    // Initial schedule of reminder notifications on app start
+    setupReminderNotifications().catch(console.error);
+
+    // Re-schedule when app returns to foreground
+    const sub = AppState.addEventListener('change', (nextState) => {
+      if (appState.current.match(/inactive|background/) && nextState === 'active') {
+        setupReminderNotifications().catch(console.error);
+      }
+      appState.current = nextState;
+    });
+
+    // Schedule a refresh shortly after local midnight to pick up the new daily reminder
+    const scheduleMidnightRefresh = () => {
+      const now = new Date();
+      const nextMidnight = new Date(now);
+      nextMidnight.setDate(now.getDate() + 1);
+      nextMidnight.setHours(0, 1, 0, 0); // 00:01 local time
+      const delay = Math.max(1000, nextMidnight.getTime() - now.getTime());
+      midnightTimeoutRef.current = setTimeout(async () => {
+        try {
+          await setupReminderNotifications();
+        } catch (e) {
+          console.error('Midnight reminder reschedule failed:', e);
+        } finally {
+          scheduleMidnightRefresh();
+        }
+      }, delay);
+    };
+
+    scheduleMidnightRefresh();
+
+    return () => {
+      sub.remove();
+      if (midnightTimeoutRef.current) clearTimeout(midnightTimeoutRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     const handleDeepLink = async (event) => {
-      const url = event.url;
-
-      // Only handle Supabase auth URLs
-      if (!url || !url.includes('auth/callback')) {
+      const { url } = event;
+      console.log('Deep link received:', url);
+      
+      if (!url) {
+        console.log('No URL in deep link event');
         return;
       }
 
       try {
-        // Tell Supabase to handle the session from the URL
-        const { data, error } = await supabase.auth.exchangeCodeForSession(url);
-
-        if (error) {
-          console.error("Auth redirect error:", error);
-          // Don't redirect on auth errors, let the user try again
-          return;
-        }
-
-        if (data.session) {
-          console.log("Session recovered!", data.session);
-          router.replace('/tabs/home'); // redirect wherever you want
+        if (url.includes('auth/callback')) {
+          console.log('Processing Supabase auth callback...');
+          const urlObj = new URL(url);
+          const type = urlObj.searchParams.get('type');
+          
+          if (type === 'recovery') {
+            console.log('Password reset callback detected');
+            router.replace('/resetpassword');
+            return;
+          }
+          const { data, error } = await supabase.auth.exchangeCodeForSession(url);
+          if (error) {
+            console.error('Auth redirect error:', error);
+            return;
+          }
+          if (data.session) {
+            console.log('Session recovered from deep link!', {
+              userId: data.session.user.id,
+              email: data.session.user.email,
+              emailConfirmed: data.session.user.email_confirmed_at
+            });
+            router.replace('/');
+          } else {
+            console.log('No session recovered from deep link');
+          }
+        } else {
+          console.log('Processing other deep link:', url);
+          if (url.includes('subscription')) {
+            router.push('/subscription');
+          } else if (url.includes('home')) {
+            router.push('/tabs/home');
+          }
         }
       } catch (error) {
-        console.error("Error handling deep link:", error);
+        console.error('Error handling deep link:', error);
       }
     };
 
     const subscription = Linking.addEventListener('url', handleDeepLink);
-
-    // Handle case where app is opened from cold start via email link
     Linking.getInitialURL().then((url) => {
-      if (url) handleDeepLink({ url });
+      if (url) {
+        console.log('App opened with initial URL:', url);
+        handleDeepLink({ url });
+      } else {
+        console.log('No initial URL found');
+      }
     });
 
     return () => subscription.remove();
@@ -55,4 +122,8 @@ export default function RootLayout() {
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
+}
+
+export default function RootLayout() {
+  return <RootShell />;
 }

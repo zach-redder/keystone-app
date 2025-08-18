@@ -135,6 +135,8 @@ export default function WaitForEmailConfirmationScreen({ email, preferences: ini
         const savedPrefs = await AsyncStorage.getItem('final_preferences');
         preferences = savedPrefs ? JSON.parse(savedPrefs) : null;
         console.log('Preferences from AsyncStorage:', preferences);
+      } else {
+        console.log('Using passed preferences:', preferences);
       }
 
       if (!preferences) {
@@ -169,9 +171,17 @@ export default function WaitForEmailConfirmationScreen({ email, preferences: ini
         'aipersonality_custom_options',
       ]);
       
-      console.log('Navigating to subscription...');
-      // Navigate to subscription
-      router.replace('/subscription');
+      // Verify the user is properly signed in and has a session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.error('No session after email confirmation - this should not happen');
+        setError('Authentication error. Please try signing in again.');
+        return;
+      }
+      
+      console.log('User session verified, navigating to main app...');
+      // Navigate to main app and let the routing logic handle the correct destination
+      router.replace('/');
     } catch (err) {
       console.error('Error in handleConfirmedEmail:', err);
       setError(err.message);
@@ -277,14 +287,14 @@ export default function WaitForEmailConfirmationScreen({ email, preferences: ini
       <View style={styles.contentContainer}>
         <View style={styles.emailConfirmationHeader}>
           <Text style={styles.title}>Check your inbox</Text>
-          <Text style={styles.subtitle}>
+          <Text style={[styles.subtitle, { marginBottom: 0 }]}>
             We sent a confirmation email to:
           </Text>
           <View style={styles.emailContainer}>
             <Text style={styles.emailText}>{email}</Text>
           </View>
           <Text style={styles.description}>
-            Click the link in the email to confirm your account, then click "I Confirmed My Email" below.
+            Click the link in the email to confirm your account, then you're all set!
           </Text>
         </View>
 
@@ -307,14 +317,6 @@ export default function WaitForEmailConfirmationScreen({ email, preferences: ini
             </View>
           ) : (
             <>
-              <TouchableOpacity
-                style={[styles.button, styles.primaryButton]}
-                onPress={handleSignInAfterConfirmation}
-                disabled={isChecking}
-              >
-                <Text style={styles.buttonText}>I Confirmed My Email - Sign In</Text>
-              </TouchableOpacity>
-
               <TouchableOpacity
                 style={[styles.button, styles.secondaryButton]}
                 onPress={handleResendEmail}

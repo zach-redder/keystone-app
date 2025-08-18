@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, Modal, Animated, Dimensions, PanResponder } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useUpgradeGateway } from '../../src/paywall/upgradeGateway';
 import * as Haptics from 'expo-haptics';
 
 const { height: screenHeight } = Dimensions.get('window');
@@ -12,6 +13,7 @@ const ProUpgradeModal = ({ visible, onClose, currentPage }) => {
   const dragOffset = useRef(new Animated.Value(0)).current;
   const isClosing = useRef(false);
   const router = useRouter();
+  const { openUpgradeGateway } = useUpgradeGateway();
 
   // Pan responder for drag gestures - applies only to draggable content area
   const panResponder = useRef(
@@ -83,8 +85,8 @@ const ProUpgradeModal = ({ visible, onClose, currentPage }) => {
 
   const handleTryPress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    closeModal(() => {
-      router.push(`/subscription?returnTo=${currentPage || 'home'}`);
+    closeModal(async () => {
+      await openUpgradeGateway(router, { returnTo: currentPage || 'home' });
     });
   };
 
@@ -114,10 +116,10 @@ const ProUpgradeModal = ({ visible, onClose, currentPage }) => {
 
   const features = [
     'No daily limits',
-    'Advanced AI features',
     'Unlimited identity storage',
-    'View in-depth trends',
-    'Special discord community perks',
+    'Extra powerful AI',
+    'Custom AI personalities',
+    'Discord community perks',
   ];
 
   return (
@@ -128,7 +130,7 @@ const ProUpgradeModal = ({ visible, onClose, currentPage }) => {
       onRequestClose={onClose}
     >
       <Animated.View style={[styles.overlay, { opacity: overlayOpacity }]}>
-        <TouchableOpacity style={styles.overlayTouchable} activeOpacity={1} onPress={closeModal} />
+        <TouchableOpacity style={styles.overlayTouchable} activeOpacity={1} onPress={() => closeModal()} />
         <Animated.View 
           style={[
             styles.modalContainer,

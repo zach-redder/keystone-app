@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useEffect } from 'react';
 import { styles } from '../../styles/onboarding';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const shared = {
   progressAnim: new Animated.Value(0),
@@ -14,10 +15,8 @@ const shared = {
 const steps = [
   'FutureSelfVision',
   'LifeGoals',
-  'CoreValues',
-  'AIPersonality',
-  'NotificationOptIn',
-  'NotificationTime',
+  'CoreValues'
+  // Removed: 'AIPersonality', 'NotificationOptIn', 'NotificationTime'
 ];
 
 export default function OnboardingHeader() {
@@ -44,8 +43,28 @@ export default function OnboardingHeader() {
     shared.previousStepIndex = currentStepIndex;
   }, [currentStepIndex]);
 
-  const handleBack = () => {
+  const handleBack = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    // Special case: If on NotificationTime and notificationPermissionShown is true, skip NotificationOptIn
+    if (step === 'NotificationTime') {
+
+      const shown = await AsyncStorage.getItem('notificationPermissionShown');
+      if (shown === 'true') {
+        const prevIndex = currentStepIndex - 2; // Skip NotificationOptIn
+        const targetProgress = (prevIndex + 1) / steps.length;
+        shared.shouldAnimate = false;
+        router.replace('/onboarding/AIPersonality');
+        Animated.timing(shared.progressAnim, {
+          toValue: targetProgress,
+          duration: 400,
+          useNativeDriver: false,
+          easing: Easing.out(Easing.ease),
+        }).start(() => {
+          shared.previousStepIndex = prevIndex;
+        });
+        return;
+      }
+    }
 
     const prevIndex = currentStepIndex - 1;
     const targetProgress = (prevIndex + 1) / steps.length;

@@ -1,12 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Dimensions, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as RNIap from 'react-native-iap';
 import { supabase } from '../lib/supabase';
+import * as Haptics from 'expo-haptics';
+import { upgradeUserToPro, downgradeUserToFree } from '../services/auth';
+import { useUpgradeGateway } from '../src/paywall/upgradeGateway';
 
 const { width: screenWidth } = Dimensions.get('window');
+
+// Product ID mapping
+const productIds = {
+  monthly: 'com.reddermedia.keystone.monthly',
+  yearly: 'com.reddermedia.keystone.yearly',
+  lifetime: 'com.reddermedia.keystone.life'
+};
 
 // Feature data for the carousel
 const features = [
@@ -34,35 +44,78 @@ const features = [
     title: "AI Personalities",
     subtitle: "Customize your AI experience with unique personalities"
   },
+  // {
+  //   id: 5,
+  //   icon: "trending-up",
+  //   title: "In-Depth Trends",
+  //   subtitle: "Track your growth with detailed insights"
+  // },
   {
     id: 5,
-    icon: "trending-up",
-    title: "In-Depth Trends",
-    subtitle: "Track your growth with detailed insights"
-  },
-  {
-    id: 6,
     icon: "people",
     title: "Community Perks",
     subtitle: "Join the community and unlock exclusive benefits"
   }
 ];
 
-const productIds = ['your_subscription_id'];
-
 export default function SubscriptionScreen() {
-  const router = useRouter();
-  const params = useLocalSearchParams();
   const scrollViewRef = useRef(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isUserScrolling, setIsUserScrolling] = useState(false);
-  const [selectedSubscription, setSelectedSubscription] = useState('yearly'); // Default to yearly
+  const [selectedSubscription, setSelectedSubscription] = useState('yearly');
+  const [isLoading, setIsLoading] = useState(false);
+  const [products, setProducts] = useState([]);
 
   const insets = useSafeAreaInsets();
-  const purchaseUpdateSubscription = useRef(null);
-  const purchaseErrorSubscription = useRef(null);
+  const { openUpgradeGateway } = useUpgradeGateway();
+  const hasAttemptedPaywallRef = useRef(false);
 
-  // Auto-slide functionality
+  // Product IDs mapping
+  const productIds = {
+    monthly: 'com.reddermedia.keystone.monthly',
+    yearly: 'com.reddermedia.keystone.yearly',
+    lifetime: 'com.reddermedia.keystone.life'
+  };
+
+  // Static product list for fallback Subscribe screen
+  useEffect(() => {
+    const mockProducts = [
+      { id: 'com.reddermedia.keystone.monthly', price: '$9.99/month' },
+      { id: 'com.reddermedia.keystone.yearly', price: '$29.99/year' },
+      { id: 'com.reddermedia.keystone.life', price: '$99.99' }
+    ];
+    setProducts(mockProducts);
+  }, []);
+
+  // Check subscription status
+  const checkUserSubscriptionStatus = async () => {
+    // In fallback, assume not subscribed; entitlements refresh occurs in native flow
+    try { await downgradeUserToFree(); } catch {}
+  };
+
+  useEffect(() => {
+    checkUserSubscriptionStatus();
+    // Attempt to present native paywall immediately so reviewers always see IAP
+    if (!hasAttemptedPaywallRef.current) {
+      hasAttemptedPaywallRef.current = true;
+      setTimeout(() => {
+        openUpgradeGateway(router, { returnTo: params.returnTo || 'home' });
+      }, 250);
+    }
+  }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      checkUserSubscriptionStatus();
+    }, [])
+  );
+
+  const handlePurchaseProduct = async () => {
+    // Always route purchases through native IAP paywall
+    await openUpgradeGateway(router, { returnTo: params.returnTo || 'home', intent: 'purchase' });
+  };
+
+  // Feature carousel auto-slide
   useEffect(() => {
     if (isUserScrolling) return;
 
@@ -76,57 +129,6 @@ export default function SubscriptionScreen() {
 
     return () => clearInterval(interval);
   }, [isUserScrolling]);
-
-  useEffect(() => {
-    async function initIAP() {
-      try {
-        await RNIap.initConnection();
-        await RNIap.flushFailedPurchasesCachedAsPendingAndroid?.();
-      } catch (e) {
-        console.warn('IAP init error', e);
-      }
-    }
-    initIAP();
-
-    purchaseUpdateSubscription.current = RNIap.purchaseUpdatedListener(async (purchase) => {
-      try {
-        const receipt = purchase.transactionReceipt;
-        if (receipt) {
-          // Get current user id
-          const { data: { user } } = await supabase.auth.getUser();
-          if (!user) return;
-          // Send to edge function for validation
-          const { data, error } = await supabase.functions.invoke('validate-apple-receipt', {
-            body: { receiptData: receipt, userId: user.id }
-          });
-          if (error) {
-            console.warn('Validation error', error);
-          } else if (data?.is_pro) {
-            console.log('User upgraded to pro via receipt validation');
-          }
-          // Finish transaction (iOS)
-          if (purchase.transactionId) {
-            await RNIap.finishTransaction({ purchase, isConsumable: false });
-          }
-        } else {
-          // Explicitly log missing receipt case
-          console.warn('Purchase update received without a transactionReceipt', purchase?.productId);
-        }
-      } catch (err) {
-        console.warn('purchaseUpdatedListener error', err);
-      }
-    });
-
-    purchaseErrorSubscription.current = RNIap.purchaseErrorListener((error) => {
-      console.warn('purchase error', error);
-    });
-
-    return () => {
-      try { purchaseUpdateSubscription.current?.remove(); } catch {}
-      try { purchaseErrorSubscription.current?.remove(); } catch {}
-      RNIap.endConnection();
-    };
-  }, []);
 
   const scrollToIndex = (index) => {
     if (scrollViewRef.current) {
@@ -148,7 +150,6 @@ export default function SubscriptionScreen() {
   };
 
   const handleScrollEndDrag = () => {
-    // Reset auto-scroll after 5 seconds of user inactivity
     setTimeout(() => {
       setIsUserScrolling(false);
     }, 5000);
@@ -171,22 +172,40 @@ export default function SubscriptionScreen() {
 
   const handleStartFreeTrial = async () => {
     try {
-      await RNIap.requestSubscription(productIds[0]);
+      setIsLoading(true);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      
+      // Route to native paywall (handles product selection inside paywall)
+      await handlePurchaseProduct();
     } catch (err) {
-      console.warn(err);
+      console.warn('Failed to start free trial:', err);
+      Alert.alert('Error', 'Failed to start free trial. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
-  };  
+  };
+
+  const handleRestorePurchases = async () => {
+    try {
+      setIsLoading(true);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      // Present native paywall which includes restore option via StoreKit
+      await openUpgradeGateway(router, { returnTo: params.returnTo || 'home', intent: 'restore' });
+    } catch (err) {
+      console.warn('Failed to restore purchases:', err);
+      Alert.alert('Error', 'Failed to restore purchases. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <>
       <View style={{ height: insets.top, backgroundColor: '#B9C096' }} />
       <View style={styles.container}>
-        {/* Header with close button */}
+        {/* Header - no close button for hard paywall */}
         <View style={styles.header}>
-          <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
-            <Ionicons name="close" size={24} color="#2B2B2B" />
-          </TouchableOpacity>
-          <Text style={styles.title}>Keystone Pro</Text>
+          <Text style={styles.title}>Keystone</Text>
         </View>
 
         {/* Feature Carousel */}
@@ -266,11 +285,11 @@ export default function SubscriptionScreen() {
                 onPress={() => setSelectedSubscription('yearly')}
               >
                 <View style={styles.saveBadge}>
-                  <Text style={styles.saveBadgeText}>Save 50%</Text>
+                  <Text style={styles.saveBadgeText}>Save 75%</Text>
                 </View>
                 <View style={styles.subscriptionOptionContent}>
                   <Text style={styles.subscriptionTitle}>Yearly</Text>
-                  <Text style={styles.subscriptionPrice}>$59.99/year after trial ends</Text>
+                  <Text style={styles.subscriptionPrice}>$29.99/year after trial ends</Text>
                 </View>
               </TouchableOpacity>
 
@@ -284,14 +303,29 @@ export default function SubscriptionScreen() {
               >
                 <View style={styles.subscriptionOptionContent}>
                   <Text style={styles.subscriptionTitle}>Lifetime</Text>
-                  <Text style={styles.subscriptionPrice}>$119.99 after trial ends</Text>
+                  <Text style={styles.subscriptionPrice}>$99.99 after trial ends</Text>
                 </View>
               </TouchableOpacity>
             </View>
 
             {/* Start Free Trial button */}
-            <TouchableOpacity style={styles.trialButton} onPress={handleStartFreeTrial}>
-              <Text style={styles.trialButtonText}>Start Free Trial</Text>
+            <TouchableOpacity 
+              style={[styles.trialButton, isLoading && styles.disabledButton]} 
+              onPress={handleStartFreeTrial}
+              disabled={isLoading}
+            >
+              <Text style={styles.trialButtonText}>
+                {isLoading ? 'Processing...' : 'Start Free Trial'}
+              </Text>
+            </TouchableOpacity>
+
+            {/* Restore Purchases button */}
+            <TouchableOpacity 
+              style={styles.restoreButton} 
+              onPress={handleRestorePurchases}
+              disabled={isLoading}
+            >
+              <Text style={styles.restoreButtonText}>Restore Purchases</Text>
             </TouchableOpacity>
 
             {/* No payment text */}
@@ -317,18 +351,6 @@ const styles = {
     paddingTop: 10,
     paddingBottom: 10,
     position: 'relative',
-  },
-  closeButton: {
-    position: 'absolute',
-    left: 20,
-    top: 10,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(43, 43, 43, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1,
   },
   title: {
     fontSize: 32,
@@ -460,6 +482,25 @@ const styles = {
     textAlign: 'center',
     fontStyle: 'italic',
     width: '100%',
+  },
+  disabledButton: {
+    opacity: 0.6,
+  },
+  restoreButton: {
+    backgroundColor: 'transparent',
+    borderRadius: 35,
+    paddingVertical: 15,
+    paddingHorizontal: 40,
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#fff',
+  },
+  restoreButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
   },
   carousel: {
     flex: 0,

@@ -18,6 +18,9 @@ export default function TabLayout() {
         tabBarInactiveTintColor: '#888',
         tabBarShowLabel: false,
         headerShown: false,
+        tabBarItemStyle: {
+          marginTop: -5,
+        },
       })}
     >
       <Tabs.Screen name="keys" options={{

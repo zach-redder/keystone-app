@@ -1,179 +1,100 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { 
-  View, 
-  Text, 
-  Modal, 
-  ScrollView, 
-  TouchableOpacity, 
-  TextInput, 
-  Animated, 
-  Dimensions,
-  ActivityIndicator,
-  Alert
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
-import { fetchIdentityKeys } from '../../services/userKeys';
-import { generatePersonalizedResponse } from '../../services/aiService';
-// import { saveAffirmationEntry } from '../services/affirmationService';
-import keysStyles from '../../styles/keys';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, Modal, ScrollView, TextInput, KeyboardAvoidingView, Platform, TouchableOpacity, Alert } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { getPreferredAiPersona } from '../../services/userPreferences';
+import { generateAIMessage, fetchAIChatMessages, insertAIChatMessagePair, fetchTodaysAIChatMessagePairCount, deleteAllAIChatMessages } from '../../services/affirmationService';
+// Removed checkUserProStatus import - app is now fully paid-only
+import Markdown from 'react-native-markdown-display';
 
-const { height: screenHeight } = Dimensions.get('window');
+const AffirmIdentityModal = ({ visible, onClose, onRequestProUpgrade }) => {
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState('');
+  const [persona, setPersona] = useState('AI');
+  const [loadingAI, setLoadingAI] = useState(false);
+  const scrollViewRef = useRef(null);
+  const [thinkingDots, setThinkingDots] = useState('');
 
-const AffirmIdentityModal = ({ visible, onClose }) => {
-  const [coreValues, setCoreValues] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [userResponse, setUserResponse] = useState('');
-  const [isGeneratingResponse, setIsGeneratingResponse] = useState(false);
-  const [aiResponse, setAiResponse] = useState('');
-  const [showAiResponse, setShowAiResponse] = useState(false);
-
-  // Affirmation questions based on core values
-  const affirmationQuestions = [
-    {
-      id: 1,
-      text: "How did you live out your core values today?",
-      placeholder: "Share specific examples of how you embodied your values...",
-    },
-    {
-      id: 2,
-      text: "Which of your core values challenged you most today?",
-      placeholder: "Describe the situation and how you responded...",
-    },
-    {
-      id: 3,
-      text: "What would your future self say about how you're living your values?",
-      placeholder: "Reflect on your growth and alignment...",
-    },
-  ];
-
-  // Load user's core values
   useEffect(() => {
-    const loadCoreValues = async () => {
-      if (!visible) return;
-      
-      console.log('AffirmIdentityModal: Loading core values...');
-      
+    let isMounted = true;
+    (async () => {
+      let cleanPersona = 'AI';
       try {
-        setLoading(true);
-        const keys = await fetchIdentityKeys();
-        const values = keys.filter(key => key.category === 'Core Values');
-        setCoreValues(values);
-        console.log('AffirmIdentityModal: Core values loaded:', values.length);
-      } catch (error) {
-        console.error('Error loading core values:', error);
-        Alert.alert('Error', 'Failed to load your core values');
-      } finally {
-        setLoading(false);
+        const p = await getPreferredAiPersona();
+        cleanPersona = p.replace(/:.*$/, '') || 'AI';
+      } catch {}
+      if (isMounted) setPersona(cleanPersona);
+      const chatMessages = await fetchAIChatMessages();
+      if (isMounted) {
+        if (Array.isArray(chatMessages) && chatMessages.length > 0) {
+          setMessages(chatMessages);
+        } else {
+          setMessages([]); // No messages, show welcome placeholder
+        }
       }
-    };
-
-    loadCoreValues();
+    })();
+    return () => { isMounted = false; };
   }, [visible]);
 
-  // Animation logic
   useEffect(() => {
-    if (visible) {
-      // Reset state when modal opens
-      setCurrentQuestion(0);
-      setUserResponse('');
-      setAiResponse('');
-      setShowAiResponse(false);
-    }
-  }, [visible]);
-
-  const closeModal = () => {
-    console.log('AffirmIdentityModal: Closing modal');
-    // Reset state
-    setCurrentQuestion(0);
-    setUserResponse('');
-    setAiResponse('');
-    setShowAiResponse(false);
-    console.log('AffirmIdentityModal: Calling onClose');
-    onClose();
-  };
-
-  const generateAiResponse = async () => {
-    if (!userResponse.trim()) {
-      Alert.alert('Please enter your response first');
-      return;
-    }
-
-    setIsGeneratingResponse(true);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
-    try {
-      const response = await generatePersonalizedResponse(userResponse, coreValues, currentQuestion);
-      setAiResponse(response);
-      setShowAiResponse(true);
-    } catch (error) {
-      console.error('Error generating AI response:', error);
-      Alert.alert('Error', 'Failed to generate response. Please try again.');
-    } finally {
-      setIsGeneratingResponse(false);
-    }
-  };
-
-  const handleNextQuestion = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    
-    // Save the current response if AI response was generated
-    // TODO: Uncomment when affirmation_entries table is created
-    // if (showAiResponse && userResponse.trim() && aiResponse.trim()) {
-    //   try {
-    //     await saveAffirmationEntry(
-    //       affirmationQuestions[currentQuestion].text,
-    //       userResponse,
-    //       aiResponse
-    //     );
-    //   } catch (error) {
-    //     console.error('Error saving affirmation entry:', error);
-    //     // Don't block the flow, just log the error
-    //   }
-    // }
-    
-    if (currentQuestion < affirmationQuestions.length - 1) {
-      setCurrentQuestion(currentQuestion + 1);
-      setUserResponse('');
-      setAiResponse('');
-      setShowAiResponse(false);
+    let interval;
+    if (loadingAI) {
+      let count = 0;
+      interval = setInterval(() => {
+        count = (count + 1) % 4;
+        setThinkingDots('.'.repeat(count));
+      }, 400);
     } else {
-      // All questions completed
-      Alert.alert(
-        'Affirmation Complete',
-        'Great work reflecting on your identity and values! This practice helps strengthen your alignment.',
-        [{ text: 'Finish', onPress: closeModal }]
-      );
+      setThinkingDots('');
+    }
+    return () => clearInterval(interval);
+  }, [loadingAI]);
+
+  const handleSend = async () => {
+    if (!input.trim()) return;
+    setLoadingAI(true);
+    try {
+      // 🔒 PAID-ONLY APP: All users have unlimited AI chat access
+      const userMsg = { role: 'user', content: input };
+      const prevMessages = [...messages, userMsg];
+      setMessages(prevMessages);
+      setInput('');
+      const ai_response = await generateAIMessage(input, messages);
+      const aiMsg = { role: 'assistant', content: ai_response };
+      const updatedMessages = [...prevMessages, aiMsg];
+      setMessages(updatedMessages);
+      await insertAIChatMessagePair(userMsg, aiMsg);
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    } catch (err) {
+      const userMsg = { role: 'user', content: input };
+      const aiMsg = { role: 'assistant', content: 'Sorry, there was a problem getting a response.' };
+      const prevMessages = [...messages, userMsg];
+      const updatedMessages = [...prevMessages, aiMsg];
+      setMessages(updatedMessages);
+      await insertAIChatMessagePair(userMsg, aiMsg);
+    } finally {
+      setLoadingAI(false);
     }
   };
 
-  const handlePreviousQuestion = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    
-    if (currentQuestion > 0) {
-      setCurrentQuestion(currentQuestion - 1);
-      setUserResponse('');
-      setAiResponse('');
-      setShowAiResponse(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <Modal
-        visible={visible}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={onClose}
-      >
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#D4DE95" />
-          <Text style={styles.loadingText}>Loading your values...</Text>
-        </View>
-      </Modal>
+  const handleResetChat = async () => {
+    Alert.alert(
+      'Reset Chat',
+      'Are you sure you want to delete all your affirmation chat history?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset', style: 'destructive', onPress: async () => {
+            await deleteAllAIChatMessages();
+            setMessages([]);
+          }
+        }
+      ]
     );
-  }
+  };
+
+  const showWelcome = messages.length === 0;
 
   return (
     <Modal
@@ -182,109 +103,110 @@ const AffirmIdentityModal = ({ visible, onClose }) => {
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <View style={styles.modalContainer}>
-        <View style={styles.horizontalBar} />
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-          <Text style={styles.title}>Affirm Your Identity</Text>
-          
-          {/* Core Values Display */}
-          {coreValues.length > 0 ? (
-            <View style={styles.valuesContainer}>
-              <Text style={styles.valuesTitle}>Your Core Values:</Text>
-              <View style={styles.valuesList}>
-                {coreValues.map((value, index) => (
-                  <View key={index} style={styles.valueItem}>
-                    <Ionicons name="diamond" size={14} color="#D4DE95" />
-                    <Text style={styles.valueText}>{value.description}</Text>
+      <View style={{ flex: 1, backgroundColor: '#2B2B2B' }}>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 48 : 36}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.horizontalBarOuter}>
+              <View style={styles.horizontalBar} />
+            </View>
+            <View style={styles.titleRow}>
+              <Text style={styles.title}>Affirm Identity</Text>
+              <TouchableOpacity onPress={handleResetChat} style={{ padding: 8 }}>
+                <MaterialCommunityIcons name="restore" size={26} color="#B9C096" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView
+              style={styles.content}
+              ref={scrollViewRef}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingBottom: 80 }}
+              onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+            >
+              {showWelcome ? (
+                <View style={{ marginBottom: 16 }}>
+                  <Text style={[styles.msgHeader, styles.msgHeaderAI]}>{persona.toUpperCase()}</Text>
+                  <View style={styles.aiMsg}>
+                    <Markdown style={markdownStyles}>
+                      {`**Welcome!**\n\nChat with your AI assistant to affirm your identity and stay authentic.`}
+                    </Markdown>
                   </View>
-                ))}
-              </View>
-            </View>
-          ) : (
-            <View style={styles.noValuesContainer}>
-              <Ionicons name="information-circle" size={20} color="#A1A1AA" />
-              <Text style={styles.noValuesText}>
-                You haven't defined your core values yet. This affirmation will help you reflect on your general identity and principles.
-              </Text>
-            </View>
-          )}
-
-          {/* Question */}
-          <View style={styles.questionContainer}>
-            <Text style={styles.questionCounter}>
-              Question {currentQuestion + 1} of {affirmationQuestions.length}
-            </Text>
-            <Text style={styles.questionText}>
-              {affirmationQuestions[currentQuestion].text}
-            </Text>
-          </View>
-
-          {/* User Response Input */}
-          <View style={styles.responseContainer}>
-            <TextInput
-              style={styles.responseInput}
-              multiline
-              numberOfLines={4}
-              placeholder={affirmationQuestions[currentQuestion].placeholder}
-              placeholderTextColor="#A1A1AA"
-              value={userResponse}
-              onChangeText={setUserResponse}
-              textAlignVertical="top"
-            />
-          </View>
-
-          {/* AI Response */}
-          {showAiResponse && (
-            <View style={styles.aiResponseContainer}>
-              <View style={styles.aiResponseHeader}>
-                <Ionicons name="sparkles" size={16} color="#D4DE95" />
-                <Text style={styles.aiResponseTitle}>AI Reflection</Text>
-              </View>
-              <Text style={styles.aiResponseText}>{aiResponse}</Text>
-            </View>
-          )}
-
-          {/* Action Buttons */}
-          <View style={styles.buttonContainer}>
-            {!showAiResponse ? (
-              <TouchableOpacity 
-                style={[styles.actionButton, isGeneratingResponse && styles.disabledButton]} 
-                onPress={generateAiResponse}
-                disabled={isGeneratingResponse}
-              >
-                {isGeneratingResponse ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <>
-                    <Ionicons name="sparkles" size={16} color="#fff" style={styles.buttonIcon} />
-                    <Text style={styles.actionButtonText}>Get AI Reflection</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity style={styles.actionButton} onPress={handleNextQuestion}>
-                <Text style={styles.actionButtonText}>
-                  {currentQuestion < affirmationQuestions.length - 1 ? 'Next Question' : 'Complete'}
-                </Text>
-              </TouchableOpacity>
-            )}
-
-            <View style={styles.navigationButtons}>
-              {currentQuestion > 0 && (
-                <TouchableOpacity style={styles.navButton} onPress={handlePreviousQuestion}>
-                  <Text style={styles.navButtonText}>Previous</Text>
-                </TouchableOpacity>
+                </View>
+              ) : (
+                <>
+                  {messages.map((msg, idx) => (
+                    <View key={idx} style={{ marginBottom: 2 }}>
+                      <Text
+                        style={[
+                          styles.msgHeader,
+                          msg.role === 'user' ? styles.msgHeaderUser : styles.msgHeaderAI
+                        ]}
+                      >
+                        {(msg.role === 'user' ? 'YOU' : persona).toUpperCase()}
+                      </Text>
+                      <View style={msg.role === 'user' ? styles.userMsg : styles.aiMsg}>
+                        {msg.role === 'assistant' ? (
+                          <Markdown style={markdownStyles}>
+                            {msg.content?.replace(/\n/g, '\n')}
+                          </Markdown>
+                        ) : (
+                          <Text style={styles.msgText}>{msg.content}</Text>
+                        )}
+                      </View>
+                    </View>
+                  ))}
+                  {loadingAI && (
+                    <View style={{ marginBottom: 2 }}>
+                      <Text style={[styles.msgHeader, styles.msgHeaderAI]}>{persona.toUpperCase()}</Text>
+                      <View style={styles.aiMsg}>
+                        <Text style={{ color: '#B3B3B3', fontSize: 15, fontStyle: 'italic' }}>AI is thinking{thinkingDots}</Text>
+                      </View>
+                    </View>
+                  )}
+                </>
               )}
-              
-              <TouchableOpacity style={styles.cancelButton} onPress={closeModal}>
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+            </ScrollView>
+            <View style={styles.chatBoxRow}>
+              <TextInput
+                style={styles.chatInput}
+                placeholder="Type your message..."
+                placeholderTextColor="#A1A1AA"
+                value={input}
+                onChangeText={setInput}
+                onSubmitEditing={handleSend}
+                returnKeyType="default"
+                blurOnSubmit={false}
+              />
+              <TouchableOpacity style={styles.sendBtn} onPress={handleSend}>
+                <MaterialCommunityIcons name="send" size={26} style={{ left: 2 }} color="#232323" />
               </TouchableOpacity>
             </View>
           </View>
-        </ScrollView>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );
+};
+
+const markdownStyles = {
+  body: { color: '#fff', fontSize: 15 },
+  text: { color: '#fff' },
+  strong: { color: '#D4DE95' },
+  em: { color: '#B9C096' },
+  code_inline: { backgroundColor: '#232323', color: '#D4DE95', borderRadius: 4, padding: 2 },
+  code_block: { backgroundColor: '#232323', color: '#D4DE95', borderRadius: 6, padding: 8 },
+  link: { color: '#B9C096', textDecorationLine: 'underline' },
+  heading1: { color: '#D4DE95', fontSize: 18, fontWeight: 'bold' },
+  heading2: { color: '#D4DE95', fontSize: 16, fontWeight: 'bold' },
+  heading3: { color: '#D4DE95', fontSize: 15, fontWeight: 'bold' },
+  hr: {
+    borderBottomColor: '#555',
+    borderBottomWidth: 1,
+    marginVertical: 12,
+  },
 };
 
 const styles = {
@@ -294,186 +216,107 @@ const styles = {
     paddingHorizontal: 20,
     paddingTop: 10,
   },
-  horizontalBar: {
-    width: 40,
-    height: 4,
-    backgroundColor: '#555',
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: 20,
+  horizontalBarOuter: {
+    alignItems: 'center',
+    marginTop: 16,
+    marginBottom: 24,
   },
-  content: {
-    flex: 1,
+  horizontalBar: {
+    width: 48,
+    height: 5,
+    backgroundColor: '#555',
+    borderRadius: 3,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
   },
   title: {
     color: '#fff',
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: '700',
-    marginBottom: 24,
     textAlign: 'center',
   },
-  valuesContainer: {
-    marginBottom: 24,
-    backgroundColor: '#3C3C3C',
-    borderRadius: 16,
-    padding: 16,
-  },
-  valuesTitle: {
-    color: '#D4DE95',
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 12,
-  },
-  valuesList: {
-    gap: 8,
-  },
-  valueItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  valueText: {
-    color: '#fff',
-    fontSize: 14,
+  content: {
     flex: 1,
+    paddingBottom: 0,
   },
-  noValuesContainer: {
-    marginBottom: 24,
-    backgroundColor: '#3C3C3C',
-    borderRadius: 16,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-  },
-  noValuesText: {
-    color: '#A1A1AA',
-    fontSize: 14,
-    lineHeight: 20,
-    flex: 1,
-  },
-  questionContainer: {
-    marginBottom: 24,
-  },
-  questionCounter: {
-    color: '#A1A1AA',
-    fontSize: 14,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  questionText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
-    lineHeight: 26,
-    textAlign: 'center',
-  },
-  responseContainer: {
-    marginBottom: 24,
-  },
-  responseInput: {
-    backgroundColor: '#3C3C3C',
-    borderRadius: 12,
-    padding: 16,
-    color: '#fff',
-    fontSize: 16,
-    minHeight: 120,
-    textAlignVertical: 'top',
-  },
-  aiResponseContainer: {
+  userMsg: {
+    alignSelf: 'flex-end',
     backgroundColor: '#1e1e1e',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: '#D4DE95',
+    borderRadius: 16,
+    borderBottomRightRadius: 4,
+    padding: 12,
+    marginVertical: 6,
+    marginLeft: 40,
+    marginRight: 0,
+    maxWidth: '80%',
   },
-  aiResponseHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 12,
+  aiMsg: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#3C3C3C',
+    borderRadius: 16,
+    borderBottomLeftRadius: 4,
+    padding: 12,
+    marginVertical: 6,
+    marginRight: 40,
+    marginLeft: 0,
+    maxWidth: '80%',
   },
-  aiResponseTitle: {
-    color: '#D4DE95',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  aiResponseText: {
+  msgText: {
     color: '#fff',
     fontSize: 15,
-    lineHeight: 22,
+    fontWeight: '500',
   },
-  buttonContainer: {
-    gap: 16,
-    marginBottom: 40,
+  msgHeader: {
+    fontSize: 11,
+    color: '#B9C096',
+    fontWeight: '700',
+    marginBottom: 2,
+    letterSpacing: 0.5,
+    opacity: 0.85,
   },
-  actionButton: {
-    backgroundColor: '#1e1e1e',
+  msgHeaderAI: {
+    marginLeft: 6,
+    textAlign: 'left',
+  },
+  msgHeaderUser: {
+    marginRight: 6,
+    textAlign: 'right',
+  },
+  chatBoxRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#232323',
+    borderRadius: 24 ,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginTop: 12,
+    marginBottom: 32,
+    marginHorizontal: 0,
+  },
+  chatInput: {
+    flex: 1,
+    color: '#fff',
+    fontSize: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+  },
+  sendBtn: {
+    marginLeft: 6,
+    backgroundColor: '#D4DE95',
     borderRadius: 20,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    shadowColor: '#D4DE95',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
   },
-  disabledButton: {
-    opacity: 0.6,
-  },
-  buttonIcon: {
-    marginRight: 8,
-  },
-  actionButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  navigationButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  navButton: {
-    backgroundColor: '#555',
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    flex: 1,
-    alignItems: 'center',
-  },
-  navButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  cancelButton: {
-    backgroundColor: '#555',
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    flex: 1,
-    alignItems: 'center',
-  },
-  cancelButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: '#2B2B2B',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    color: '#fff',
-    fontSize: 16,
-    marginTop: 16,
+  sendBtnText: {
+    color: '#232323',
+    fontWeight: '700',
+    fontSize: 15,
   },
 };
 

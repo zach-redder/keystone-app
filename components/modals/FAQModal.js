@@ -47,8 +47,8 @@ const FAQModal = ({ visible, onClose }) => {
       answer: "We recommend daily review through the app's affirmation feature. You can update your keys anytime as you grow and evolve."
     },
     {
-      question: "What's the difference between Pro and Free?",
-      answer: "Free gives you all core features. Pro unlocks advanced AI personalities, unlimited keys, detailed analytics, and priority support."
+      question: "What features does Keystone include?",
+      answer: "Keystone includes unlimited keys, advanced AI personalities, detailed analytics, premium support, and all core alignment features to help you become your best self."
     },
     {
       question: "How does the AI personality work?",

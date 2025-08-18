@@ -1,89 +1,81 @@
-import { View, Text, Pressable, SafeAreaView, TouchableOpacity, Image, ScrollView, Animated } from 'react-native';
+import { View, Text, Pressable, SafeAreaView, TouchableOpacity, Image, ScrollView, Animated, Share, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
-import { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import keysStyles from '../../styles/keys';
 import AlignModal from '../../components/modals/AlignModal';
+import ActionLogResultModal from '../../components/modals/ActionLogResultModal';
 import AlignButton from '../../components/buttons/AlignButton';
 import Menu from '../../components/forms/Menu';
 import InfoModal from '../../components/modals/InfoModal';
 import DeleteConfirmationModal from '../../components/modals/DeleteConfirmationModal';
 import EditKeyModal from '../../components/modals/EditKeyModal';
 import CreateKeyModal from '../../components/modals/CreateKeyModal';
-import ProUpgradeModal from '../../components/modals/ProUpgradeModal';
+// Removed ProUpgradeModal import - no longer needed in paid-only app
 import CommunityModal from '../../components/modals/CommunityModal';
+import AffirmIdentityModal from '../../components/modals/AffirmIdentityModal';
+import ShareProgressModal from '../../components/modals/ShareProgressModal';
+// Removed ReferralModal - now using direct app sharing
 import { fetchIdentityKeys, deleteIdentityKey, updateIdentityKey, addIdentityKey } from '../../services/userKeys';
-import { checkUserProStatus } from '../../services/auth';
-import { shareKeysPage } from '../../services/shareService';
+// Removed checkUserProStatus import - app is now fully paid-only
+import { getAppStoreLink, APP_NAME } from '../../constants/appStore';
+import { getUserDayStreak } from '../../services/userPreferences';
 
-function AppButton({ title, onPress, style, icon, iconRight, plusMarginRight, animatedStyle }) {
-  const pressScale = useRef(new Animated.Value(1)).current;
-  const pressOpacity = useRef(new Animated.Value(1)).current;
-
-  const handlePressIn = () => {
-    Animated.parallel([
-      Animated.timing(pressScale, {
-        toValue: 0.96,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-      Animated.timing(pressOpacity, {
-        toValue: 0.7,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-    ]).start();
+function AppButton({ title, onPress, style, icon, iconRight, plusMarginRight }) {
+  const handlePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  };
-
-  const handlePressOut = () => {
-    // Trigger onPress when finger is released
     if (onPress) {
       onPress();
     }
-    
-    Animated.parallel([
-      Animated.timing(pressScale, {
-        toValue: 1,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-      Animated.timing(pressOpacity, {
-        toValue: 1,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-    ]).start();
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
   };
 
-  const combinedAnimatedStyle = [
-    animatedStyle,
-    {
-      transform: [
-        ...(animatedStyle?.transform || []),
-        { scale: pressScale }
-      ],
-      opacity: pressOpacity,
-    }
-  ];
+  return (
+    <TouchableOpacity 
+      onPress={handlePress}
+      style={[keysStyles.button, style]}
+      activeOpacity={0.8}
+    >
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+        {icon && <Text style={keysStyles.buttonIcon}>{icon}</Text>}
+        <Text style={keysStyles.buttonText}>{title}</Text>
+        {iconRight && (
+          <Image source={require('../../assets/plus.png')} style={{ ...keysStyles.plusImage, marginRight: plusMarginRight }} />
+        )}
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+// Simple key row component without complex animations
+function KeyRow({ keyData, onEdit, onDelete }) {
+  const handleEditPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onEdit(keyData);
+  };
+
+  const handleDeletePress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onDelete(keyData);
+  };
 
   return (
-    <Animated.View style={combinedAnimatedStyle}>
-      <Pressable 
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-        style={[keysStyles.button, style]}
+    <View style={keysStyles.inputRow}>
+      <TouchableOpacity 
+        style={keysStyles.keyTextContainer}
+        onPress={handleEditPress}
+        activeOpacity={0.8}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-          {icon && <Text style={keysStyles.buttonIcon}>{icon}</Text>}
-          <Text style={keysStyles.buttonText}>{title}</Text>
-          {iconRight && (
-            <Image source={require('../../assets/plus.png')} style={{ ...keysStyles.plusImage, marginRight: plusMarginRight }} />
-          )}
-        </View>
-      </Pressable>
-    </Animated.View>
+        <Text style={keysStyles.keyText}>{keyData.description}</Text>
+      </TouchableOpacity>
+      <TouchableOpacity 
+        style={keysStyles.trashWrap}
+        onPress={handleDeletePress}
+        activeOpacity={0.7}
+      >
+        <Image source={require('../../assets/delete.png')} style={{ width: 28, height: 28 }} resizeMode="contain" />
+      </TouchableOpacity>
+    </View>
   );
 }
 
@@ -137,27 +129,40 @@ export default function Keys() {
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [createModalVisible, setCreateModalVisible] = useState(false);
-  const [proModalVisible, setProModalVisible] = useState(false);
+  // Removed proModalVisible state - no longer needed in paid-only app
   const [communityModalVisible, setCommunityModalVisible] = useState(false);
   const [keyToDelete, setKeyToDelete] = useState(null);
   const [keyToEdit, setKeyToEdit] = useState(null);
-  const [badgeText, setBadgeText] = useState('PRO');
+  const [dayStreak, setDayStreak] = useState(0);
   const menuBtnRef = useRef(null);
   const [alignModalVisible, setAlignModalVisible] = useState(false);
+  const [affirmIdentityModalVisible, setAffirmIdentityModalVisible] = useState(false);
+  const [shareProgressModalVisible, setShareProgressModalVisible] = useState(false);
+  // Removed referralModalVisible - now using direct app sharing
+  const [resultModalVisible, setResultModalVisible] = useState(false);
+  const [resultLog, setResultLog] = useState(null);
+
+  const scrollViewRef = useRef(null);
 
   // Load user keys when component mounts or selected item changes
   useEffect(() => {
     loadUserKeys();
-    checkProStatus();
   }, [selectedItem]);
 
-  const checkProStatus = async () => {
+  // Load streak whenever the screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      loadDayStreak();
+    }, [])
+  );
+
+  const loadDayStreak = async () => {
     try {
-      const isPro = await checkUserProStatus();
-      setBadgeText(isPro ? 'COMMUNITY' : 'PRO');
+      const streak = await getUserDayStreak();
+      setDayStreak(streak);
     } catch (error) {
-      console.error('Error checking Pro status:', error);
-      setBadgeText('PRO');
+      console.error('Error loading day streak:', error);
+      setDayStreak(0);
     }
   };
 
@@ -206,20 +211,12 @@ export default function Keys() {
     }
 
     return categoryKeys.map((key, index) => (
-      <View key={key.id || index} style={keysStyles.inputRow}>
-        <TouchableOpacity 
-          style={keysStyles.keyTextContainer}
-          onPress={() => handleEditPress(key)}
-        >
-          <Text style={keysStyles.keyText}>{key.description}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={keysStyles.trashWrap}
-          onPress={() => handleDeletePress(key)}
-        >
-          <Image source={require('../../assets/delete.png')} style={{ width: 28, height: 28 }} resizeMode="contain" />
-        </TouchableOpacity>
-      </View>
+      <KeyRow
+        key={`${selectedItem.category}-${key.id || index}`}
+        keyData={key}
+        onEdit={handleEditPress}
+        onDelete={handleDeletePress}
+      />
     ));
   };
 
@@ -236,32 +233,20 @@ export default function Keys() {
   };
 
   const handleMenuItemSelect = async (item) => {
-    // Define Pro-only categories
-    const proOnlyCategories = ['identity_traits', 'motivations', 'avoidances'];
+    // 🔒 PAID-ONLY APP: All categories are now available to all users
     
-    // Check if the selected category requires Pro
-    if (proOnlyCategories.includes(item.category)) {
-      try {
-        const isPro = await checkUserProStatus();
-        if (!isPro) {
-          // User doesn't have Pro, show upgrade modal instead
-          setProModalVisible(true);
-          setMenuVisible(false);
-          return;
-        }
-      } catch (error) {
-        console.error('Error checking Pro status:', error);
-        // Show Pro modal on error for restricted categories
-        setProModalVisible(true);
-        setMenuVisible(false);
-        return;
+    // Only change if actually changing category
+    if (item.category !== selectedItem.category) {
+      setSelectedItem(item);
+      
+      // Scroll to top
+      if (scrollViewRef.current) {
+        scrollViewRef.current.scrollTo({ y: 0, animated: true });
       }
     }
     
-    // User has Pro or category is free, proceed normally
-    setSelectedItem(item);
     setMenuVisible(false);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
   };
 
   const handleInfoPress = () => {
@@ -273,12 +258,14 @@ export default function Keys() {
   };
 
   const handleDeletePress = (key) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setKeyToDelete(key);
     setDeleteModalVisible(true);
   };
 
   const handleDeleteConfirm = async () => {
     if (!keyToDelete) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     try {
       await deleteIdentityKey(keyToDelete.id);
@@ -293,12 +280,14 @@ export default function Keys() {
   };
 
   const handleEditPress = (key) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setKeyToEdit(key);
     setEditModalVisible(true);
   };
 
   const handleEditSave = async (newValue) => {
     if (!keyToEdit) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     try {
       await updateIdentityKey(keyToEdit.id, { description: newValue });
@@ -317,31 +306,14 @@ export default function Keys() {
   };
 
   const handleCreatePress = async () => {
-    const categoryKeys = getCurrentCategoryKeys();
-    
-    try {
-      const isPro = await checkUserProStatus();
-      
-      // Check if user already has 5 keys in this category and is not Pro
-      if (categoryKeys.length >= 5 && !isPro) {
-        // Show pro upgrade modal instead
-        setProModalVisible(true);
-        return;
-      }
-    } catch (error) {
-      console.error('Error checking Pro status:', error);
-      // If there's an error checking Pro status and user has 5+ keys, show Pro modal
-      if (categoryKeys.length >= 5) {
-        setProModalVisible(true);
-        return;
-      }
-    }
+    // 🔒 PAID-ONLY APP: All users have unlimited key creation
     
     // Open modal instantly
     setCreateModalVisible(true);
   };
 
   const handleCreateSave = async (value) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     try {
       await addIdentityKey(selectedItem.category, value);
       // Reload keys to get the complete data with ID
@@ -353,30 +325,28 @@ export default function Keys() {
     }
   };
 
-  const handleBadgePress = async () => {
-    try {
-      const isPro = await checkUserProStatus();
-      if (isPro) {
-        // Show Community modal for Pro users
-        setCommunityModalVisible(true);
-      } else {
-        // Show Pro upgrade modal for non-Pro users
-        setProModalVisible(true);
-      }
-    } catch (error) {
-      console.error('Error checking Pro status:', error);
-      // Show Pro modal on error to be safe
-      setProModalVisible(true);
-    }
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  };
+  // Removed handleBadgePress - no longer needed with streak UI
 
   const handleSharePress = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
-      await shareKeysPage();
+      const appStoreLink = getAppStoreLink();
+      await Share.share({
+        message: `Check out ${APP_NAME} - the app that helps you overcome doubt and become your best self! Download it here: ${appStoreLink}`,
+        url: appStoreLink,
+        title: `${APP_NAME} - Overcome Doubt`
+      });
     } catch (error) {
       console.error('Error sharing app:', error);
     }
+  };
+
+  // Removed handleRequestProUpgrade - no longer needed in paid-only app
+
+  // Handler for Affirm Identity from AlignModal
+  const handleAffirmIdentity = () => {
+    setAlignModalVisible(false);
+    setAffirmIdentityModalVisible(true);
   };
 
   return (
@@ -385,9 +355,10 @@ export default function Keys() {
         <View style={keysStyles.headerRow}>
           <Text style={keysStyles.header}>Your Keys</Text>
           <View style={keysStyles.headerButtons}>
-            <TouchableOpacity style={keysStyles.proBadgeWrap} onPress={handleBadgePress}>
-              <Text style={keysStyles.proBadge}>{badgeText}</Text>
-            </TouchableOpacity>
+            <View style={keysStyles.streakBadgeWrap}>
+              <Ionicons name="flame" size={16} color="#D4DE95" />
+              <Text style={keysStyles.streakBadge}>{dayStreak}</Text>
+            </View>
             <TouchableOpacity style={keysStyles.shareButton} onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               handleSharePress();
@@ -454,8 +425,12 @@ export default function Keys() {
           onItemSelect={handleMenuItemSelect}
         />
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={keysStyles.scrollView}>  
-
+        <ScrollView 
+          ref={scrollViewRef}
+          showsVerticalScrollIndicator={false} 
+          contentContainerStyle={keysStyles.scrollView}
+          scrollEventThrottle={16}
+        >  
           {renderCategoryKeys()}
 
           <AppButton
@@ -465,7 +440,6 @@ export default function Keys() {
             iconRight={"+"}
             plusMarginRight={0}
           />
-
         </ScrollView>
 
         <AlignButton onPress={handleAlignButtonPress} />
@@ -496,11 +470,7 @@ export default function Keys() {
         onCreate={handleCreateSave}
         keyType={selectedItem.label.slice(0, -1)}
       />
-      <ProUpgradeModal
-        visible={proModalVisible}
-        onClose={() => setProModalVisible(false)}
-        currentPage="keys"
-      />
+      {/* Removed ProUpgradeModal - no longer needed in paid-only app */}
       <CommunityModal
         visible={communityModalVisible}
         onClose={() => setCommunityModalVisible(false)}
@@ -508,7 +478,29 @@ export default function Keys() {
       <AlignModal
         visible={alignModalVisible}
         onClose={() => setAlignModalVisible(false)}
+        onUpgradePress={() => {
+          // No longer needed - all users have full access
+        }}
+        onAffirmIdentity={handleAffirmIdentity}
+        onLogActionResult={(log) => {
+          // Automatically show result modal after successful log action
+          setResultLog(log);
+          setResultModalVisible(true);
+        }}
       />
+      <AffirmIdentityModal
+        visible={affirmIdentityModalVisible}
+        onClose={() => setAffirmIdentityModalVisible(false)}
+      />
+      <ActionLogResultModal
+        visible={resultModalVisible}
+        onClose={() => setResultModalVisible(false)}
+        log={resultLog}
+      />
+        <ShareProgressModal
+          visible={shareProgressModalVisible}
+          onClose={() => setShareProgressModalVisible(false)}
+        />
     </SafeAreaView>
   );
 }

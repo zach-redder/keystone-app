@@ -8,23 +8,79 @@ export default function Index() {
 
   useEffect(() => {
     const check = async () => {
+      console.log('=== MAIN APP ROUTING ===');
       const { status } = await checkUserStatus();
 
-      console.log('status', status);
+      console.log('Main app routing - status:', status);
   
-      if (status === 'brand_new') {
-        setRedirectTo('/onboarding/Welcome'); // ✅ new user — start onboarding
-      } else if (status === 'needs_onboarding') {
-        setRedirectTo('/onboarding/Welcome'); // email confirmed, start onboarding from beginning
-      } else if (status === 'incomplete') {
-        setRedirectTo('/onboarding/FutureSelfVision'); // resume onboarding
-      } else if (status === 'no_session') {
-        setRedirectTo('/signin'); // Route to sign-in screen if no session
-      } else if (status === 'complete') {
-        setRedirectTo('/tabs/home');
-      } else {
-        console.error('Unknown error or user state.');
-        setRedirectTo('/signin');
+      switch (status) {
+        case 'no_session':
+          // No active session, route to sign-in
+          console.log('Main app routing - Redirecting to /signin');
+          setRedirectTo('/onboarding/Welcome');
+          break;
+          
+        case 'needs_email_confirmation':
+          // User signed up but email not confirmed
+          console.log('Main app routing - Redirecting to /register');
+          setRedirectTo('/register');
+          break;
+          
+        case 'needs_onboarding':
+          // Brand new user or user who needs to start onboarding
+          console.log('Main app routing - Redirecting to /onboarding/Welcome');
+          setRedirectTo('/onboarding/Welcome');
+          break;
+          
+        case 'needs_quiz':
+          // User has started identity keys but needs to complete quiz
+          console.log('Main app routing - Redirecting to /onboarding/Quiz/1');
+          setRedirectTo('/onboarding/Quiz/1');
+          break;
+          
+        case 'needs_user_info':
+          // User has completed quiz but needs to enter user info
+          console.log('Main app routing - Redirecting to /onboarding/Quiz/UserInfo');
+          setRedirectTo('/onboarding/Quiz/UserInfo');
+          break;
+          
+        case 'needs_referral_code':
+          // User has completed quiz and user info, ready for referral code step
+          console.log('Main app routing - Redirecting to /onboarding/ReferralCode');
+          setRedirectTo('/onboarding/ReferralCode');
+          break;
+          
+        case 'ready_for_subscription':
+          // User has completed quiz and user info, ready for subscription
+          console.log('Main app routing - Redirecting to /onboarding/Subscription');
+          setRedirectTo('/onboarding/Subscription');
+          break;
+          
+        case 'subscription_complete':
+          // User has subscribed but onboarding not marked complete in database
+          console.log('Main app routing - Redirecting to /onboarding/Subscription');
+          setRedirectTo('/onboarding/Subscription');
+          break;
+          
+        case 'complete':
+          // User has completed onboarding, route to home
+          console.log('Main app routing - Redirecting to /tabs/home');
+          setRedirectTo('/tabs/home');
+          break;
+          
+        case 'error':
+          // Database error, route to sign-in as fallback
+          console.error('Database error in user status check');
+          console.log('Main app routing - Redirecting to /signin (error)');
+          setRedirectTo('/signin');
+          break;
+          
+        default:
+          // Unknown status, route to sign-in as fallback
+          console.error('Unknown user status:', status);
+          console.log('Main app routing - Redirecting to /signin (unknown)');
+          setRedirectTo('/signin');
+          break;
       }
     };
   

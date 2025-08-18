@@ -2,6 +2,7 @@ import { supabase } from '../lib/supabase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { addIdentityKeysBatch, IdentityKey } from './userKeys';
 import { handleNewUserEmailList } from './emailListService';
+import { createFirstReminder } from './reminderService';
 
 interface Preferences {
   timezone?: string;
@@ -17,11 +18,25 @@ export const signUpUser = async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        emailRedirectTo: 'keystone://emailconfirmation', // Deep link back to app
+      },
     });
 
     if (error) {
-      console.error('Signup error:', error);
-      throw error;
+      // Only log unexpected errors
+      const msg = error?.message?.toLowerCase() || '';
+      if (
+        msg.includes('password should be at least 8 characters') ||
+        msg.includes('anonymous sign-ins are disabled') ||
+        msg.includes('invalid')
+      ) {
+        // Do not log known user input errors
+        throw error;
+      } else {
+        console.error('Signup error:', error);
+        throw error;
+      }
     }
     
     console.log('Signup response:', {
@@ -39,8 +54,19 @@ export const signUpUser = async (email: string, password: string) => {
     console.log('Signup successful - user created, waiting for email confirmation');
     return data.user;
   } catch (error) {
-    console.error('Error in signUpUser:', error);
-    throw error;
+    // Only log unexpected errors
+    const msg = (error as any)?.message?.toLowerCase() || '';
+    if (
+      msg.includes('password should be at least 8 characters') ||
+      msg.includes('anonymous sign-ins are disabled') ||
+      msg.includes('invalid')
+    ) {
+      // Do not log known user input errors
+      throw error;
+    } else {
+      console.error('Error in signUpUser:', error);
+      throw error;
+    }
   }
 };
 
@@ -51,11 +77,15 @@ export const signInUser = async (email: string, password: string) => {
       password,
     });
 
-    console.log('Sign-in response:', { data, error });
-
     if (error) {
-      console.error('Sign-in error:', error);
-      throw error;
+      const msg = error?.message?.toLowerCase() || '';
+      if (msg.includes('missing email or phone')) {
+        // Do not log known user input errors
+        throw error;
+      } else {
+        console.error('Sign-in error:', error);
+        throw error;
+      }
     }
 
     const user = data.user;
@@ -66,14 +96,20 @@ export const signInUser = async (email: string, password: string) => {
     console.log('Sign-in successful for user:', user.id);
     return user;
   } catch (error) {
-    console.error('Error in signInUser:', error);
-    throw error;
+    const msg = (error as any)?.message?.toLowerCase() || '';
+    if (msg.includes('missing email or phone')) {
+      // Do not log known user input errors
+      throw error;
+    } else {
+      console.error('Error in signInUser:', error);
+      throw error;
+    }
   }
 };
 
 export const resetPassword = async (email: string) => {
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: 'keystone-app://reset-password', // Deep link for password reset
+    redirectTo: 'keystone://resetpassword',
   });
 
   if (error) throw error;
@@ -83,14 +119,20 @@ export const resetPassword = async (email: string) => {
 export const insertUserProfileAfterConfirmation = async (
   preferences: Preferences
 ) => {
+  console.log('insertUserProfileAfterConfirmation - Starting with preferences:', preferences);
+  
   const {
     data: { user },
     error: userError,
   } = await supabase.auth.getUser();
 
-  if (userError || !user) throw userError;
+  if (userError || !user) {
+    console.error('insertUserProfileAfterConfirmation - User error:', userError);
+    throw userError;
+  }
 
   const userId = user.id;
+  console.log('insertUserProfileAfterConfirmation - User ID:', userId);
 
   // Check if user profile already exists
   const { data: existingProfile, error: profileCheckError } = await supabase
@@ -106,13 +148,24 @@ export const insertUserProfileAfterConfirmation = async (
     return true;
   }
 
-  console.log('Inserting user profile:', { userId, email: user.email });
+  // Get user name from AsyncStorage
+  let userName = '';
+  try {
+    userName = await AsyncStorage.getItem('@user_name') || '';
+    console.log('Retrieved user name from AsyncStorage:', userName);
+  } catch (error) {
+    console.error('Error retrieving user name from AsyncStorage:', error);
+  }
+
+  console.log('Inserting user profile:', { userId, email: user.email, name: userName });
 
   // Insert into users table
+  console.log('insertUserProfileAfterConfirmation - Inserting user profile with onboarding_complete: true');
   const { error: userInsertError } = await supabase.from('users').insert([
     {
       id: userId,
       email: user.email,
+      name: userName.trim() || null, // Use null if name is empty
       is_pro: false,
       onboarding_complete: true,
     },
@@ -122,20 +175,26 @@ export const insertUserProfileAfterConfirmation = async (
     console.error('Error inserting user profile:', userInsertError);
     throw userInsertError;
   }
+  
+  console.log('insertUserProfileAfterConfirmation - User profile inserted successfully');
 
-  // Add user to Resend email list
-  try {
-    if (user.email) {
-      console.log('Adding user to Resend email list:', user.email);
-      await handleNewUserEmailList({
-        email: user.email,
-        sendWelcome: true,
-      });
-    }
-  } catch (resendError) {
-    console.error('Error adding user to Resend email list:', resendError);
-    // Don't throw the error here - we don't want to fail user creation if email list fails
-    // You might want to log this to your error tracking service
+  // Add user to Resend email list (non-blocking)
+  if (user.email) {
+    const userEmail = user.email; // Store email to avoid TypeScript error
+    console.log('Adding user to Resend email list:', userEmail);
+    // Use setTimeout to make this non-blocking
+    setTimeout(async () => {
+      try {
+        await handleNewUserEmailList({
+          email: userEmail,
+          sendWelcome: true,
+        });
+      } catch (resendError) {
+        console.error('Error adding user to Resend email list:', resendError);
+        // Don't throw the error here - we don't want to fail user creation if email list fails
+        // You might want to log this to your error tracking service
+      }
+    }, 100); // Small delay to ensure user creation completes first
   }
 
   // Use provided preferences or fallback to defaults
@@ -154,6 +213,125 @@ export const insertUserProfileAfterConfirmation = async (
   if (prefInsertError) {
     console.error('Error inserting user preferences:', prefInsertError);
     throw prefInsertError;
+  }
+
+  // Create first reminder
+  try {
+    console.log('Creating first reminder for user...');
+    await createFirstReminder();
+  } catch (reminderError) {
+    console.error('Error creating first reminder:', reminderError);
+    // Don't throw - non-critical error
+  }
+
+  // Handle pending referral code if user redeemed one during onboarding
+  try {
+    console.log('Checking for pending referral code...');
+    const pendingReferralCode = await AsyncStorage.getItem('pending_referral_code');
+    
+    if (pendingReferralCode) {
+      const referralInfo = JSON.parse(pendingReferralCode);
+      console.log('Found pending referral code:', referralInfo);
+      
+      // Apply the referral code benefits
+      const expiresAt = referralInfo.durationMonths 
+        ? new Date(Date.now() + referralInfo.durationMonths * 30 * 24 * 60 * 60 * 1000).toISOString()
+        : null;
+      
+      // Update user with referral subscription info
+      const updateData: any = { 
+        is_pro: true,
+        referral_subscription_type: referralInfo.subscriptionType
+      };
+      
+      if (expiresAt && referralInfo.subscriptionType !== 'lifetime') {
+        updateData.pro_expires_at = expiresAt;
+      }
+      
+      const { error: updateError } = await supabase
+        .from('users')
+        .update(updateData)
+        .eq('id', userId);
+      
+      if (updateError) {
+        console.error('Error updating user with referral subscription:', updateError);
+      } else {
+        console.log('Successfully applied referral code benefits to user');
+        
+        // Record the redemption
+        const { error: redemptionError } = await supabase
+          .from('referral_redemptions')
+          .insert([{
+            user_id: userId,
+            referral_code: referralInfo.code,
+            subscription_type: referralInfo.subscriptionType,
+            redeemed_at: referralInfo.redeemedAt,
+            expires_at: expiresAt
+          }]);
+        
+        if (redemptionError) {
+          console.error('Error recording referral redemption:', redemptionError);
+        } else {
+          console.log('Successfully recorded referral redemption');
+        }
+        
+        // Update usage count in referral_codes table
+        const { data: currentCode } = await supabase
+          .from('referral_codes')
+          .select('used_count')
+          .eq('code', referralInfo.code)
+          .single();
+        
+        if (currentCode) {
+          await supabase
+            .from('referral_codes')
+            .update({ used_count: currentCode.used_count + 1 })
+            .eq('code', referralInfo.code);
+        }
+      }
+      
+      // Clear the pending referral code
+      await AsyncStorage.removeItem('pending_referral_code');
+    }
+  } catch (referralError) {
+    console.error('Error handling pending referral code:', referralError);
+    // Don't throw - non-critical error
+  }
+
+  // Handle pending alignment scores from quiz
+  try {
+    console.log('Checking for pending alignment scores from quiz...');
+    const pendingAlignmentScores = await AsyncStorage.getItem('pending_alignment_scores');
+    
+    if (pendingAlignmentScores) {
+      const alignmentScores = JSON.parse(pendingAlignmentScores);
+      console.log('Found pending alignment scores:', alignmentScores);
+      
+      // Update user with alignment scores
+      const { error: alignmentError } = await supabase
+        .from('users')
+        .update({
+          core_values: alignmentScores.core_values,
+          identity_traits: alignmentScores.identity_traits,
+          future_self_vision: alignmentScores.future_self_vision,
+          avoidances: alignmentScores.avoidances,
+          motivations: alignmentScores.motivations,
+          life_goals: alignmentScores.life_goals
+        })
+        .eq('id', userId);
+      
+      if (alignmentError) {
+        console.error('Error updating user with alignment scores:', alignmentError);
+      } else {
+        console.log('Successfully transferred alignment scores to database');
+      }
+      
+      // Clear the pending alignment scores
+      await AsyncStorage.removeItem('pending_alignment_scores');
+    }
+  } catch (alignmentError) {
+    console.error('Error handling pending alignment scores:', alignmentError);
+    // Don't throw - non-critical error
   }
 
   // Get identity keys from AsyncStorage
@@ -281,6 +459,19 @@ export const insertUserProfileAfterConfirmation = async (
     throw error;
   }
 
+  // Verify the user profile was created correctly
+  const { data: verifyData, error: verifyError } = await supabase
+    .from('users')
+    .select('id, onboarding_complete')
+    .eq('id', userId)
+    .single();
+    
+  if (verifyError) {
+    console.error('Error verifying user profile creation:', verifyError);
+  } else {
+    console.log('insertUserProfileAfterConfirmation - Verification successful:', verifyData);
+  }
+
   return true;
 };
 
@@ -386,50 +577,119 @@ export const checkUserStatus = async () => {
 
   const user = session?.user;
 
+  console.log('checkUserStatus - Session user:', user ? { id: user.id, email: user.email, emailConfirmed: user.email_confirmed_at } : 'No user');
+
   if (!user) {
-    // No active session, route to sign-up screen
+    // No active session, route to sign-in screen
+    console.log('checkUserStatus - No session, returning no_session');
     return { status: 'no_session' };
   }
 
   // Check if user's email is confirmed
   const emailConfirmed = user.email_confirmed_at !== null;
   
+  console.log('checkUserStatus - Email confirmed:', emailConfirmed);
+  
   if (!emailConfirmed) {
     // User signed up but hasn't confirmed email yet
-    // This should be handled in the registration flow, not here
-    // If we get here, something went wrong, so sign them out and start fresh
-    await supabase.auth.signOut();
-    return { status: 'no_session' };
+    // Route to registration flow
+    console.log('checkUserStatus - Email not confirmed, returning needs_email_confirmation');
+    return { status: 'needs_email_confirmation' };
   }
 
   // Check database for user profile and onboarding status
   const { data, error } = await supabase
     .from('users')
-    .select('onboarding_complete')
+    .select('onboarding_complete, is_pro')
     .eq('id', user.id)
     .maybeSingle();
 
   if (error) {
-    console.error('Error fetching onboarding status:', error);
+    console.error('Error fetching user status:', error);
     return { status: 'error' };
   }
 
-  console.log('User database record:', data);
+  console.log('checkUserStatus - User database record:', data);
 
   if (!data) {
     // User is signed in and email confirmed, but no database record exists
     // This means they need to start onboarding from the beginning
     // Clear any stale onboarding data
+    console.log('checkUserStatus - No database record, clearing onboarding data and returning needs_onboarding');
     await clearOnboardingData();
     return { status: 'needs_onboarding' };
   }
 
+  // Check AsyncStorage for onboarding progress
+  const onboardingComplete = await AsyncStorage.getItem('onboarding_complete');
+  const hasSubscription = await AsyncStorage.getItem('subscription_complete');
+  const hasUserInfo = await AsyncStorage.getItem('@user_name');
+  const hasQuizAnswers = await AsyncStorage.getItem('quiz_answers');
+  const hasFutureSelf = await AsyncStorage.getItem('future_self_vision');
+  const hasLifeGoals = await AsyncStorage.getItem('life_goals');
+  const hasCoreValues = await AsyncStorage.getItem('core_values');
+
+  console.log('checkUserStatus - AsyncStorage onboarding state:', {
+    onboardingComplete,
+    hasSubscription,
+    hasUserInfo,
+    hasQuizAnswers,
+    hasFutureSelf,
+    hasLifeGoals,
+    hasCoreValues
+  });
+
   // Update local storage with current database state
   await AsyncStorage.setItem('onboarding_complete', data.onboarding_complete ? 'true' : 'false');
 
-  return data.onboarding_complete
-    ? { status: 'complete' }
-    : { status: 'incomplete' };
+  console.log('checkUserStatus - Database onboarding_complete:', data.onboarding_complete);
+
+  // If user has completed onboarding in database, they're done
+  if (data.onboarding_complete) {
+    console.log('checkUserStatus - Onboarding complete in database, returning complete');
+    return { status: 'complete' };
+  }
+
+  // Check for subscription completion
+  if (hasSubscription === 'true') {
+    // User has subscribed but onboarding not marked complete in database
+    // This shouldn't happen normally, but route to subscription page to be safe
+    console.log('checkUserStatus - Has subscription but not complete in DB, returning subscription_complete');
+    return { status: 'subscription_complete' };
+  }
+
+  // Check for user info completion (quiz + user info)
+  if (hasUserInfo && hasQuizAnswers) {
+    // Check if user has completed referral code step
+    const hasReferralCode = await AsyncStorage.getItem('referral_code_complete');
+    if (hasReferralCode === 'true') {
+      // User has completed referral code step, route to subscription
+      console.log('checkUserStatus - Has user info and quiz, referral complete, returning ready_for_subscription');
+      return { status: 'ready_for_subscription' };
+    } else {
+      // User has completed quiz and user info, route to referral code step
+      console.log('checkUserStatus - Has user info and quiz, needs referral, returning needs_referral_code');
+      return { status: 'needs_referral_code' };
+    }
+  }
+
+  // Check for quiz completion
+  if (hasQuizAnswers) {
+    // User has completed quiz but not user info
+    console.log('checkUserStatus - Has quiz answers, returning needs_user_info');
+    return { status: 'needs_user_info' };
+  }
+
+  // Check for identity keys completion
+  if (hasFutureSelf || hasLifeGoals || hasCoreValues) {
+    // User has started identity keys but not completed quiz
+    console.log('checkUserStatus - Has identity keys, returning needs_quiz');
+    return { status: 'needs_quiz' };
+  }
+
+  // User is signed in but hasn't started onboarding
+  console.log('checkUserStatus - No onboarding progress, returning needs_onboarding');
+  return { status: 'needs_onboarding' };
 };
 
 export const resendConfirmationEmail = async (email: string) => {
@@ -443,38 +703,9 @@ export const resendConfirmationEmail = async (email: string) => {
 };
 
 export const checkUserProStatus = async () => {
-  try {
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-    
-    if (authError || !user) {
-      console.log('User not authenticated, returning false for pro status');
-      return false; // Return false instead of throwing
-    }
-
-    const { data, error } = await supabase
-      .from('users')
-      .select('is_pro')
-      .eq('id', user.id)
-      .maybeSingle(); // Use maybeSingle instead of single
-
-    if (error) {
-      console.error('Error checking pro status:', error);
-      return false; // Return false on error instead of throwing
-    }
-
-    if (!data) {
-      console.log('User record not found, returning false for pro status');
-      return false;
-    }
-
-    return data?.is_pro || false;
-  } catch (error) {
-    console.error('Error in checkUserProStatus:', error);
-    return false;
-  }
+  // 🔒 PAID-ONLY APP: All users are considered "Pro" by default
+  // This function now always returns true since the app is behind a hard paywall
+  return true;
 };
 
 export const upgradeUserToPro = async (userId?: string) => {
@@ -508,6 +739,37 @@ export const upgradeUserToPro = async (userId?: string) => {
   }
 };
 
+export const downgradeUserToFree = async (userId?: string) => {
+  try {
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+      throw new Error('User not authenticated');
+    }
+
+    const targetUserId = userId || user.id;
+
+    // Update user to free status in database
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({ is_pro: false })
+      .eq('id', targetUserId);
+
+    if (updateError) {
+      throw updateError;
+    }
+
+    console.log('Successfully downgraded user to free:', targetUserId);
+    return true;
+  } catch (error) {
+    console.error('Error downgrading user to free:', error);
+    throw error;
+  }
+};
+
 export const checkUserProfileExists = async (): Promise<boolean> => {
   try {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -535,6 +797,21 @@ export const checkUserProfileExists = async (): Promise<boolean> => {
   }
 };
 
+export const checkEmailExists = async (email: string): Promise<boolean> => {
+  // Check in public.users table
+  const { data: userData, error: userError } = await supabase
+    .from('users')
+    .select('id')
+    .eq('email', email)
+    .maybeSingle();
+  if (userError) {
+    console.error('Error checking if email exists in users table:', userError);
+  }
+  if (userData) return true;
+
+  return false;
+};
+
 export const clearOnboardingData = async () => {
   try {
     console.log('Clearing onboarding data from AsyncStorage...');
@@ -551,9 +828,53 @@ export const clearOnboardingData = async () => {
       'lifegoals_custom_options',
       'corevalues_custom_options',
       'aipersonality_custom_options',
+      'subscription_complete',
+      'referral_code_complete',
+      'pending_referral_code',
+      'pending_alignment_scores',
+      'quiz_answers',
+      '@user_name',
+      '@user_age',
     ]);
     console.log('Onboarding data cleared successfully');
   } catch (error) {
     console.error('Error clearing onboarding data:', error);
+  }
+};
+
+// Mark subscription as complete
+export const markSubscriptionComplete = async () => {
+  try {
+    await AsyncStorage.setItem('subscription_complete', 'true');
+    console.log('Subscription marked as complete');
+    return true;
+  } catch (error) {
+    console.error('Error marking subscription complete:', error);
+    return false;
+  }
+};
+
+// Check if subscription is complete
+export const isSubscriptionComplete = async (): Promise<boolean> => {
+  try {
+    const subscriptionComplete = await AsyncStorage.getItem('subscription_complete');
+    return subscriptionComplete === 'true';
+  } catch (error) {
+    console.error('Error checking subscription status:', error);
+    return false;
+  }
+};
+
+export const updateUserPassword = async (newPassword: string) => {
+  try {
+    const { data, error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) {
+      console.error('Error updating password:', error);
+      throw error;
+    }
+    return data;
+  } catch (error) {
+    console.error('Error in updateUserPassword:', error);
+    throw error;
   }
 };

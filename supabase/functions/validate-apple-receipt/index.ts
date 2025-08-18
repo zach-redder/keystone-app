@@ -56,6 +56,7 @@ interface AppleVerifyReceiptResponse {
 
 const PROD_ENDPOINT = 'https://buy.itunes.apple.com/verifyReceipt'
 const SANDBOX_ENDPOINT = 'https://sandbox.itunes.apple.com/verifyReceipt'
+const LIFETIME_SKU = 'com.reddermedia.keystone.pro.lifetime';
 
 async function postToApple(url: string, body: VerifyReceiptRequest): Promise<AppleVerifyReceiptResponse> {
   const res = await fetch(url, {
@@ -76,9 +77,11 @@ function getNewestActive(receipts: AppleInAppReceipt[] | undefined): AppleInAppR
 }
 
 function isActive(r: AppleInAppReceipt | null): boolean {
-  if (!r) return false
-  const now = Date.now()
-  const exp = Number(r.expires_date_ms || '0')
+  if (!r) return false;
+  // Lifetime: no expires_date_ms expected; treat as active
+  if (r.product_id === LIFETIME_SKU) return true;
+  const now = Date.now();
+  const exp = Number(r.expires_date_ms || '0');
   return exp > now
 }
 
@@ -120,8 +123,10 @@ serve(async (req) => {
       appleResp = await postToApple(PROD_ENDPOINT, baseRequest)
     }
 
-    const newest = getNewestActive(appleResp.latest_receipt_info)
-    const active = isActive(newest)
+    const newest = getNewestActive(appleResp.latest_receipt_info);
+    // Lifetime override: if any receipt has lifetime sku, force active
+    const anyLifetime = appleResp.latest_receipt_info?.some(r => r.product_id === LIFETIME_SKU);
+    let active = isActive(newest) || anyLifetime;
 
     if (appleResp.status === 0) {
       await updateUserProStatus(userId, active)
@@ -136,7 +141,8 @@ serve(async (req) => {
         status: appleResp.status,
         environment: appleResp.environment,
         latestCount: appleResp.latest_receipt_info?.length || 0
-      }
+      },
+      rawReceipts: appleResp.latest_receipt_info || []
     }), { status: 200, headers: { 'Content-Type': 'application/json' } })
   } catch (e) {
     console.error('Unhandled error', e)

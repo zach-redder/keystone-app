@@ -1,16 +1,34 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, Modal, Animated, Dimensions, PanResponder } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, Animated, Dimensions, PanResponder, Easing } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import AffirmIdentityModal from './AffirmIdentityModal';
+import LogActionModal from './LogActionModal';
+import ActionLogResultModal from './ActionLogResultModal';
+import ShareProgressModal from './ShareProgressModal';
+// Removed checkUserProStatus import - app is now fully paid-only
+import { fetchTodaysActionLogCount } from '../../services/actionLogs';
 
 const { height: screenHeight } = Dimensions.get('window');
 
-const AlignModal = ({ visible, onClose }) => {
+const AlignModal = ({ visible, onClose, onUpgradePress, onAffirmIdentity, onLogActionResult }) => {
   const slideAnim = useRef(new Animated.Value(screenHeight)).current;
   const overlayOpacity = useRef(new Animated.Value(0)).current;
   const dragOffset = useRef(new Animated.Value(0)).current;
   const isClosing = useRef(false);
-  const [showAffirmIdentityModal, setShowAffirmIdentityModal] = useState(false);
+  const [showLogActionModal, setShowLogActionModal] = useState(false);
+  // Removed checkingLimit state - no longer needed in paid-only app
+  const [showShareProgressModal, setShowShareProgressModal] = useState(false);
+
+  // Animation refs for sequential icon fade-ins
+  const affirmIconAnim = useRef(new Animated.Value(0)).current;
+  const logIconAnim = useRef(new Animated.Value(0)).current;
+  const shareIconAnim = useRef(new Animated.Value(0)).current;
+  
+  // Button press animations
+  const affirmScaleAnim = useRef(new Animated.Value(1)).current;
+  const logScaleAnim = useRef(new Animated.Value(1)).current;
+  const shareScaleAnim = useRef(new Animated.Value(1)).current;
 
   // Pan responder for drag gestures - applies only to draggable content area
   const panResponder = useRef(
@@ -77,30 +95,66 @@ const AlignModal = ({ visible, onClose }) => {
     });
   };
 
-  const handleAffirmIdentity = () => {
-    console.log('AlignModal: Affirm Identity clicked');
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setShowAffirmIdentityModal(true);
-    console.log('AlignModal: showAffirmIdentityModal set to true');
+  // Enhanced button press handlers with smooth animations
+  const createButtonPressHandler = (scaleAnim, callback, hapticType = Haptics.ImpactFeedbackStyle.Medium) => {
+    return () => {
+      Animated.sequence([
+        Animated.spring(scaleAnim, {
+          toValue: 0.95,
+          useNativeDriver: true,
+          tension: 200,
+          friction: 8,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          useNativeDriver: true,
+          tension: 200,
+          friction: 8,
+        }),
+      ]).start();
+      
+      Haptics.impactAsync(hapticType);
+      setTimeout(callback, 100); // Small delay for animation feedback
+    };
   };
 
-  const handleLogAction = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    // TODO: Add log action functionality
-    console.log('Log Action pressed');
+  const handleAffirmIdentity = createButtonPressHandler(
+    affirmScaleAnim,
+    () => {
+      console.log('AlignModal: Affirm Identity clicked');
+      if (onAffirmIdentity) onAffirmIdentity();
+    }
+  );
+
+  const handleLogAction = createButtonPressHandler(
+    logScaleAnim,
+    () => {
+      // 🔒 PAID-ONLY APP: All users have unlimited access to action logging
+      setShowLogActionModal(true);
+    }
+  );
+
+  const handleLogActionClose = () => {
+    setShowLogActionModal(false);
+    // Close the entire modal flow after logging action
+    onClose();
+  };
+
+  const handleShareProgress = createButtonPressHandler(
+    shareScaleAnim,
+    () => {
+      setShowShareProgressModal(true);
+    }
+  );
+
+  const handleShareProgressClose = () => {
+    setShowShareProgressModal(false);
+    onClose();
   };
 
   const handleCancel = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     closeModal();
-  };
-
-  const handleAffirmIdentityClose = () => {
-    console.log('AlignModal: AffirmIdentityModal is closing');
-    setShowAffirmIdentityModal(false);
-    // Close the entire modal flow after affirmation
-    console.log('AlignModal: Closing parent modal');
-    onClose();
   };
 
   useEffect(() => {
@@ -111,26 +165,59 @@ const AlignModal = ({ visible, onClose }) => {
       dragOffset.setValue(0);
       isClosing.current = false;
       
+      // Reset icon animations
+      affirmIconAnim.setValue(0);
+      logIconAnim.setValue(0);
+      shareIconAnim.setValue(0);
+      
       // Opening animation - slide up from bottom
       Animated.parallel([
         Animated.timing(slideAnim, {
           toValue: 0,
-          duration: 200,
+          duration: 300,
+          easing: Easing.out(Easing.back(1.2)),
           useNativeDriver: true,
         }),
         Animated.timing(overlayOpacity, {
           toValue: 1,
-          duration: 200,
+          duration: 300,
           useNativeDriver: true,
         }),
-      ]).start();
+      ]).start(() => {
+        // Sequential icon fade-ins with staggered delays
+        Animated.stagger(150, [
+          Animated.spring(affirmIconAnim, {
+            toValue: 1,
+            useNativeDriver: true,
+            tension: 100,
+            friction: 8,
+          }),
+          Animated.spring(logIconAnim, {
+            toValue: 1,
+            useNativeDriver: true,
+            tension: 100,
+            friction: 8,
+          }),
+          Animated.spring(shareIconAnim, {
+            toValue: 1,
+            useNativeDriver: true,
+            tension: 100,
+            friction: 8,
+          }),
+        ]).start();
+      });
+    } else {
+      // Reset icon animations when modal closes
+      affirmIconAnim.setValue(0);
+      logIconAnim.setValue(0);
+      shareIconAnim.setValue(0);
     }
   }, [visible]);
 
   return (
     <>
       <Modal
-        visible={visible && !showAffirmIdentityModal}
+        visible={visible && !showLogActionModal && !showShareProgressModal}
         transparent
         animationType="none"
         onRequestClose={onClose}
@@ -165,13 +252,59 @@ const AlignModal = ({ visible, onClose }) => {
 
             {/* Action buttons - separate from draggable area */}
             <View style={styles.buttonContainer}>
-              <TouchableOpacity style={styles.actionButton} onPress={handleAffirmIdentity}>
-                <Text style={styles.actionButtonText}>Affirm Identity</Text>
-              </TouchableOpacity>
+              <Animated.View style={{ 
+                opacity: affirmIconAnim,
+                transform: [
+                  { scale: affirmScaleAnim },
+                  { 
+                    translateY: affirmIconAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [20, 0],
+                    })
+                  }
+                ]
+              }}>
+                <TouchableOpacity style={styles.actionButton} onPress={handleAffirmIdentity}>
+                  <Ionicons name="heart" size={20} color="#D4DE95" style={styles.buttonIcon} />
+                  <Text style={styles.actionButtonText}>Affirm Identity</Text>
+                </TouchableOpacity>
+              </Animated.View>
               
-              <TouchableOpacity style={styles.actionButton} onPress={handleLogAction}>
-                <Text style={styles.actionButtonText}>Log Action</Text>
-              </TouchableOpacity>
+              <Animated.View style={{ 
+                opacity: logIconAnim,
+                transform: [
+                  { scale: logScaleAnim },
+                  { 
+                    translateY: logIconAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [20, 0],
+                    })
+                  }
+                ]
+              }}>
+                <TouchableOpacity style={styles.actionButton} onPress={handleLogAction}>
+                  <Ionicons name="pencil" size={20} color="#D4DE95" style={styles.buttonIcon} />
+                  <Text style={styles.actionButtonText}>Log Action</Text>
+                </TouchableOpacity>
+              </Animated.View>
+
+              <Animated.View style={{ 
+                opacity: shareIconAnim,
+                transform: [
+                  { scale: shareScaleAnim },
+                  { 
+                    translateY: shareIconAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [20, 0],
+                    })
+                  }
+                ]
+              }}>
+                <TouchableOpacity style={styles.actionButton} onPress={handleShareProgress}>
+                  <Ionicons name="share-social" size={20} color="#D4DE95" style={styles.buttonIcon} />
+                  <Text style={styles.actionButtonText}>Share Progress</Text>
+                </TouchableOpacity>
+              </Animated.View>
               
               <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
                 <Text style={styles.cancelButtonText}>Cancel</Text>
@@ -181,9 +314,26 @@ const AlignModal = ({ visible, onClose }) => {
         </Animated.View>
       </Modal>
 
-      <AffirmIdentityModal
-        visible={showAffirmIdentityModal}
-        onClose={handleAffirmIdentityClose}
+      <LogActionModal
+        visible={showLogActionModal}
+        onClose={handleLogActionClose}
+        onSubmit={(log) => {
+          setShowLogActionModal(false);
+          // Wait for modal close animation, then show result
+          setTimeout(() => {
+            // Pass the result back to parent for display
+            if (onLogActionResult) {
+              onLogActionResult(log);
+            }
+            onClose();
+          }, 300);
+        }}
+        onUpgradePress={onUpgradePress}
+      />
+
+      <ShareProgressModal
+        visible={showShareProgressModal}
+        onClose={handleShareProgressClose}
       />
     </>
   );
@@ -242,11 +392,18 @@ const styles = {
     paddingVertical: 20,
     paddingHorizontal: 32,
     alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
     shadowColor: '#D4DE95',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
+    shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 5,
+    borderWidth: 1,
+    borderColor: 'rgba(212, 222, 149, 0.2)',
+  },
+  buttonIcon: {
+    marginRight: 12,
   },
   actionButtonText: {
     color: '#fff',

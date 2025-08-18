@@ -3,12 +3,10 @@
     "name": "Keystone",
     "slug": "keystone",
     "scheme": "keystone",
-    "deepLinking": true,
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/keystone.png",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "splash": {
       "image": "./assets/keystone.png",
       "resizeMode": "contain",
@@ -16,28 +14,50 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "keystone-ios",
+      "bundleIdentifier": "com.reddermedia.keystone",
       "infoPlist": {
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLName": "com.reddermedia.keystone",
+            "CFBundleURLSchemes": [
+              "keystone"
+            ]
+          }
+        ],
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
+      "package": "com.reddermedia.keystone",
       "adaptiveIcon": {
         "foregroundImage": "./assets/keystone.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "keystone"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
     },
     "web": {
       "favicon": "./assets/keystone.png"
     },
     "extra": {
       "eas": {
-        "projectId": "8d662333-69a6-44eb-a191-21cb7666a62b"
+        "projectId": "dcae90a0-8eb4-4fe0-b8d0-e50c0989c2e3"
       }
     },
-    "plugins": [
-      "expo-mail-composer"
-    ]
+    "owner": "zach_redder"
   }
 }

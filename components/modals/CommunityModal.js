@@ -77,10 +77,10 @@ const CommunityModal = ({ visible, onClose }) => {
 
   const handleJoinCommunity = async () => {
     try {
-      await Linking.openURL('https://discord.me/thealignedcore');
+      await Linking.openURL('https://whop.com/the-aligned-core');
       closeModal();
     } catch (error) {
-      console.error('Error opening Discord link:', error);
+      console.error('Error opening Whop link:', error);
       // Still close modal even if link fails
       closeModal();
     }
