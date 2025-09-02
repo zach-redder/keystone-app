@@ -622,7 +622,6 @@ export const checkUserStatus = async () => {
 
   // Check AsyncStorage for onboarding progress
   const onboardingComplete = await AsyncStorage.getItem('onboarding_complete');
-  const hasSubscription = await AsyncStorage.getItem('subscription_complete');
   const hasUserInfo = await AsyncStorage.getItem('@user_name');
   const hasQuizAnswers = await AsyncStorage.getItem('quiz_answers');
   const hasFutureSelf = await AsyncStorage.getItem('future_self_vision');
@@ -631,7 +630,6 @@ export const checkUserStatus = async () => {
 
   console.log('checkUserStatus - AsyncStorage onboarding state:', {
     onboardingComplete,
-    hasSubscription,
     hasUserInfo,
     hasQuizAnswers,
     hasFutureSelf,
@@ -650,22 +648,15 @@ export const checkUserStatus = async () => {
     return { status: 'complete' };
   }
 
-  // Check for subscription completion
-  if (hasSubscription === 'true') {
-    // User has subscribed but onboarding not marked complete in database
-    // This shouldn't happen normally, but route to subscription page to be safe
-    console.log('checkUserStatus - Has subscription but not complete in DB, returning subscription_complete');
-    return { status: 'subscription_complete' };
-  }
-
   // Check for user info completion (quiz + user info)
   if (hasUserInfo && hasQuizAnswers) {
     // Check if user has completed referral code step
     const hasReferralCode = await AsyncStorage.getItem('referral_code_complete');
     if (hasReferralCode === 'true') {
-      // User has completed referral code step, route to subscription
-      console.log('checkUserStatus - Has user info and quiz, referral complete, returning ready_for_subscription');
-      return { status: 'ready_for_subscription' };
+      // User has completed referral code step, mark onboarding complete
+      console.log('checkUserStatus - Has user info and quiz, referral complete, marking onboarding complete');
+      await AsyncStorage.setItem('onboarding_complete', 'true');
+      return { status: 'complete' };
     } else {
       // User has completed quiz and user info, route to referral code step
       console.log('checkUserStatus - Has user info and quiz, needs referral, returning needs_referral_code');
@@ -703,8 +694,7 @@ export const resendConfirmationEmail = async (email: string) => {
 };
 
 export const checkUserProStatus = async () => {
-  // 🔒 PAID-ONLY APP: All users are considered "Pro" by default
-  // This function now always returns true since the app is behind a hard paywall
+  // All users are considered "Pro" by default
   return true;
 };
 
@@ -828,7 +818,6 @@ export const clearOnboardingData = async () => {
       'lifegoals_custom_options',
       'corevalues_custom_options',
       'aipersonality_custom_options',
-      'subscription_complete',
       'referral_code_complete',
       'pending_referral_code',
       'pending_alignment_scores',
@@ -842,27 +831,10 @@ export const clearOnboardingData = async () => {
   }
 };
 
-// Mark subscription as complete
-export const markSubscriptionComplete = async () => {
-  try {
-    await AsyncStorage.setItem('subscription_complete', 'true');
-    console.log('Subscription marked as complete');
-    return true;
-  } catch (error) {
-    console.error('Error marking subscription complete:', error);
-    return false;
-  }
-};
-
 // Check if subscription is complete
 export const isSubscriptionComplete = async (): Promise<boolean> => {
-  try {
-    const subscriptionComplete = await AsyncStorage.getItem('subscription_complete');
-    return subscriptionComplete === 'true';
-  } catch (error) {
-    console.error('Error checking subscription status:', error);
-    return false;
-  }
+  // All users are considered to have completed subscription
+  return true;
 };
 
 export const updateUserPassword = async (newPassword: string) => {

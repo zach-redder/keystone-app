@@ -1,13 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Dimensions, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { productIds, initIap, requestPlanPurchase, restorePurchases, validateEntitlements, teardown as teardownIap } from '../../services/iapService';
-import Haptics from 'expo-haptics';
-import { upgradeUserToPro, downgradeUserToFree } from '../../services/auth';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabase } from '../../lib/supabase';
+import * as Haptics from 'expo-haptics';
+import { downgradeUserToFree } from '../../services/auth';
+import { usePlacement, useUser } from 'expo-superwall';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -56,58 +54,39 @@ export default function SubscriptionScreen() {
 
   const insets = useSafeAreaInsets();
 
+  // Superwall hooks
+  const { registerPlacement, state: placementState } = usePlacement({
+    onError: (err) => {
+      console.error("Placement Error:", err);
+      Alert.alert('Error', 'Failed to load paywall. Please try again.');
+    },
+    onPresent: (info) => {
+      console.log("Paywall Presented:", info);
+    },
+    onDismiss: (info, result) => {
+      console.log("Paywall Dismissed:", info, "Result:", result);
+      // Handle the result - if user purchased, navigate to home
+      if (result?.outcome === 'purchased') {
+        router.push('/tabs/home');
+      }
+    },
+  });
+
+  const { user } = useUser();
+
+  // No-op effect to preserve previous structure without IAP initialization
   useEffect(() => {
     let mounted = true;
     (async () => {
-      await initIap({
-        onProUnlocked: async () => {
-          if (!mounted) return;
-          router.push('/register');
-        },
-        onPurchaseError: (error) => {
-          if (!mounted) return;
-          Alert.alert('Purchase Error', error?.message || 'Something went wrong');
+      try {
+        // Ensure user is set to free locally when viewing this screen in the current flow
+        if (mounted) {
+          try { await downgradeUserToFree(); } catch {}
         }
-      });
-      await validateEntitlements();
+      } catch {}
     })();
-    return () => { mounted = false; teardownIap(); };
+    return () => { mounted = false; };
   }, []);
-
-  useFocusEffect(
-    React.useCallback(() => {
-      validateEntitlements();
-    }, [])
-  );
-
-  const handleStartFreeTrial = async () => {
-    try {
-      setIsLoading(true);
-      const selectedProductId = productIds[selectedSubscription];
-      if (!selectedProductId) {
-        Alert.alert('Error', 'Invalid product selected');
-        return;
-      }
-      await requestPlanPurchase(selectedSubscription);
-    } catch (err) {
-      console.warn('Purchase request error:', err);
-      Alert.alert('Error', 'Failed to initiate purchase. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleRestorePurchases = async () => {
-    try {
-      setIsLoading(true);
-      await restorePurchases();
-      Alert.alert('Restore', 'Purchase restoration attempted.');
-    } catch (e) {
-      Alert.alert('Error', 'Failed to restore purchases');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   // Auto-slide functionality
   useEffect(() => {
@@ -144,357 +123,218 @@ export default function SubscriptionScreen() {
   };
 
   const handleScrollEndDrag = () => {
-    // Reset auto-scroll after 5 seconds of user inactivity
     setTimeout(() => {
       setIsUserScrolling(false);
     }, 5000);
   };
 
+  const handleClose = () => {
+    const returnTo = params.returnTo || 'home';
+    if (returnTo === 'home') {
+      router.push('/tabs/home');
+    } else if (returnTo === 'keys') {
+      router.push('/tabs/keys');
+    } else if (returnTo === 'profile') {
+      router.push('/tabs/profile');
+    } else {
+      router.back();
+    }
+  };
+
+  const handleStartFreeTrial = async () => {
+    try {
+      setIsLoading(true);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      
+      // Trigger Superwall paywall
+      await registerPlacement({
+        placement: "onboarding_complete"
+      });
+    } catch (err) {
+      console.warn('Failed to show paywall:', err);
+      Alert.alert('Error', 'Failed to show paywall. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRestorePurchases = async () => {
+    try {
+      setIsLoading(true);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      
+      // Trigger Superwall paywall with restore option
+      await registerPlacement({
+        placement: "onboarding_complete"
+      });
+    } catch (err) {
+      console.warn('Failed to show paywall:', err);
+      Alert.alert('Error', 'Failed to show paywall. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <>
-      <View style={{ height: insets.top, backgroundColor: '#B9C096' }} />
-      <View style={styles.container}>
-        {/* Header - no close button for hard paywall */}
-        <View style={styles.header}>
-          <Text style={styles.title}>Keystone</Text>
-        </View>
-
-        {/* Feature Carousel */}
-        <View style={styles.carouselWrapper}>
-          <ScrollView
-            ref={scrollViewRef}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            onScroll={handleScroll}
-            onScrollBeginDrag={handleScrollBeginDrag}
-            onScrollEndDrag={handleScrollEndDrag}
-            scrollEventThrottle={16}
-            style={styles.carousel}
-            contentContainerStyle={styles.carouselContent}
-          >
-            {features.map((feature, index) => (
-              <View key={feature.id} style={[styles.featureSlide, { width: screenWidth }]}>
-                <View style={styles.featureCard}>
-                  <View style={styles.featureContent}>
-                    {/* Icon */}
-                    <View style={styles.iconContainer}>
-                      <View style={styles.iconCircle}>
-                        <Ionicons name={feature.icon} size={32} color="#fff" />
-                      </View>
-                    </View>
-
-                    {/* Feature title */}
-                    <Text style={styles.featureTitle}>{feature.title}</Text>
-                    <Text style={styles.featureSubtitle}>{feature.subtitle}</Text>
-                  </View>
-                </View>
-              </View>
-            ))}
-          </ScrollView>
-        </View>
-
-        {/* Dots indicator */}
-        <View style={styles.dotsContainer}>
-          {features.map((feature, index) => (
-            <View
-              key={feature.id}
-              style={[
-                styles.dot,
-                currentIndex === index && styles.activeDot
-              ]}
-            />
-          ))}
-        </View>
-
-        {/* Subscription background that extends to screen edges */}
-        <View style={styles.subscriptionBackground}>
-          <View style={styles.subscriptionContent}>
-            {/* Subscription options */}
-            <View style={styles.subscriptionContainer}>
-              {/* Monthly option */}
-              <TouchableOpacity 
-                style={[
-                  styles.subscriptionOption,
-                  selectedSubscription === 'monthly' && styles.selectedOption
-                ]}
-                onPress={() => {
-                  setSelectedSubscription('monthly');
-                  Haptics.selectionAsync();
-                }}
-              >
-                <View style={styles.subscriptionOptionContent}>
-                  <Text style={styles.subscriptionTitle}>Monthly</Text>
-                  <Text style={styles.subscriptionPrice}>$9.99/month after trial ends</Text>
-                </View>
-              </TouchableOpacity>
-
-              {/* Yearly option with badge */}
-              <TouchableOpacity 
-                style={[
-                  styles.subscriptionOption, 
-                  styles.recommendedOption,
-                  selectedSubscription === 'yearly' && styles.selectedOption
-                ]}
-                onPress={() => {
-                  setSelectedSubscription('yearly');
-                  Haptics.selectionAsync();
-                }}
-              >
-                <View style={styles.saveBadge}>
-                  <Text style={styles.saveBadgeText}>Save 75%</Text>
-                </View>
-                <View style={styles.subscriptionOptionContent}>
-                  <Text style={styles.subscriptionTitle}>Yearly</Text>
-                  <Text style={styles.subscriptionPrice}>$29.99/year after trial ends</Text>
-                </View>
-              </TouchableOpacity>
-
-              {/* Lifetime option */}
-              <TouchableOpacity 
-                style={[
-                  styles.subscriptionOption,
-                  selectedSubscription === 'lifetime' && styles.selectedOption
-                ]}
-                onPress={() => {
-                  setSelectedSubscription('lifetime');
-                  Haptics.selectionAsync();
-                }}
-              >
-                <View style={styles.subscriptionOptionContent}>
-                  <Text style={styles.subscriptionTitle}>Lifetime</Text>
-                  <Text style={styles.subscriptionPrice}>$99.99 for life</Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-
-            {/* Purchase button with dynamic text */}
-            <TouchableOpacity style={[styles.trialButton, isLoading && { opacity: 0.6 }]} onPress={handleStartFreeTrial} disabled={isLoading}>
-              <Text style={styles.trialButtonText}>
-                {selectedSubscription === 'lifetime' ? (isLoading ? 'Processing...' : 'Purchase Lifetime Access') : (isLoading ? 'Processing...' : 'Start Free Trial')}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.restoreButton} onPress={handleRestorePurchases} disabled={isLoading}>
-              <Text style={styles.restoreButtonText}>Restore Purchases</Text>
-            </TouchableOpacity>
-            <Text style={styles.noPaymentText}>
-              {selectedSubscription === 'lifetime' ? 'One-time payment' : 'No payment due now'}
-            </Text>
-          </View>
-        </View>
+    <View style={{ flex: 1, backgroundColor: '#1f1f1f', paddingTop: insets.top }}>
+      {/* Header */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, paddingHorizontal: 20 }}>
+        <TouchableOpacity onPress={handleClose} style={{ position: 'absolute', left: 20 }}>
+          <Ionicons name="close" size={28} color="#fff" />
+        </TouchableOpacity>
+        <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>Upgrade</Text>
       </View>
-      <View style={{ height: insets.bottom, backgroundColor: '#2B2B2B' }} />
-    </>
+
+      {/* Features Carousel */}
+      <ScrollView
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onScroll={handleScroll}
+        onScrollBeginDrag={handleScrollBeginDrag}
+        onScrollEndDrag={handleScrollEndDrag}
+        scrollEventThrottle={16}
+        ref={scrollViewRef}
+        style={{ flexGrow: 0 }}
+      >
+        {features.map((feature) => (
+          <View key={feature.id} style={{ width: screenWidth, alignItems: 'center', paddingHorizontal: 24, paddingTop: 10 }}>
+            <View
+              style={{
+                width: 64,
+                height: 64,
+                borderRadius: 32,
+                backgroundColor: '#B9C096',
+                justifyContent: 'center',
+                alignItems: 'center',
+                marginBottom: 16,
+              }}
+            >
+              <Ionicons name={feature.icon} size={30} color="#2B2B2B" />
+            </View>
+            <Text style={{ color: '#fff', fontSize: 22, fontWeight: 'bold', marginBottom: 6, textAlign: 'center' }}>{feature.title}</Text>
+            <Text style={{ color: '#ccc', fontSize: 16, textAlign: 'center' }}>{feature.subtitle}</Text>
+          </View>
+        ))}
+      </ScrollView>
+
+      {/* Pagination dots */}
+      <View style={{ flexDirection: 'row', justifyContent: 'center', marginVertical: 12 }}>
+        {features.map((_, index) => (
+          <View
+            key={index}
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: 4,
+              marginHorizontal: 6,
+              backgroundColor: currentIndex === index ? '#B9C096' : '#555',
+            }}
+          />
+        ))}
+      </View>
+
+      {/* Subscription options */}
+      <View style={{ paddingHorizontal: 20, marginTop: 10 }}>
+        {/* Monthly */}
+        <TouchableOpacity
+          style={{
+            backgroundColor: selectedSubscription === 'monthly' ? '#2B2B2B' : 'transparent',
+            borderRadius: 14,
+            borderWidth: 1,
+            borderColor: selectedSubscription === 'monthly' ? '#3B3B3B' : '#333',
+            paddingVertical: 14,
+            paddingHorizontal: 16,
+            marginBottom: 12,
+          }}
+          onPress={() => setSelectedSubscription('monthly')}
+          activeOpacity={0.8}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>Monthly</Text>
+              <Text style={{ color: '#aaa', fontSize: 14, marginTop: 4 }}>$9.99/month after trial ends</Text>
+            </View>
+            {selectedSubscription === 'monthly' && (
+              <Ionicons name="checkmark-circle" size={22} color="#B9C096" />
+            )}
+          </View>
+        </TouchableOpacity>
+
+        {/* Yearly */}
+        <TouchableOpacity
+          style={{
+            backgroundColor: selectedSubscription === 'yearly' ? '#2B2B2B' : 'transparent',
+            borderRadius: 14,
+            borderWidth: 1,
+            borderColor: selectedSubscription === 'yearly' ? '#3B3B3B' : '#333',
+            paddingVertical: 14,
+            paddingHorizontal: 16,
+            marginBottom: 12,
+          }}
+          onPress={() => setSelectedSubscription('yearly')}
+          activeOpacity={0.8}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>Yearly</Text>
+              <Text style={{ color: '#aaa', fontSize: 14, marginTop: 4 }}>$29.99/year after trial ends</Text>
+            </View>
+            {selectedSubscription === 'yearly' && (
+              <Ionicons name="checkmark-circle" size={22} color="#B9C096" />
+            )}
+          </View>
+        </TouchableOpacity>
+
+        {/* Lifetime */}
+        <TouchableOpacity
+          style={{
+            backgroundColor: selectedSubscription === 'lifetime' ? '#2B2B2B' : 'transparent',
+            borderRadius: 14,
+            borderWidth: 1,
+            borderColor: selectedSubscription === 'lifetime' ? '#3B3B3B' : '#333',
+            paddingVertical: 14,
+            paddingHorizontal: 16,
+            marginBottom: 16,
+          }}
+          onPress={() => setSelectedSubscription('lifetime')}
+          activeOpacity={0.8}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>Lifetime</Text>
+              <Text style={{ color: '#aaa', fontSize: 14, marginTop: 4 }}>$99.99 for life</Text>
+            </View>
+            {selectedSubscription === 'lifetime' && (
+              <Ionicons name="checkmark-circle" size={22} color="#B9C096" />
+            )}
+          </View>
+        </TouchableOpacity>
+      </View>
+
+      {/* CTA Buttons */}
+      <View style={{ paddingHorizontal: 20, paddingBottom: Math.max(insets.bottom, 16) }}>
+        <TouchableOpacity
+          style={{
+            backgroundColor: '#B9C096',
+            borderRadius: 14,
+            paddingVertical: 16,
+            alignItems: 'center',
+            marginBottom: 10,
+          }}
+          onPress={handleStartFreeTrial}
+          activeOpacity={0.8}
+          disabled={isLoading}
+        >
+          <Text style={{ color: '#2B2B2B', fontSize: 18, fontWeight: 'bold' }}>
+            {selectedSubscription === 'lifetime' ? (isLoading ? 'Processing...' : 'Purchase Lifetime Access') : (isLoading ? 'Processing...' : 'Start Free Trial')}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={handleRestorePurchases} disabled={isLoading} style={{ alignItems: 'center', paddingVertical: 10 }}>
+          <Text style={{ color: '#9aa', fontSize: 14 }}>Restore Purchases</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 }
-
-const styles = {
-  container: {
-    flex: 1,
-    backgroundColor: '#B9C096',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 10,
-    position: 'relative',
-  },
-  closeButton: {
-    position: 'absolute',
-    left: 20,
-    top: 10,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(43, 43, 43, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#2B2B2B',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  iconContainer: {
-    marginBottom: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  iconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#2B2B2B',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  featureTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#2B2B2B',
-    textAlign: 'center',
-    marginBottom: 10,
-    minHeight: 30, // Consistent height for titles
-  },
-  featureSubtitle: {
-    fontSize: 16,
-    color: '#5A5A5A',
-    textAlign: 'center',
-    lineHeight: 22,
-    minHeight: 44, // Consistent height for subtitles (2 lines)
-    paddingHorizontal: 10,
-  },
-  dotsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 20,
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: 'rgba(43, 43, 43, 0.3)',
-    marginHorizontal: 4,
-  },
-  activeDot: {
-    backgroundColor: '#2B2B2B',
-  },
-  subscriptionContainer: {
-    width: '100%',
-    marginBottom: 20,
-  },
-  subscriptionBackground: {
-    backgroundColor: '#2B2B2B',
-    borderRadius: 25,
-    padding: 20,
-    paddingTop: 30,
-  },
-  subscriptionOption: {
-    backgroundColor: 'transparent',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 10,
-    position: 'relative',
-    borderWidth: 1.5,
-    borderColor: '#555',
-  },
-  selectedOption: {
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  saveBadge: {
-    position: 'absolute',
-    top: 22,
-    right: 16,
-    backgroundColor: '#fff',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    zIndex: 1,
-  },
-  saveBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#2B2B2B',
-  },
-  subscriptionContent: {
-    alignItems: 'center',
-  },
-  subscriptionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#fff',
-    marginBottom: 4,
-  },
-  subscriptionPrice: {
-    fontSize: 14,
-    color: '#A1A1AA',
-  },
-  trialButton: {
-    backgroundColor: '#D4DE95',
-    borderRadius: 35,
-    paddingVertical: 20,
-    paddingHorizontal: 40,
-    width: '100%',
-    alignItems: 'center',
-    marginBottom: 15,
-    shadowColor: '#d4de95',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.7,
-    shadowRadius: 10,
-    elevation: 12,
-  },
-  trialButtonText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#2B2B2B',
-  },
-  restoreButton: {
-    backgroundColor: 'transparent',
-    borderRadius: 35,
-    paddingVertical: 15,
-    paddingHorizontal: 40,
-    width: '100%',
-    alignItems: 'center',
-    marginBottom: 15,
-    borderWidth: 1,
-    borderColor: '#fff',
-  },
-  restoreButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
-  },
-  noPaymentText: {
-    fontSize: 14,
-    color: '#fff',
-    opacity: 0.75,
-    textAlign: 'center',
-    fontStyle: 'italic',
-    width: '100%',
-  },
-  carousel: {
-    flex: 0,
-    height: 220,
-  },
-  carouselWrapper: {
-  },
-  carouselContent: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  featureSlide: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 40, // Centered padding
-  },
-  featureCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
-    borderRadius: 20,
-    padding: 20,
-    width: screenWidth - 80, // Fixed width accounting for slide padding
-    height: 220, // Fixed height
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 5,
-    backdropFilter: 'blur(100px)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  featureContent: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    width: '100%',
-  },
-};

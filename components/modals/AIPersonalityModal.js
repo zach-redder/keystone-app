@@ -16,7 +16,7 @@ const AIPersonalityModal = ({ visible, onClose, onUpgradePress }) => {
   const [customDescription, setCustomDescription] = useState('');
   const [customPersonalities, setCustomPersonalities] = useState([]);
 
-  // Basic personalities available to all users (post-paywall)
+          // Basic personalities available to all users
   const basicPersonalities = [
     {
       name: 'Life Coach',
@@ -123,7 +123,7 @@ const AIPersonalityModal = ({ visible, onClose, onUpgradePress }) => {
     if (isCustom) {
       selected = customPersonalities.find(p => p.name === personalityName);
     } else {
-      // All personalities are now available since user passed hard paywall
+              // All personalities are now available to all users
       const allPersonalities = [...basicPersonalities, ...advancedPersonalities];
       selected = allPersonalities.find(p => p.name === personalityName);
     }

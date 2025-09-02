@@ -100,7 +100,7 @@ export default function AnimatedProfileCard() {
                             setIsTyping(false);
                             setTimeout(() => {
                                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-                                router.push('/onboarding/PaywallTrial');
+                                router.push('/register');
                             }, 800); // Much shorter final pause
                         }
                     }, 1200); // Much shorter hold phrase time

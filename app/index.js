@@ -50,18 +50,6 @@ export default function Index() {
           setRedirectTo('/onboarding/ReferralCode');
           break;
           
-        case 'ready_for_subscription':
-          // User has completed quiz and user info, ready for subscription
-          console.log('Main app routing - Redirecting to /onboarding/Subscription');
-          setRedirectTo('/onboarding/Subscription');
-          break;
-          
-        case 'subscription_complete':
-          // User has subscribed but onboarding not marked complete in database
-          console.log('Main app routing - Redirecting to /onboarding/Subscription');
-          setRedirectTo('/onboarding/Subscription');
-          break;
-          
         case 'complete':
           // User has completed onboarding, route to home
           console.log('Main app routing - Redirecting to /tabs/home');

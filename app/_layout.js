@@ -8,6 +8,7 @@ import { AppState } from 'react-native';
 import { setupReminderNotifications } from '../services/reminderService';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
+import { SuperwallProvider } from 'expo-superwall';
 
 function RootShell() {
   const router = useRouter();
@@ -90,9 +91,7 @@ function RootShell() {
           }
         } else {
           console.log('Processing other deep link:', url);
-          if (url.includes('subscription')) {
-            router.push('/subscription');
-          } else if (url.includes('home')) {
+          if (url.includes('home')) {
             router.push('/tabs/home');
           }
         }
@@ -125,5 +124,9 @@ function RootShell() {
 }
 
 export default function RootLayout() {
-  return <RootShell />;
+  return (
+    <SuperwallProvider apiKeys={{ ios: Constants.expoConfig?.extra?.superwallApiKey || "SUPERWALL_API_KEY" }}>
+      <RootShell />
+    </SuperwallProvider>
+  );
 }

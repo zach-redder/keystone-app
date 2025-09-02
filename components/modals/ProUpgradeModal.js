@@ -2,7 +2,6 @@ import React, { useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, Modal, Animated, Dimensions, PanResponder } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useUpgradeGateway } from '../../src/paywall/upgradeGateway';
 import * as Haptics from 'expo-haptics';
 
 const { height: screenHeight } = Dimensions.get('window');
@@ -13,7 +12,6 @@ const ProUpgradeModal = ({ visible, onClose, currentPage }) => {
   const dragOffset = useRef(new Animated.Value(0)).current;
   const isClosing = useRef(false);
   const router = useRouter();
-  const { openUpgradeGateway } = useUpgradeGateway();
 
   // Pan responder for drag gestures - applies only to draggable content area
   const panResponder = useRef(
@@ -39,16 +37,16 @@ const ProUpgradeModal = ({ visible, onClose, currentPage }) => {
         dragOffset.setValue(gestureState.dy);
       },
       onPanResponderRelease: (evt, gestureState) => {
+        // Reset offset
         dragOffset.flattenOffset();
         
-        // If dragged down more than 80px or with sufficient velocity, close modal
-        if (gestureState.dy > 80 || gestureState.vy > 0.3) {
-          closeModal();
+        // If dragged down significantly, close the modal
+        if (gestureState.dy > 100 || gestureState.vy > 0.5) {
+          handleClose();
         } else {
           // Snap back to original position
-          Animated.timing(dragOffset, {
+          Animated.spring(dragOffset, {
             toValue: 0,
-            duration: 250,
             useNativeDriver: true,
           }).start();
         }
@@ -56,201 +54,252 @@ const ProUpgradeModal = ({ visible, onClose, currentPage }) => {
     })
   ).current;
 
-  const closeModal = (callbackAfterClose) => {
-    if (isClosing.current) return;
-    isClosing.current = true;
-
-    Animated.parallel([
-      Animated.timing(slideAnim, {
-        toValue: screenHeight,
-        duration: 250,
-        useNativeDriver: true,
-      }),
-      Animated.timing(overlayOpacity, {
-        toValue: 0,
-        duration: 250,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      dragOffset.setValue(0);
-      isClosing.current = false;
-      onClose();
-
-      // Safely run any action AFTER modal closes
-      if (callbackAfterClose) {
-        callbackAfterClose();
-      }
-    });
-  };
-
-  const handleTryPress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    closeModal(async () => {
-      await openUpgradeGateway(router, { returnTo: currentPage || 'home' });
-    });
-  };
-
   useEffect(() => {
     if (visible) {
-      // Reset values and closing flag
+      // Reset animations
       slideAnim.setValue(screenHeight);
       overlayOpacity.setValue(0);
       dragOffset.setValue(0);
       isClosing.current = false;
       
-      // Opening animation - slide up from bottom
+      // Animate in
       Animated.parallel([
-        Animated.timing(slideAnim, {
+        Animated.spring(slideAnim, {
           toValue: 0,
-          duration: 200,
+          tension: 100,
+          friction: 8,
           useNativeDriver: true,
         }),
         Animated.timing(overlayOpacity, {
           toValue: 1,
-          duration: 200,
+          duration: 300,
           useNativeDriver: true,
         }),
       ]).start();
+      
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
   }, [visible]);
 
-  const features = [
-    'No daily limits',
-    'Unlimited identity storage',
-    'Extra powerful AI',
-    'Custom AI personalities',
-    'Discord community perks',
-  ];
+  const handleClose = () => {
+    if (isClosing.current) return;
+    isClosing.current = true;
+    
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    
+    Animated.parallel([
+      Animated.spring(slideAnim, {
+        toValue: screenHeight,
+        tension: 100,
+        friction: 8,
+        useNativeDriver: true,
+      }),
+      Animated.timing(overlayOpacity, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      onClose();
+    });
+  };
+
+  const handleUpgradePress = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    
+    // For now, just close the modal since we're removing paywall logic
+    // You can add your own upgrade logic here later
+    handleClose();
+  };
+
+  if (!visible) return null;
 
   return (
     <Modal
-      visible={visible}
       transparent
+      visible={visible}
       animationType="none"
-      onRequestClose={onClose}
+      onRequestClose={handleClose}
     >
-      <Animated.View style={[styles.overlay, { opacity: overlayOpacity }]}>
-        <TouchableOpacity style={styles.overlayTouchable} activeOpacity={1} onPress={() => closeModal()} />
-        <Animated.View 
-          style={[
-            styles.modalContainer,
-            {
-              transform: [
-                { translateY: Animated.add(slideAnim, dragOffset) }
-              ]
-            }
-          ]}
+      <Animated.View
+        style={{
+          flex: 1,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          opacity: overlayOpacity,
+        }}
+      >
+        <TouchableOpacity
+          style={{ flex: 1 }}
+          activeOpacity={1}
+          onPress={handleClose}
+        />
+        
+        <Animated.View
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            transform: [
+              {
+                translateY: Animated.add(slideAnim, dragOffset),
+              },
+            ],
+          }}
+          {...panResponder.panHandlers}
         >
-          {/* Draggable content area */}
-          <View {...panResponder.panHandlers}>
-            {/* Draggable handle area */}
-            <View style={styles.handleArea}>
-              <View style={styles.handleBar} />
+          <View
+            style={{
+              backgroundColor: '#2B2B2B',
+              borderTopLeftRadius: 20,
+              borderTopRightRadius: 20,
+              paddingTop: 20,
+              paddingBottom: 40,
+              paddingHorizontal: 20,
+              minHeight: 400,
+            }}
+          >
+            {/* Drag indicator */}
+            <View
+              style={{
+                width: 40,
+                height: 4,
+                backgroundColor: '#666',
+                borderRadius: 2,
+                alignSelf: 'center',
+                marginBottom: 20,
+              }}
+            />
+            
+            {/* Header */}
+            <View style={{ alignItems: 'center', marginBottom: 30 }}>
+              <View
+                style={{
+                  width: 60,
+                  height: 60,
+                  borderRadius: 30,
+                  backgroundColor: '#B9C096',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  marginBottom: 15,
+                }}
+              >
+                <Ionicons name="star" size={30} color="#2B2B2B" />
+              </View>
+              
+              <Text
+                style={{
+                  fontSize: 24,
+                  fontWeight: 'bold',
+                  color: '#fff',
+                  textAlign: 'center',
+                  marginBottom: 8,
+                }}
+              >
+                Unlock Premium
+              </Text>
+              
+              <Text
+                style={{
+                  fontSize: 16,
+                  color: '#ccc',
+                  textAlign: 'center',
+                  lineHeight: 22,
+                }}
+              >
+                Get unlimited access to all features and take your alignment to the next level
+              </Text>
             </View>
-
-            {/* Title */}
-            <Text style={styles.title}>Upgrade to Keystone Pro</Text>
-
-            {/* Features */}
-            <View style={styles.featuresContainer}>
-              {features.map((feature) => (
-                <View key={feature} style={styles.featureRow}>
-                  <Ionicons name="checkmark" size={20} color="#D4DE95" style={styles.checkmark} />
-                  <Text style={styles.featureText}>{feature}</Text>
+            
+            {/* Features list */}
+            <View style={{ marginBottom: 30 }}>
+              {[
+                { icon: 'infinite', text: 'Unlimited daily alignments' },
+                { icon: 'sparkles', text: 'Advanced AI feedback' },
+                { icon: 'key', text: 'Unlimited identity keys' },
+                { icon: 'people', text: 'Community access' },
+                { icon: 'trending-up', text: 'Detailed progress insights' },
+              ].map((feature, index) => (
+                <View
+                  key={index}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    marginBottom: 15,
+                  }}
+                >
+                  <View
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 16,
+                      backgroundColor: '#B9C096',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      marginRight: 15,
+                    }}
+                  >
+                    <Ionicons name={feature.icon} size={18} color="#2B2B2B" />
+                  </View>
+                  
+                  <Text
+                    style={{
+                      fontSize: 16,
+                      color: '#fff',
+                      flex: 1,
+                    }}
+                  >
+                    {feature.text}
+                  </Text>
                 </View>
               ))}
             </View>
-
-            {/* Thank you message */}
-            <Text style={styles.thankYouText}>
-              Thank you for supporting our goal in helping everyone achieve their dreams.
-            </Text>
+            
+            {/* Upgrade button */}
+            <TouchableOpacity
+              style={{
+                backgroundColor: '#B9C096',
+                borderRadius: 12,
+                paddingVertical: 16,
+                alignItems: 'center',
+                marginBottom: 15,
+              }}
+              onPress={handleUpgradePress}
+              activeOpacity={0.8}
+            >
+              <Text
+                style={{
+                  fontSize: 18,
+                  fontWeight: 'bold',
+                  color: '#2B2B2B',
+                }}
+              >
+                Upgrade Now
+              </Text>
+            </TouchableOpacity>
+            
+            {/* Close button */}
+            <TouchableOpacity
+              style={{
+                paddingVertical: 12,
+                alignItems: 'center',
+              }}
+              onPress={handleClose}
+            >
+              <Text
+                style={{
+                  fontSize: 16,
+                  color: '#999',
+                }}
+              >
+                Maybe Later
+              </Text>
+            </TouchableOpacity>
           </View>
-
-          {/* Try button - completely separate from draggable area */}
-          <TouchableOpacity style={styles.tryButton} onPress={handleTryPress}>
-            <Text style={styles.tryButtonText}>Try for $0.00</Text>
-          </TouchableOpacity>
         </Animated.View>
       </Animated.View>
     </Modal>
   );
 };
 
-const styles = {
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'flex-end',
-  },
-  overlayTouchable: {
-    flex: 1,
-  },
-  modalContainer: {
-    backgroundColor: '#2B2B2B',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 24,
-    paddingBottom: 40,
-    minHeight: screenHeight * 0.55,
-  },
-  handleBar: {
-    width: 40,
-    height: 4,
-    backgroundColor: '#555',
-    borderRadius: 2,
-    alignSelf: 'center',
-  },
-  handleArea: {
-    paddingVertical: 20,
-    alignItems: 'center',
-    marginBottom: 8,
-    marginTop: 4,
-  },
-  title: {
-    color: '#fff',
-    fontSize: 24,
-    fontWeight: '700',
-    marginBottom: 24,
-  },
-  featuresContainer: {
-    marginBottom: 20,
-  },
-  featureRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  checkmark: {
-    marginRight: 12,
-  },
-  featureText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  thankYouText: {
-    color: '#A1A1AA',
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 32,
-  },
-  tryButton: {
-    backgroundColor: '#D4DE95',
-    borderRadius: 35,
-    paddingVertical: 20,
-    alignItems: 'center',
-    shadowColor: '#D4DE95',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.7,
-    shadowRadius: 10,
-    elevation: 12,
-  },
-  tryButtonText: {
-    color: '#2B2B2B',
-    fontSize: 18,
-    fontWeight: '700',
-  },
-};
-
-export default ProUpgradeModal;
+export default ProUpgradeModal; 
