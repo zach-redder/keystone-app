@@ -8,7 +8,7 @@ module.exports = ({ config }) => {
       supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
       supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
       apiUrl: process.env.EXPO_PUBLIC_API_URL,
-      superwallApiKey: process.env.EXPO_PUBLIC_SUPERWALL_API_KEY,
+      // Superwall removed
     },
     scheme: "keystone",
     plugins: [

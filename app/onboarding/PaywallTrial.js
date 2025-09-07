@@ -1,10 +1,9 @@
-import React, { useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Animated, Image } from 'react-native';
+import React, { useRef, useEffect, useState } from 'react';
+import { View, Text, TouchableOpacity, Animated, Image, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { styles } from '../../styles/onboarding';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 export default function PaywallTrial() {
     const router = useRouter();
@@ -12,6 +11,9 @@ export default function PaywallTrial() {
     const slideValue = useRef(new Animated.Value(30)).current;
     const imageScale = useRef(new Animated.Value(0.8)).current;
     const pulseValue = useRef(new Animated.Value(1)).current;
+    const [isLoading, setIsLoading] = useState(false);
+
+    // Superwall removed; this screen now just introduces the free trial UX
 
     useEffect(() => {
         // Entrance animation
@@ -54,9 +56,18 @@ export default function PaywallTrial() {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }, []);
 
-    const handleStartTrial = () => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-        router.push('/onboarding/Subscription');
+    const handleStartTrial = async () => {
+        try {
+            setIsLoading(true);
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+            // Continue to Subscription screen which now handles native IAP
+            router.replace('/onboarding/Subscription');
+        } catch (err) {
+            console.warn('Navigation error:', err);
+            Alert.alert('Error', 'Failed to continue. Please try again.');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -107,9 +118,10 @@ export default function PaywallTrial() {
                     style={styles.startTrialButton}
                     onPress={handleStartTrial}
                     activeOpacity={0.8}
+                    disabled={isLoading}
                 >
                     <Text style={styles.startTrialButtonText}>
-                        Let's Go
+                        {isLoading ? 'Loading...' : 'Let\'s Go'}
                     </Text>
                 </TouchableOpacity>
             </Animated.View>
