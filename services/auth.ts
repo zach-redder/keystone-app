@@ -334,6 +334,52 @@ export const insertUserProfileAfterConfirmation = async (
     // Don't throw - non-critical error
   }
 
+  // Handle pending subscription from unauthenticated purchase
+  try {
+    console.log('Checking for pending subscription...');
+    const pendingSubscription = await AsyncStorage.getItem('pending_subscription');
+    
+    if (pendingSubscription) {
+      const subscriptionData = JSON.parse(pendingSubscription);
+      console.log('Found pending subscription:', subscriptionData);
+      
+      // Validate the subscription with Supabase Edge Function
+      const { data, error } = await supabase.functions.invoke('iap-verify-apple', {
+        body: { 
+          receiptData: subscriptionData.receiptData, 
+          productId: subscriptionData.productId 
+        },
+        headers: { 'x-user-id': userId },
+      });
+      
+      if (error) {
+        console.error('Error validating pending subscription:', error);
+      } else if (data?.active) {
+        console.log('Successfully validated pending subscription');
+        // The Edge Function already handles upserting to subscriptions table
+        // Update user's pro status
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({ is_pro: true })
+          .eq('id', userId);
+        
+        if (updateError) {
+          console.error('Error updating user pro status:', updateError);
+        } else {
+          console.log('Successfully updated user to pro status');
+        }
+      } else {
+        console.log('Pending subscription validation failed or inactive');
+      }
+      
+      // Clear the pending subscription regardless of validation result
+      await AsyncStorage.removeItem('pending_subscription');
+    }
+  } catch (subscriptionError) {
+    console.error('Error handling pending subscription:', subscriptionError);
+    // Don't throw - non-critical error
+  }
+
   // Get identity keys from AsyncStorage
   try {
     console.log('Loading identity keys from AsyncStorage...');

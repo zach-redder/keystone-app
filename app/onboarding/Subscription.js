@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Dimensions, Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
-import { downgradeUserToFree } from '../../services/auth';
 import { supabase } from '../../lib/supabase';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   initConnection,
   getProducts,
@@ -59,7 +59,7 @@ export default function SubscriptionScreen() {
   const scrollViewRef = useRef(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isUserScrolling, setIsUserScrolling] = useState(false);
-  const [selectedSubscription, setSelectedSubscription] = useState('yearly'); // Default to yearly
+  const [selectedSubscription, setSelectedSubscription] = useState('yearly');
   const [isLoading, setIsLoading] = useState(false);
   const [products, setProducts] = useState([]);
   const [isPro, setIsPro] = useState(false);
@@ -73,6 +73,12 @@ export default function SubscriptionScreen() {
     let mounted = true;
     (async () => {
       try {
+        // Check for pending subscription from unauthenticated purchase
+        const pendingSubscription = await AsyncStorage.getItem('pending_subscription');
+        if (pendingSubscription && mounted) {
+          setIsPro(true);
+        }
+
         if (Platform.OS === 'android') {
           try { await flushFailedPurchasesCachedAsPendingAndroid(); } catch {}
         }
@@ -121,26 +127,43 @@ export default function SubscriptionScreen() {
 
   const validateAndUnlock = async (receiptBase64, productId) => {
     try {
-      // Get current user ID for the Edge Function
+      // Check if user is authenticated
       const { data: { user } } = await supabase.auth.getUser();
-      const { data, error } = await supabase.functions.invoke('iap-verify-apple', {
-        body: { receiptData: receiptBase64, productId },
-        headers: { 'x-user-id': user?.id || '' },
-      });
-      if (error) {
-        console.warn('Receipt validation error:', error);
-        Alert.alert('Validation Error', 'Unable to validate purchase.');
-        return;
-      }
-      if (data?.active) {
-        setIsPro(true);
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        Alert.alert('Success', 'Pro unlocked!');
-        // Optionally route to home if this screen ends the flow
-        // router.push('/tabs/home');
+      
+      if (user) {
+        // User is authenticated - validate with Supabase Edge Function
+        const { data, error } = await supabase.functions.invoke('iap-verify-apple', {
+          body: { receiptData: receiptBase64, productId },
+          headers: { 'x-user-id': user.id },
+        });
+        
+        if (error) {
+          console.warn('Receipt validation error:', error);
+          Alert.alert('Validation Error', 'Unable to validate purchase.');
+          return;
+        }
+        
+        if (data?.active) {
+          setIsPro(true);
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          Alert.alert('Success', 'Pro unlocked!');
+        } else {
+          setIsPro(false);
+          Alert.alert('Inactive', 'Subscription is not active.');
+        }
       } else {
-        setIsPro(false);
-        Alert.alert('Inactive', 'Subscription is not active.');
+        // User is not authenticated - save to AsyncStorage for later processing
+        const subscriptionData = {
+          receiptData: receiptBase64,
+          productId: productId,
+          purchaseDate: new Date().toISOString(),
+          validated: false, // Will be validated when user registers
+        };
+        
+        await AsyncStorage.setItem('pending_subscription', JSON.stringify(subscriptionData));
+        setIsPro(true); // Temporarily show as pro for unauthenticated users
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        Alert.alert('Success', 'Purchase recorded! You\'ll have full access once you create an account.');
       }
     } catch (err) {
       console.warn('validateAndUnlock error:', err);
@@ -188,18 +211,6 @@ export default function SubscriptionScreen() {
     }, 5000);
   };
 
-  const handleClose = () => {
-    const returnTo = params.returnTo || 'home';
-    if (returnTo === 'home') {
-      router.push('/tabs/home');
-    } else if (returnTo === 'keys') {
-      router.push('/tabs/keys');
-    } else if (returnTo === 'profile') {
-      router.push('/tabs/profile');
-    } else {
-      router.back();
-    }
-  };
 
   const handleStartFreeTrial = async () => {
     try {
@@ -247,177 +258,354 @@ export default function SubscriptionScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#1f1f1f', paddingTop: insets.top }}>
-      {/* Header */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, paddingHorizontal: 20 }}>
-        <TouchableOpacity onPress={handleClose} style={{ position: 'absolute', left: 20 }}>
-          <Ionicons name="close" size={28} color="#fff" />
-        </TouchableOpacity>
-        <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>Upgrade</Text>
-      </View>
+    <>
+      <View style={{ height: insets.top, backgroundColor: '#B9C096' }} />
+      <View style={styles.container}>
+        {/* Header - no close button for hard paywall */}
+        <View style={styles.header}>
+          <Text style={styles.title}>Keystone</Text>
+        </View>
 
-      {/* Features Carousel */}
-      <ScrollView
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onScroll={handleScroll}
-        onScrollBeginDrag={handleScrollBeginDrag}
-        onScrollEndDrag={handleScrollEndDrag}
-        scrollEventThrottle={16}
-        ref={scrollViewRef}
-        style={{ flexGrow: 0 }}
-      >
-        {features.map((feature) => (
-          <View key={feature.id} style={{ width: screenWidth, alignItems: 'center', paddingHorizontal: 24, paddingTop: 10 }}>
+        {/* Feature Carousel */}
+        <View style={styles.carouselWrapper}>
+          <ScrollView
+            ref={scrollViewRef}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onScroll={handleScroll}
+            onScrollBeginDrag={handleScrollBeginDrag}
+            onScrollEndDrag={handleScrollEndDrag}
+            scrollEventThrottle={16}
+            style={styles.carousel}
+            contentContainerStyle={styles.carouselContent}
+          >
+            {features.map((feature, index) => (
+              <View key={feature.id} style={[styles.featureSlide, { width: screenWidth }]}>
+                <View style={styles.featureCard}>
+                  <View style={styles.featureContent}>
+                    {/* Icon */}
+                    <View style={styles.iconContainer}>
+                      <View style={styles.iconCircle}>
+                        <Ionicons name={feature.icon} size={32} color="#fff" />
+                      </View>
+                    </View>
+
+                    {/* Feature title */}
+                    <Text style={styles.featureTitle}>{feature.title}</Text>
+                    <Text style={styles.featureSubtitle}>{feature.subtitle}</Text>
+                  </View>
+                </View>
+              </View>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* Dots indicator */}
+        <View style={styles.dotsContainer}>
+          {features.map((feature, index) => (
             <View
-              style={{
-                width: 64,
-                height: 64,
-                borderRadius: 32,
-                backgroundColor: '#B9C096',
-                justifyContent: 'center',
-                alignItems: 'center',
-                marginBottom: 16,
-              }}
+              key={feature.id}
+              style={[
+                styles.dot,
+                currentIndex === index && styles.activeDot
+              ]}
+            />
+          ))}
+        </View>
+
+        {/* Subscription background that extends to screen edges */}
+        <View style={styles.subscriptionBackground}>
+          <View style={styles.subscriptionContent}>
+            {/* Subscription options */}
+            <View style={styles.subscriptionContainer}>
+              {/* Monthly option */}
+              <TouchableOpacity 
+                style={[
+                  styles.subscriptionOption,
+                  selectedSubscription === 'monthly' && styles.selectedOption
+                ]}
+                onPress={() => setSelectedSubscription('monthly')}
+              >
+                <View style={styles.subscriptionOptionContent}>
+                  <Text style={styles.subscriptionTitle}>Monthly</Text>
+                  <Text style={styles.subscriptionPrice}>
+                    {products.find(p => p.productId === 'com.reddermedia.keystone.monthly')?.localizedPrice || '$9.99/month after trial ends'}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+
+              {/* Yearly option with badge */}
+              <TouchableOpacity 
+                style={[
+                  styles.subscriptionOption, 
+                  styles.recommendedOption,
+                  selectedSubscription === 'yearly' && styles.selectedOption
+                ]}
+                onPress={() => setSelectedSubscription('yearly')}
+              >
+                <View style={styles.saveBadge}>
+                  <Text style={styles.saveBadgeText}>Save 75%</Text>
+                </View>
+                <View style={styles.subscriptionOptionContent}>
+                  <Text style={styles.subscriptionTitle}>Yearly</Text>
+                  <Text style={styles.subscriptionPrice}>
+                    {products.find(p => p.productId === 'com.reddermedia.keystone.yearly')?.localizedPrice || '$29.99/year after trial ends'}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+
+              {/* Lifetime option */}
+              <TouchableOpacity 
+                style={[
+                  styles.subscriptionOption,
+                  selectedSubscription === 'lifetime' && styles.selectedOption
+                ]}
+                onPress={() => setSelectedSubscription('lifetime')}
+              >
+                <View style={styles.subscriptionOptionContent}>
+                  <Text style={styles.subscriptionTitle}>Lifetime</Text>
+                  <Text style={styles.subscriptionPrice}>
+                    {products.find(p => p.productId === 'com.reddermedia.keystone.lifetime')?.localizedPrice || '$99.99 for life'}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+
+            {/* Start Free Trial button */}
+            <TouchableOpacity 
+              style={[styles.trialButton, isLoading && styles.disabledButton]} 
+              onPress={handleStartFreeTrial}
+              disabled={isLoading}
             >
-              <Ionicons name={feature.icon} size={30} color="#2B2B2B" />
-            </View>
-            <Text style={{ color: '#fff', fontSize: 22, fontWeight: 'bold', marginBottom: 6, textAlign: 'center' }}>{feature.title}</Text>
-            <Text style={{ color: '#ccc', fontSize: 16, textAlign: 'center' }}>{feature.subtitle}</Text>
-          </View>
-        ))}
-      </ScrollView>
-
-      {/* Pagination dots */}
-      <View style={{ flexDirection: 'row', justifyContent: 'center', marginVertical: 12 }}>
-        {features.map((_, index) => (
-          <View
-            key={index}
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: 4,
-              marginHorizontal: 6,
-              backgroundColor: currentIndex === index ? '#B9C096' : '#555',
-            }}
-          />
-        ))}
-      </View>
-
-      {/* Subscription options (with localized price if available) */}
-      <View style={{ paddingHorizontal: 20, marginTop: 10 }}>
-        {/* Monthly */}
-        <TouchableOpacity
-          style={{
-            backgroundColor: selectedSubscription === 'monthly' ? '#2B2B2B' : 'transparent',
-            borderRadius: 14,
-            borderWidth: 1,
-            borderColor: selectedSubscription === 'monthly' ? '#3B3B3B' : '#333',
-            paddingVertical: 14,
-            paddingHorizontal: 16,
-            marginBottom: 12,
-          }}
-          onPress={() => setSelectedSubscription('monthly')}
-          activeOpacity={0.8}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>Monthly</Text>
-              <Text style={{ color: '#aaa', fontSize: 14, marginTop: 4 }}>
-                {products.find(p => p.productId === 'com.reddermedia.keystone.monthly')?.localizedPrice || '$9.99/month after trial ends'}
+              <Text style={styles.trialButtonText}>
+                {selectedSubscription === 'lifetime' ? (isLoading ? 'Processing...' : 'Purchase Lifetime Access') : (isLoading ? 'Processing...' : 'Start Free Trial')}
               </Text>
-            </View>
-            {selectedSubscription === 'monthly' && (
-              <Ionicons name="checkmark-circle" size={22} color="#B9C096" />
+            </TouchableOpacity>
+
+            {/* Restore Purchases button */}
+            <TouchableOpacity 
+              style={styles.restoreButton} 
+              onPress={handleRestorePurchases}
+              disabled={isLoading}
+            >
+              <Text style={styles.restoreButtonText}>Restore Purchases</Text>
+            </TouchableOpacity>
+
+            {/* No payment text */}
+            <Text style={styles.noPaymentText}>No payment due now</Text>
+
+            {isPro && (
+              <View style={{ alignItems: 'center', paddingVertical: 8, marginTop: 10 }}>
+                <Text style={{ color: '#B9C096', fontSize: 14 }}>You're Pro, enjoy the experience!</Text>
+              </View>
             )}
           </View>
-        </TouchableOpacity>
-
-        {/* Yearly */}
-        <TouchableOpacity
-          style={{
-            backgroundColor: selectedSubscription === 'yearly' ? '#2B2B2B' : 'transparent',
-            borderRadius: 14,
-            borderWidth: 1,
-            borderColor: selectedSubscription === 'yearly' ? '#3B3B3B' : '#333',
-            paddingVertical: 14,
-            paddingHorizontal: 16,
-            marginBottom: 12,
-          }}
-          onPress={() => setSelectedSubscription('yearly')}
-          activeOpacity={0.8}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>Yearly</Text>
-              <Text style={{ color: '#aaa', fontSize: 14, marginTop: 4 }}>
-                {products.find(p => p.productId === 'com.reddermedia.keystone.yearly')?.localizedPrice || '$29.99/year after trial ends'}
-              </Text>
-            </View>
-            {selectedSubscription === 'yearly' && (
-              <Ionicons name="checkmark-circle" size={22} color="#B9C096" />
-            )}
-          </View>
-        </TouchableOpacity>
-
-        {/* Lifetime */}
-        <TouchableOpacity
-          style={{
-            backgroundColor: selectedSubscription === 'lifetime' ? '#2B2B2B' : 'transparent',
-            borderRadius: 14,
-            borderWidth: 1,
-            borderColor: selectedSubscription === 'lifetime' ? '#3B3B3B' : '#333',
-            paddingVertical: 14,
-            paddingHorizontal: 16,
-            marginBottom: 16,
-          }}
-          onPress={() => setSelectedSubscription('lifetime')}
-          activeOpacity={0.8}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>Lifetime</Text>
-              <Text style={{ color: '#aaa', fontSize: 14, marginTop: 4 }}>
-                {products.find(p => p.productId === 'com.reddermedia.keystone.lifetime')?.localizedPrice || '$99.99 for life'}
-              </Text>
-            </View>
-            {selectedSubscription === 'lifetime' && (
-              <Ionicons name="checkmark-circle" size={22} color="#B9C096" />
-            )}
-          </View>
-        </TouchableOpacity>
+        </View>
       </View>
-
-      {/* CTA Buttons */}
-      <View style={{ paddingHorizontal: 20, paddingBottom: Math.max(insets.bottom, 16) }}>
-        <TouchableOpacity
-          style={{
-            backgroundColor: '#B9C096',
-            borderRadius: 14,
-            paddingVertical: 16,
-            alignItems: 'center',
-            marginBottom: 10,
-          }}
-          onPress={handleStartFreeTrial}
-          activeOpacity={0.8}
-          disabled={isLoading}
-        >
-          <Text style={{ color: '#2B2B2B', fontSize: 18, fontWeight: 'bold' }}>
-            {selectedSubscription === 'lifetime' ? (isLoading ? 'Processing...' : 'Purchase Lifetime Access') : (isLoading ? 'Processing...' : 'Start Free Trial')}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={handleRestorePurchases} disabled={isLoading} style={{ alignItems: 'center', paddingVertical: 10 }}>
-          <Text style={{ color: '#9aa', fontSize: 14 }}>Restore Purchases</Text>
-        </TouchableOpacity>
-
-        {isPro && (
-          <View style={{ alignItems: 'center', paddingVertical: 8 }}>
-            <Text style={{ color: '#B9C096', fontSize: 14 }}>You're Pro, enjoy the experience!</Text>
-          </View>
-        )}
-      </View>
-    </View>
+      <View style={{ height: insets.bottom, backgroundColor: '#2B2B2B' }} />
+    </>
   );
 }
+
+const styles = {
+  container: {
+    flex: 1,
+    backgroundColor: '#B9C096',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 10,
+    position: 'relative',
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: '700',
+    color: '#2B2B2B',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  iconContainer: {
+    marginBottom: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  iconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#2B2B2B',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  featureTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#2B2B2B',
+    textAlign: 'center',
+    marginBottom: 10,
+    minHeight: 30, // Consistent height for titles
+  },
+  featureSubtitle: {
+    fontSize: 16,
+    color: '#5A5A5A',
+    textAlign: 'center',
+    lineHeight: 22,
+    minHeight: 44, // Consistent height for subtitles (2 lines)
+    paddingHorizontal: 10,
+  },
+  dotsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(43, 43, 43, 0.3)',
+    marginHorizontal: 4,
+  },
+  activeDot: {
+    backgroundColor: '#2B2B2B',
+  },
+  subscriptionContainer: {
+    width: '100%',
+    marginBottom: 20,
+  },
+  subscriptionBackground: {
+    backgroundColor: '#2B2B2B',
+    borderRadius: 25,
+    padding: 20,
+    paddingTop: 30,
+  },
+  subscriptionOption: {
+    backgroundColor: 'transparent',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 10,
+    position: 'relative',
+    borderWidth: 1.5,
+    borderColor: '#555',
+  },
+  selectedOption: {
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  saveBadge: {
+    position: 'absolute',
+    top: 22,
+    right: 16,
+    backgroundColor: '#fff',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    zIndex: 1,
+  },
+  saveBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#2B2B2B',
+  },
+  subscriptionContent: {
+    alignItems: 'center',
+  },
+  subscriptionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#fff',
+    marginBottom: 4,
+  },
+  subscriptionPrice: {
+    fontSize: 14,
+    color: '#A1A1AA',
+  },
+  trialButton: {
+    backgroundColor: '#D4DE95',
+    borderRadius: 35,
+    paddingVertical: 20,
+    paddingHorizontal: 40,
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: 15,
+    shadowColor: '#d4de95',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.7,
+    shadowRadius: 10,
+    elevation: 12,
+  },
+  trialButtonText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#2B2B2B',
+  },
+  noPaymentText: {
+    fontSize: 14,
+    color: '#fff',
+    opacity: 0.75,
+    textAlign: 'center',
+    fontStyle: 'italic',
+    width: '100%',
+  },
+  disabledButton: {
+    opacity: 0.6,
+  },
+  restoreButton: {
+    backgroundColor: 'transparent',
+    borderRadius: 35,
+    paddingVertical: 15,
+    paddingHorizontal: 40,
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#fff',
+  },
+  restoreButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  carousel: {
+    flex: 0,
+    height: 220,
+  },
+  carouselWrapper: {
+  },
+  carouselContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  featureSlide: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40, // Centered padding
+  },
+  featureCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    borderRadius: 20,
+    padding: 20,
+    width: screenWidth - 80, // Fixed width accounting for slide padding
+    height: 220, // Fixed height
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
+    backdropFilter: 'blur(100px)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  featureContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+    width: '100%',
+  },
+};
