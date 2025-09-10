@@ -5,7 +5,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { downgradeUserToFree } from '../../services/auth';
-import { usePlacement, useUser } from 'expo-superwall';
+//import { usePlacement, useUser } from 'expo-superwall';
 
 const { width: screenWidth } = Dimensions.get('window');
 

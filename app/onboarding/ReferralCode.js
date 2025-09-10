@@ -163,7 +163,7 @@ export default function ReferralCode() {
                     [
                         {
                             text: 'Continue',
-                            onPress: () => router.push('/register'),
+                            onPress: () => router.push('/register'), // Skip paywall since they have a code
                         }
                     ]
                 );

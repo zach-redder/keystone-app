@@ -100,7 +100,7 @@ export default function AnimatedProfileCard() {
                             setIsTyping(false);
                             setTimeout(() => {
                                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-                                router.push('/register');
+                                router.push('/onboarding/SuperwallPaywall'); // Go directly to home after profile card animation
                             }, 800); // Much shorter final pause
                         }
                     }, 1200); // Much shorter hold phrase time

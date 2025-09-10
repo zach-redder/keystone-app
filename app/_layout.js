@@ -8,7 +8,7 @@ import { AppState } from 'react-native';
 import { setupReminderNotifications } from '../services/reminderService';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
-import { SuperwallProvider } from 'expo-superwall';
+//import { SuperwallProvider } from 'expo-superwall';
 
 function RootShell() {
   const router = useRouter();
@@ -124,9 +124,17 @@ function RootShell() {
 }
 
 export default function RootLayout() {
+  const superwallApiKey = Constants.expoConfig?.extra?.superwallApiKey;
+  
+  // Log Superwall configuration for debugging
+  console.log('Superwall API Key configured:', superwallApiKey ? 'Yes' : 'No');
+  if (!superwallApiKey) {
+    console.warn('Superwall API Key not found in app.config.js. Please ensure EXPO_PUBLIC_SUPERWALL_API_KEY is set in your environment.');
+  }
+  
   return (
-    <SuperwallProvider apiKeys={{ ios: Constants.expoConfig?.extra?.superwallApiKey || "SUPERWALL_API_KEY" }}>
+    //<SuperwallProvider apiKeys={{ ios: superwallApiKey || "SUPERWALL_API_KEY" }}>
       <RootShell />
-    </SuperwallProvider>
+    //</SuperwallProvider>
   );
 }

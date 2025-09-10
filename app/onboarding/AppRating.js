@@ -1,17 +1,29 @@
-import React, { useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Animated, ScrollView } from 'react-native';
+import React, { useRef, useEffect, useState } from 'react';
+import { View, Text, TouchableOpacity, Animated, ScrollView, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { styles } from '../../styles/onboarding';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AntDesign } from '@expo/vector-icons';
 import * as StoreReview from 'expo-store-review';
+import { usePlacement } from 'expo-superwall';
 
 export default function AppRating() {
     const router = useRouter();
     const fadeValue = useRef(new Animated.Value(0)).current;
     const slideValue = useRef(new Animated.Value(30)).current;
     const starScale = useRef(new Animated.Value(0.8)).current;
+    const [isChecking, setIsChecking] = useState(false);
+    const [lastPaywallResult, setLastPaywallResult] = useState(null);
+
+    const { registerPlacement } = usePlacement({
+        onError: (err) => console.error('Placement Error:', err),
+        onPresent: (info) => console.log('Paywall Presented (rating check):', info),
+        onDismiss: (info, result) => {
+            console.log('Paywall Dismissed (rating check):', info, 'Result:', result);
+            setLastPaywallResult(result || null);
+        },
+    });
 
     useEffect(() => {
         // Entrance animation
@@ -63,17 +75,47 @@ export default function AppRating() {
         }
     };
 
-    const handleNext = () => {
+    // Checks subscription status via Superwall. This accounts for App Store
+    // promo codes and purchases because Superwall resolves entitlements natively.
+    const checkSubscriptionStatus = async () => {
+        try {
+            setIsChecking(true);
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            // Configure a placement in Superwall (e.g., "check_subscription_status")
+            // to immediately return entitlement state without necessarily presenting a paywall.
+            // If your placement does present, the onDismiss handler will capture the result.
+            const result = await registerPlacement({ placement: 'check_subscription_status' });
+            // Keep last result in state for visibility/debug
+            if (result) setLastPaywallResult(result);
+            
+            // Heuristics to treat user as subscribed
+            const purchased = result?.outcome === 'purchased' || result?.entitlementStatus === 'active' || result?.isSubscribed === true;
+            return !!purchased;
+        } catch (err) {
+            console.error('Error checking subscription via Superwall:', err);
+            Alert.alert('Subscription', 'Unable to verify subscription at this time.');
+            return false;
+        } finally {
+            setIsChecking(false);
+        }
+    };
+
+    const handleNext = async () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        router.push('/onboarding/AnimatedProfileCard');
+        // Use Superwall entitlement check instead of database/referral logic
+        const isSubscribed = await checkSubscriptionStatus();
+        if (isSubscribed) {
+            router.push('/onboarding/AnimatedProfileCard');
+        } else {
+            // If not subscribed, route into your paywall flow
+            router.push('/onboarding/Subscription');
+        }
     };
 
     const handleBack = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         router.back();
     };
-
-
 
     const renderStars = () => {
         return (
@@ -184,11 +226,19 @@ export default function AppRating() {
                     style={styles.nextButton} 
                     onPress={handleNext}
                     activeOpacity={0.8}
+                    disabled={isChecking}
                 >
                     <Text style={styles.buttonText}>
-                        Next
+                        {isChecking ? 'Checking…' : 'Next'}
                     </Text>
                 </TouchableOpacity>
+
+                {/* Optional: show last result for debugging */}
+                {!!lastPaywallResult && (
+                    <Text style={{ color: '#888', fontSize: 12, marginTop: 8 }}>
+                        {`Last Result: ${JSON.stringify(lastPaywallResult)}`}
+                    </Text>
+                )}
             </Animated.View>
         </LinearGradient>
     );

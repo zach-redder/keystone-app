@@ -18,7 +18,7 @@ export default function RegisterForm() {
   const router = useRouter();
 
   const handleBack = () => {
-    router.replace('/onboarding/NotificationTime');
+    router.replace('/onboarding/SuperwallPaywall');
   };
 
   const handleSignUp = async () => {
