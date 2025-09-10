@@ -4,7 +4,6 @@ import { useRouter } from 'expo-router';
 import { styles } from '../../styles/onboarding';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
-//import { usePlacement } from 'expo-superwall';
 
 export default function PaywallTrial() {
     const router = useRouter();
@@ -13,6 +12,9 @@ export default function PaywallTrial() {
     const slideValue = useRef(new Animated.Value(30)).current;
     const imageScale = useRef(new Animated.Value(0.8)).current;
     const pulseValue = useRef(new Animated.Value(1)).current;
+    const [isLoading, setIsLoading] = useState(false);
+
+    // Superwall removed; this screen now just introduces the free trial UX
 
     useEffect(() => {
         // Entrance animation
@@ -55,46 +57,18 @@ export default function PaywallTrial() {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }, []);
 
-    // Superwall placement hook
-    // const { registerPlacement } = usePlacement({
-    //     onError: (err) => {
-    //         console.error("Superwall Placement Error:", err);
-    //         Alert.alert('Error', 'Failed to load subscription options. Please try again.');
-    //         setIsLoading(false);
-    //     },
-    //     onPresent: (info) => {
-    //         console.log("Superwall Paywall Presented:", info);
-    //         setIsLoading(false);
-    //     },
-    //     onDismiss: (info, result) => {
-    //         console.log("Superwall Paywall Dismissed:", info, "Result:", result);
-    //         setIsLoading(false);
-            
-    //         // Handle different dismissal outcomes
-    //         if (result?.outcome === 'purchased' || result?.outcome === 'restored') {
-    //             router.replace('/register');
-    //         } else {
-    //             // User skipped - still allow to continue
-    //             router.replace('/register');
-    //         }
-    //     },
-    // });
-
     const handleStartTrial = async () => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-        setIsLoading(true);
-
-        router.push('/onboarding/SuperwallPaywall');
-        // try {
-        //     console.log('Triggering Superwall campaign: onboarding_complete');
-        //     await registerPlacement({
-        //         placement: "onboarding_complete"
-        //     });
-        // } catch (err) {
-        //     console.error('Failed to trigger Superwall:', err);
-        //     Alert.alert('Error', 'Failed to show subscription options. Please try again.');
-        //     setIsLoading(false);
-        // }
+        try {
+            setIsLoading(true);
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+            // Continue to Subscription screen which now handles native IAP
+            router.replace('/onboarding/Subscription');
+        } catch (err) {
+            console.warn('Navigation error:', err);
+            Alert.alert('Error', 'Failed to continue. Please try again.');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -148,7 +122,7 @@ export default function PaywallTrial() {
                     disabled={isLoading}
                 >
                     <Text style={styles.startTrialButtonText}>
-                        {isLoading ? 'Loading...' : "Let's Go"}
+                        {isLoading ? 'Loading...' : 'Let\'s Go'}
                     </Text>
                 </TouchableOpacity>
             </Animated.View>

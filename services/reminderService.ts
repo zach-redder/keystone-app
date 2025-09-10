@@ -43,7 +43,10 @@ export const createFirstReminder = async () => {
 export const fetchTodayReminder = async () => {
   try {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) throw userError;
+    if (userError || !user) {
+      console.log('User not authenticated, returning default reminder');
+      return DEFAULT_REMINDERS[0];
+    }
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -77,7 +80,10 @@ export const fetchTodayReminder = async () => {
 export const fetchReminderForDate = async (date: Date) => {
   try {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) throw userError;
+    if (userError || !user) {
+      console.log('User not authenticated, returning default reminder');
+      return DEFAULT_REMINDERS[0];
+    }
 
     const start = new Date(date);
     start.setHours(0, 0, 0, 0);
@@ -109,6 +115,13 @@ export const fetchReminderForDate = async (date: Date) => {
 
 export const setupReminderNotifications = async () => {
   try {
+    // Check if user is authenticated first
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      console.log('User not authenticated, skipping notification setup');
+      return;
+    }
+
     // Request notification permissions
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
@@ -126,7 +139,7 @@ export const setupReminderNotifications = async () => {
     const { data: preferences, error: preferencesError } = await supabase
       .from('user_preferences')
       .select('preferred_reminder_time')
-      .single();
+      .maybeSingle();
 
     if (preferencesError) throw preferencesError;
 

@@ -199,7 +199,7 @@ export default function OnboardingStep() {
       setSelectedOptions((prevSelected) => {
         if (prevSelected.includes(option)) {
           return prevSelected.filter((item) => item !== option);
-        } else if (prevSelected.length < 5) {
+        } else {
           return [...prevSelected, option];
         }
         return prevSelected;
@@ -288,7 +288,7 @@ export default function OnboardingStep() {
             <OnboardingProgressHeader />
             <Text style={styles.selfVisionTitle}>Fast forward 10 years.</Text>
             <Text style={styles.selfVisionSubtitle}>Who do you wish to be?</Text>
-            <Text style={styles.selfVisionDescription}>Select up to 5.</Text>
+            <Text style={styles.selfVisionDescription}>Select as many as you'd like.</Text>
             <GestureScrollView 
               style={{ flex: 1, width: '100%' }}
               keyboardShouldPersistTaps="handled"
@@ -396,7 +396,7 @@ export default function OnboardingStep() {
               <OnboardingProgressHeader />
               <Text style={styles.selfVisionTitle}>You have big goals.</Text>
               <Text style={styles.selfVisionSubtitle}>What are they?</Text>
-              <Text style={styles.selfVisionDescription}>Select up to 5.</Text>
+              <Text style={styles.selfVisionDescription}>Select as many as you'd like.</Text>
               <GestureScrollView 
                 style={{ flex: 1, width: '100%' }}
                 keyboardShouldPersistTaps="handled"
@@ -521,7 +521,7 @@ export default function OnboardingStep() {
             <OnboardingProgressHeader />
             <Text style={styles.selfVisionTitle}>Values define you.</Text>
             <Text style={styles.selfVisionSubtitle}>What should people notice in you?</Text>
-            <Text style={styles.selfVisionDescription}>Select up to 5.</Text>
+            <Text style={styles.selfVisionDescription}>Select as many as you'd like.</Text>
             <GestureScrollView 
               style={{ flex: 1, width: '100%' }}
               keyboardShouldPersistTaps="handled"

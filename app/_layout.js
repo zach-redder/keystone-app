@@ -8,7 +8,6 @@ import { AppState } from 'react-native';
 import { setupReminderNotifications } from '../services/reminderService';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
-//import { SuperwallProvider } from 'expo-superwall';
 
 function RootShell() {
   const router = useRouter();
@@ -133,8 +132,6 @@ export default function RootLayout() {
   }
   
   return (
-    //<SuperwallProvider apiKeys={{ ios: superwallApiKey || "SUPERWALL_API_KEY" }}>
-      <RootShell />
-    //</SuperwallProvider>
+    <RootShell />
   );
 }
