@@ -288,7 +288,6 @@ export default function OnboardingStep() {
             <OnboardingProgressHeader />
             <Text style={styles.selfVisionTitle}>Fast forward 10 years.</Text>
             <Text style={styles.selfVisionSubtitle}>Who do you wish to be?</Text>
-            <Text style={styles.selfVisionDescription}>Select as many as you'd like.</Text>
             <GestureScrollView 
               style={{ flex: 1, width: '100%' }}
               keyboardShouldPersistTaps="handled"
@@ -396,7 +395,6 @@ export default function OnboardingStep() {
               <OnboardingProgressHeader />
               <Text style={styles.selfVisionTitle}>You have big goals.</Text>
               <Text style={styles.selfVisionSubtitle}>What are they?</Text>
-              <Text style={styles.selfVisionDescription}>Select as many as you'd like.</Text>
               <GestureScrollView 
                 style={{ flex: 1, width: '100%' }}
                 keyboardShouldPersistTaps="handled"
@@ -513,7 +511,7 @@ export default function OnboardingStep() {
       case 'CoreValues':
         return (
           <LinearGradient
-                            colors={['#2B2B2B', '#2F2F2C', '#2B2B2B']}
+            colors={['#2B2B2B', '#2F2F2C', '#2B2B2B']}
             style={styles.gradientContainer}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
@@ -521,7 +519,6 @@ export default function OnboardingStep() {
             <OnboardingProgressHeader />
             <Text style={styles.selfVisionTitle}>Values define you.</Text>
             <Text style={styles.selfVisionSubtitle}>What should people notice in you?</Text>
-            <Text style={styles.selfVisionDescription}>Select as many as you'd like.</Text>
             <GestureScrollView 
               style={{ flex: 1, width: '100%' }}
               keyboardShouldPersistTaps="handled"

@@ -4,10 +4,13 @@ import { StatusBar } from 'expo-status-bar';
 import * as Linking from 'expo-linking';
 import { supabase } from '../lib/supabase';
 import { useEffect, useRef } from 'react';
-import { AppState } from 'react-native';
+import { AppState, View, Text } from 'react-native';
 import { setupReminderNotifications } from '../services/reminderService';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import Constants from 'expo-constants';
+import { getSuperwallImplementation } from '../utils/superwallCompat';
+import { SuperwallContextProvider } from '../contexts/SuperwallContext';
+
+const { SuperwallProvider, SuperwallLoading, SuperwallLoaded } = getSuperwallImplementation();
 
 function RootShell() {
   const router = useRouter();
@@ -123,15 +126,21 @@ function RootShell() {
 }
 
 export default function RootLayout() {
-  const superwallApiKey = Constants.expoConfig?.extra?.superwallApiKey;
-  
-  // Log Superwall configuration for debugging
-  console.log('Superwall API Key configured:', superwallApiKey ? 'Yes' : 'No');
-  if (!superwallApiKey) {
-    console.warn('Superwall API Key not found in app.config.js. Please ensure EXPO_PUBLIC_SUPERWALL_API_KEY is set in your environment.');
-  }
-  
   return (
-    <RootShell />
+    <SuperwallProvider apiKeys={{ 
+      ios: process.env.EXPO_PUBLIC_SUPERWALL_API_KEY || "pk_test_expo_go_fallback", 
+      android: process.env.EXPO_PUBLIC_SUPERWALL_API_KEY || "pk_test_expo_go_fallback" 
+    }}>
+      <SuperwallLoading>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#B9C096' }}>
+          <Text style={{ fontSize: 18, fontWeight: '600', color: '#2B2B2B' }}>Loading Keystone...</Text>
+        </View>
+      </SuperwallLoading>
+      <SuperwallLoaded>
+        <SuperwallContextProvider>
+          <RootShell />
+        </SuperwallContextProvider>
+      </SuperwallLoaded>
+    </SuperwallProvider>
   );
 }

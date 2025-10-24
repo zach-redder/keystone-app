@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Redirect } from 'expo-router';
 import { checkUserStatus } from '../services/auth';
 import SplashScreen from './SplashScreen';
+import SubscriptionGate from '../components/SubscriptionGate';
 
 export default function Index() {
   const [redirectTo, setRedirectTo] = useState(null);
@@ -51,8 +52,8 @@ export default function Index() {
           break;
           
         case 'complete':
-          // User has completed onboarding, route to home
-          console.log('Main app routing - Redirecting to /tabs/home');
+          // User has completed onboarding - check subscription before routing to main app
+          console.log('Main app routing - User onboarding complete, checking subscription...');
           setRedirectTo('/tabs/home');
           break;
           

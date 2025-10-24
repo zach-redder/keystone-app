@@ -334,49 +334,34 @@ export const insertUserProfileAfterConfirmation = async (
     // Don't throw - non-critical error
   }
 
-  // Handle pending subscription from unauthenticated purchase
+  // Handle migration from old IAP system to Superwall
   try {
-    console.log('Checking for pending subscription...');
+    console.log('Checking for Superwall migration...');
     const pendingSubscription = await AsyncStorage.getItem('pending_subscription');
     
     if (pendingSubscription) {
-      const subscriptionData = JSON.parse(pendingSubscription);
-      console.log('Found pending subscription:', subscriptionData);
+      console.log('Found pending IAP subscription - migrating to Superwall system');
       
-      // Validate the subscription with Supabase Edge Function
-      const { data, error } = await supabase.functions.invoke('iap-verify-apple', {
-        body: { 
-          receiptData: subscriptionData.receiptData, 
-          productId: subscriptionData.productId 
-        },
-        headers: { 'x-user-id': userId },
-      });
+      // Mark user as pro from migrated IAP subscription
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ 
+          is_pro: true,
+          subscription_source: 'migrated_from_iap'
+        })
+        .eq('id', userId);
       
-      if (error) {
-        console.error('Error validating pending subscription:', error);
-      } else if (data?.active) {
-        console.log('Successfully validated pending subscription');
-        // The Edge Function already handles upserting to subscriptions table
-        // Update user's pro status
-        const { error: updateError } = await supabase
-          .from('users')
-          .update({ is_pro: true })
-          .eq('id', userId);
-        
-        if (updateError) {
-          console.error('Error updating user pro status:', updateError);
-        } else {
-          console.log('Successfully updated user to pro status');
-        }
+      if (updateError) {
+        console.error('Error updating user pro status during migration:', updateError);
       } else {
-        console.log('Pending subscription validation failed or inactive');
+        console.log('Successfully migrated IAP subscription to Superwall system');
       }
       
-      // Clear the pending subscription regardless of validation result
+      // Clear the pending subscription data
       await AsyncStorage.removeItem('pending_subscription');
     }
-  } catch (subscriptionError) {
-    console.error('Error handling pending subscription:', subscriptionError);
+  } catch (migrationError) {
+    console.error('Error handling IAP to Superwall migration:', migrationError);
     // Don't throw - non-critical error
   }
 
@@ -740,8 +725,24 @@ export const resendConfirmationEmail = async (email: string) => {
 };
 
 export const checkUserProStatus = async () => {
-  // All users are considered "Pro" by default
-  return true;
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      return false;
+    }
+
+    const { data: userData } = await supabase
+      .from('users')
+      .select('is_pro')
+      .eq('id', user.id)
+      .single();
+
+    return userData?.is_pro || false;
+  } catch (error) {
+    console.error('Error checking user pro status:', error);
+    return false;
+  }
 };
 
 export const upgradeUserToPro = async (userId?: string) => {
@@ -879,8 +880,24 @@ export const clearOnboardingData = async () => {
 
 // Check if subscription is complete
 export const isSubscriptionComplete = async (): Promise<boolean> => {
-  // All users are considered to have completed subscription
-  return true;
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      return false;
+    }
+
+    const { data: userData } = await supabase
+      .from('users')
+      .select('is_pro')
+      .eq('id', user.id)
+      .single();
+
+    return userData?.is_pro || false;
+  } catch (error) {
+    console.error('Error checking subscription completion:', error);
+    return false;
+  }
 };
 
 export const updateUserPassword = async (newPassword: string) => {

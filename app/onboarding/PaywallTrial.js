@@ -12,7 +12,7 @@ export default function PaywallTrial() {
     const slideValue = useRef(new Animated.Value(30)).current;
     const imageScale = useRef(new Animated.Value(0.8)).current;
     const pulseValue = useRef(new Animated.Value(1)).current;
-    const [isLoading, setIsLoading] = useState(false);
+    
 
     // Superwall removed; this screen now just introduces the free trial UX
 
@@ -61,8 +61,8 @@ export default function PaywallTrial() {
         try {
             setIsLoading(true);
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-            // Continue to Subscription screen which now handles native IAP
-            router.replace('/onboarding/Subscription');
+            // Continue to main app - Superwall will handle subscription gating
+            router.replace('/tabs/home');
         } catch (err) {
             console.warn('Navigation error:', err);
             Alert.alert('Error', 'Failed to continue. Please try again.');
