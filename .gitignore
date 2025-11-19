@@ -18,6 +18,10 @@ expo-env.d.ts
 *.key
 *.mobileprovision
 
+# Native project folders (only needed for custom dev builds, not Expo Go)
+android/
+ios/
+
 # Metro
 .metro-health-check*
 

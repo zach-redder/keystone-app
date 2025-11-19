@@ -1,23 +1,26 @@
+import React, { useEffect, useRef } from 'react';
 import { Slot, useRouter } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
 import * as Linking from 'expo-linking';
 import { supabase } from '../lib/supabase';
-import { useEffect, useRef } from 'react';
 import { AppState, View, Text } from 'react-native';
 import { setupReminderNotifications } from '../services/reminderService';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { getSuperwallImplementation } from '../utils/superwallCompat';
 import { SuperwallContextProvider } from '../contexts/SuperwallContext';
+import { getSuperwallImplementation } from '../utils/superwallCompat';
 
+// Get Superwall components (mock in Expo Go, real in production)
 const { SuperwallProvider, SuperwallLoading, SuperwallLoaded } = getSuperwallImplementation();
 
 function RootShell() {
   const router = useRouter();
-  const appState = useRef(AppState.currentState);
   const midnightTimeoutRef = useRef(null);
+  const appState = useRef('active');
 
   useEffect(() => {
+    appState.current = AppState.currentState;
+
     // Initial schedule of reminder notifications on app start
     setupReminderNotifications().catch(console.error);
 
@@ -126,11 +129,10 @@ function RootShell() {
 }
 
 export default function RootLayout() {
+  const apiKey = process.env.EXPO_PUBLIC_SUPERWALL_API_KEY || "";
+
   return (
-    <SuperwallProvider apiKeys={{ 
-      ios: process.env.EXPO_PUBLIC_SUPERWALL_API_KEY || "pk_test_expo_go_fallback", 
-      android: process.env.EXPO_PUBLIC_SUPERWALL_API_KEY || "pk_test_expo_go_fallback" 
-    }}>
+    <SuperwallProvider apiKeys={{ ios: apiKey, android: apiKey }}>
       <SuperwallLoading>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#B9C096' }}>
           <Text style={{ fontSize: 18, fontWeight: '600', color: '#2B2B2B' }}>Loading Keystone...</Text>

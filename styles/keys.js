@@ -23,13 +23,21 @@ const keysStyles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   streakBadgeWrap: {
-    backgroundColor: '#3a3a3a',
+    backgroundColor: 'rgba(80, 80, 80, 0.45)',
     borderRadius: 20,
     paddingHorizontal: 12,
     paddingVertical: 6,
     flexDirection: 'row',
     alignItems: 'center',
     marginRight: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.10)',
+    borderTopColor: 'rgba(255, 255, 255, 0.20)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 5,
   },
   streakBadge: {
     color: '#D4DE95',
@@ -149,14 +157,22 @@ const keysStyles = StyleSheet.create({
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: cardBg,
+    backgroundColor: 'rgba(80, 80, 80, 0.45)', // Slightly more opaque for visibility
     borderRadius: cardRadius,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.10)', // Subtle border
+    borderTopColor: 'rgba(255, 255, 255, 0.20)', // More noticeable top highlight
     marginBottom: 16,
     paddingHorizontal: 18,
     paddingVertical: 6,
     width: '100%',
     minHeight: 52,
-    ...cardShadow,
+    // Enhanced glassmorphism shadow
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 5,
     marginLeft: 2,
     marginRight: 2,
   },
@@ -177,7 +193,7 @@ const keysStyles = StyleSheet.create({
   keyText: {
     color: '#fff',
     fontSize: 16,
-    backgroundColor: '#3C3C3C',
+    backgroundColor: 'transparent', // Transparent to let glassmorphism show through
     borderRadius: 12,
     padding: 12,
     flex: 1,
@@ -209,8 +225,11 @@ const keysStyles = StyleSheet.create({
     marginBottom: 16,
   },
   suggestionBox: {
-    backgroundColor: cardBg,
+    backgroundColor: 'rgba(80, 80, 80, 0.45)', // Slightly more opaque for visibility
     borderRadius: cardRadius,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.10)',
+    borderTopColor: 'rgba(255, 255, 255, 0.20)', // More noticeable top highlight
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -219,7 +238,12 @@ const keysStyles = StyleSheet.create({
     marginBottom: 14,
     width: '100%',
     minHeight: 52,
-    ...cardShadow,
+    // Enhanced glassmorphism shadow
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 5,
     marginLeft: 2,
     marginRight: 2,
   },

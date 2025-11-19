@@ -1,63 +1,136 @@
+import React from 'react';
 import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 
-// Check if we're running in Expo Go
-export const isExpoGo = Constants?.appOwnership === 'expo';
+// Check if we're running in Expo Go using multiple detection methods
+export const isExpoGo = () => {
+  // Method 1: Check appOwnership - this is the most reliable
+  if (Constants?.appOwnership === 'expo') {
+    return true;
+  }
+
+  // Method 2: Check executionEnvironment (for newer Expo versions)
+  // 'storeClient' means Expo Go
+  if (Constants?.executionEnvironment === 'storeClient') {
+    return true;
+  }
+
+  // For EAS builds (development or production), we should NOT be in Expo Go
+  // Don't use __DEV__ check as it can be true for development builds
+  return false;
+};
 
 // Mock Superwall hooks for Expo Go compatibility
 export const createMockSuperwallHooks = () => {
-  const mockUseUser = () => ({
-    identify: async (userId) => {
-      console.log('[Mock Superwall] User identified:', userId);
-    },
-    setUserAttributes: async (attributes) => {
-      console.log('[Mock Superwall] User attributes set:', attributes);
-    },
-    getSubscriptionStatus: async () => {
-      console.log('[Mock Superwall] Getting subscription status (mock)');
-      return { isActive: true }; // Mock as subscribed for Expo Go testing
-    },
-  });
+  // Mock user state
+  let mockUser = null;
+  let mockAttributes = {};
 
-  const mockUsePlacement = () => ({
-    presentPlacement: async (placementId) => {
-      console.log('[Mock Superwall] Would present placement:', placementId);
-      // In Expo Go, just log instead of showing actual paywall
+  const mockUseUser = () => ({
+    identify: async (userId, options) => {
+      console.log('[Mock Superwall] User identified:', userId, options);
+      mockUser = {
+        appUserId: userId,
+        aliasId: userId,
+        applicationInstalledAt: new Date().toISOString(),
+        seed: Math.floor(Math.random() * 1000),
+        ...mockAttributes,
+      };
       return Promise.resolve();
     },
+    update: async (attributesOrUpdater) => {
+      console.log('[Mock Superwall] Updating user attributes');
+      if (typeof attributesOrUpdater === 'function') {
+        mockAttributes = attributesOrUpdater(mockAttributes);
+      } else {
+        mockAttributes = { ...mockAttributes, ...attributesOrUpdater };
+      }
+      if (mockUser) {
+        mockUser = { ...mockUser, ...mockAttributes };
+      }
+      return Promise.resolve();
+    },
+    signOut: () => {
+      console.log('[Mock Superwall] User signed out');
+      mockUser = null;
+      mockAttributes = {};
+    },
+    refresh: async () => {
+      console.log('[Mock Superwall] Refreshing user attributes (mock)');
+      return Promise.resolve(mockAttributes);
+    },
+    user: mockUser,
+    subscriptionStatus: {
+      status: 'ACTIVE', // Mock as subscribed for Expo Go testing
+      entitlements: [],
+    },
   });
 
-  const mockUseSuperwallEvents = (callback) => {
-    console.log('[Mock Superwall] Event listener registered');
-    // Don't actually call the callback in Expo Go
-    return () => console.log('[Mock Superwall] Event listener removed');
+  const mockUsePlacement = (callbacks) => {
+    console.log('[Mock Superwall] Placement hook initialized with callbacks:', Object.keys(callbacks || {}));
+    return {
+      registerPlacement: async ({ placement, params, feature }) => {
+        console.log('[Mock Superwall] Would present placement:', placement, 'with params:', params);
+        // In Expo Go, just call the feature function directly (user has access)
+        if (feature && typeof feature === 'function') {
+          feature();
+        }
+        return Promise.resolve();
+      },
+      state: { status: 'idle' },
+    };
   };
 
-  const mockSuperwall = {
-    SuperwallProvider: ({ children }) => children,
-    SuperwallLoading: ({ children }) => null, // Don't show loading in Expo Go
-    SuperwallLoaded: ({ children }) => children,
+  const mockUseSuperwallEvents = (callbacks) => {
+    console.log('[Mock Superwall] Event listeners registered for:', Object.keys(callbacks || {}));
+    // Don't actually call the callbacks in Expo Go
+    // This hook doesn't return anything (void)
+  };
+
+  // Mock Superwall components that properly handle props
+  const SuperwallProvider = ({ children, apiKeys, options, ...rest }) => {
+    // Accept and ignore props to prevent type errors
+    return <>{children}</>;
+  };
+
+  const SuperwallLoading = ({ children, ...rest }) => {
+    // Don't show loading in Expo Go
+    return null;
+  };
+
+  const SuperwallLoaded = ({ children, ...rest }) => {
+    return <>{children}</>;
   };
 
   return {
     useUser: mockUseUser,
     usePlacement: mockUsePlacement,
     useSuperwallEvents: mockUseSuperwallEvents,
-    ...mockSuperwall,
+    SuperwallProvider,
+    SuperwallLoading,
+    SuperwallLoaded,
   };
 };
 
 // Export the appropriate implementation based on environment
 export const getSuperwallImplementation = () => {
-  if (isExpoGo) {
-    console.log('🔄 Running in Expo Go - using mock Superwall implementation');
+  // Use mock ONLY in Expo Go to avoid native module issues
+  if (isExpoGo()) {
+    console.log('🔄 Expo Go detected - using mock Superwall implementation');
+    console.log('💡 To test real Superwall, build with: npx eas build --profile development');
+    console.log('⚠️  expo-superwall will NOT be loaded in Expo Go to avoid native module errors');
     return createMockSuperwallHooks();
-  } else {
-    console.log('🚀 Running in development/production build - using real Superwall');
-    try {
-      return require('expo-superwall');
-    } catch (error) {
-      console.warn('Failed to load expo-superwall, falling back to mock:', error);
-      return createMockSuperwallHooks();
-    }
+  }
+
+  // Load real Superwall in dev client and production builds
+  console.log('🚀 Dev client or production build detected - using real Superwall');
+  try {
+    const realSuperwall = require('expo-superwall');
+    console.log('✅ Real Superwall SDK loaded successfully');
+    return realSuperwall;
+  } catch (error) {
+    console.warn('⚠️ Failed to load expo-superwall, falling back to mock:', error?.message || error);
+    console.warn('⚠️ Error details:', error);
+    return createMockSuperwallHooks();
   }
 };

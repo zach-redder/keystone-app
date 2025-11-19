@@ -89,9 +89,9 @@ export default function Welcome() {
               key={index}
               style={[
                 styles.premiumStar,
-                { 
+                {
                   opacity: fadeValue,
-                  transform: [{ scale: starScale }] 
+                  transform: [{ scale: starScale }]
                 }
               ]}
             >

@@ -65,7 +65,7 @@ export default function AppRating() {
 
     const handleNext = async () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        router.push('/onboarding/Subscription');
+        router.push('/onboarding/AnimatedProfileCard');
     };
 
     const handleBack = () => {
@@ -102,12 +102,12 @@ export default function AppRating() {
             end={{ x: 1, y: 1 }}
         >
             {/* Back Arrow */}
-            <TouchableOpacity 
+            <TouchableOpacity
                 style={styles.backArrow}
                 onPress={handleBack}
                 activeOpacity={0.7}
             >
-                <AntDesign name="arrowleft" size={24} color="#ffffff" />
+                <AntDesign name="left" size={24} color="#ffffff" />
             </TouchableOpacity>
 
             <Animated.View 

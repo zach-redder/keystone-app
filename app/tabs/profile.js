@@ -372,7 +372,7 @@ export default function ProfileScreen() {
           <View style={profileStyles.profileSection}>
             <Text style={profileStyles.sectionTitle}>Account</Text>
             
-            <TouchableOpacity style={profileStyles.profileItem} onPress={() => {
+            {/* <TouchableOpacity style={profileStyles.profileItem} onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               setEditProfileModalVisible(true);
             }}>
@@ -382,7 +382,7 @@ export default function ProfileScreen() {
                 <Text style={profileStyles.profileItemValue}>{truncateEmail(userEmail)}</Text>
                 <Ionicons name="chevron-forward" size={16} color="#fff" />
               </View>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
 
             <TouchableOpacity style={[profileStyles.profileItem, profileStyles.profileItemLast]} onPress={async () => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -509,7 +509,7 @@ export default function ProfileScreen() {
               </View>
             </TouchableOpacity>
 
-            <TouchableOpacity style={profileStyles.profileItem} onPress={async () => {
+            <TouchableOpacity style={[profileStyles.profileItem, profileStyles.profileItemLast]} onPress={async () => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               try {
                 await Linking.openURL('https://thekeystoneapp.com');
@@ -524,7 +524,7 @@ export default function ProfileScreen() {
               </View>
             </TouchableOpacity>
 
-            <TouchableOpacity style={[profileStyles.profileItem, profileStyles.profileItemLast]} onPress={async () => {
+            {/* <TouchableOpacity style={[profileStyles.profileItem, profileStyles.profileItemLast]} onPress={async () => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               try {
                 await Linking.openURL('https://reddermedia.com');
@@ -537,7 +537,7 @@ export default function ProfileScreen() {
               <View style={profileStyles.profileItemRight}>
                 <Ionicons name="chevron-forward" size={16} color="#fff" />
               </View>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
           </View>
 
           {/* Sign Out Button */}

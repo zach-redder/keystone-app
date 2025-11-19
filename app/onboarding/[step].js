@@ -156,6 +156,7 @@ export default function OnboardingStep() {
       if (currentIndex < steps.length - 1) {
         router.push(`/onboarding/${steps[currentIndex + 1]}`);
       } else {
+        // After CoreValues (last step), go to Progress
         router.push('/onboarding/Progress');
       }
     } catch (error) {

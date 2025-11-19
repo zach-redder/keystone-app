@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { getUserCommunityComparison } from '../services/communityService';
 
-const CommunityCard = () => {
+const CommunityCard = ({ onJoinPress }) => {
   const [comparison, setComparison] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -37,9 +37,13 @@ const CommunityCard = () => {
   const handleExploreCommunity = async () => {
     try {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      // Replace with your actual Whop community link
-      const whopLink = 'https://discord.me/thealignedcore';
-      await Linking.openURL(whopLink);
+      // Call the onPress handler if provided, otherwise open link directly
+      if (onJoinPress) {
+        onJoinPress();
+      } else {
+        const whopLink = 'https://discord.me/thealignedcore';
+        await Linking.openURL(whopLink);
+      }
     } catch (error) {
       console.error('Error opening community link:', error);
     }
@@ -99,15 +103,18 @@ const CommunityCard = () => {
 
 const styles = {
   container: {
-    backgroundColor: '#3C3C3C',
+    backgroundColor: 'rgba(80, 80, 80, 0.45)',
     borderRadius: 16,
     padding: 20,
     marginBottom: 55,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.10)',
+    borderTopColor: 'rgba(255, 255, 255, 0.20)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.10,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 5,
   },
 
   comparisonText: {

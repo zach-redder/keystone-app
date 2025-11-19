@@ -17,43 +17,49 @@ export const useSuperwallContext = () => {
 
 export const SuperwallContextProvider = ({ children }) => {
   const [isSubscribed, setIsSubscribed] = useState(false);
-  const [subscriptionStatus, setSubscriptionStatus] = useState(null);
+  const [localSubscriptionStatus, setLocalSubscriptionStatus] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  
-  const { identify, setUserAttributes, getSubscriptionStatus } = useUser();
+
+  const { identify, update, subscriptionStatus, refresh } = useUser();
 
   // Handle Superwall events
-  useSuperwallEvents((event) => {
-    console.log('Superwall event received:', event.type, event.data);
-    
-    switch (event.type) {
-      case 'transaction_complete':
-        handlePurchaseComplete(event.data);
-        break;
-      case 'subscription_start':
-        refreshSubscriptionStatus();
-        break;
-      case 'subscription_end':
-        refreshSubscriptionStatus();
-        break;
-    }
-  });
+  useSuperwallEvents({
+    onSubscriptionStatusChange: async (status) => {
+      console.log('Subscription status changed:', status);
+      setLocalSubscriptionStatus(status);
+      const isActive = status?.status === 'ACTIVE';
+      setIsSubscribed(isActive);
 
-  const handlePurchaseComplete = async (transactionData) => {
-    try {
-      await handleSuperwallPurchaseComplete(transactionData);
-      await refreshSubscriptionStatus();
-    } catch (error) {
-      console.error('Error handling purchase completion:', error);
-    }
-  };
+      // If subscription is active, update database
+      if (isActive) {
+        try {
+          await handleSuperwallPurchaseComplete(status);
+        } catch (error) {
+          console.error('Error updating database with subscription:', error);
+        }
+      }
+    },
+    onSuperwallEvent: (eventInfo) => {
+      console.log('Superwall event received:', eventInfo.event, eventInfo.params);
+    },
+  });
 
   const refreshSubscriptionStatus = async () => {
     try {
       setIsLoading(true);
-      const status = await getSubscriptionStatus();
-      setSubscriptionStatus(status);
-      setIsSubscribed(status?.isActive || false);
+      // In the new API, subscriptionStatus is a property, not a method
+      // Use refresh() to update user data if needed
+      if (refresh) {
+        await refresh();
+      }
+
+      // Get status from the hook's subscriptionStatus property
+      const status = subscriptionStatus;
+      setLocalSubscriptionStatus(status);
+
+      // Check if status is ACTIVE
+      const isActive = status?.status === 'ACTIVE';
+      setIsSubscribed(isActive);
     } catch (error) {
       console.error('Error refreshing subscription status:', error);
       setIsSubscribed(false);
@@ -65,11 +71,11 @@ export const SuperwallContextProvider = ({ children }) => {
   const identifyUser = async (userId, userAttributes = {}) => {
     try {
       await identify(userId);
-      
+
       if (Object.keys(userAttributes).length > 0) {
-        await setUserAttributes(userAttributes);
+        await update(userAttributes);
       }
-      
+
       console.log('User identified with Superwall:', userId);
     } catch (error) {
       console.error('Error identifying user with Superwall:', error);
@@ -115,7 +121,7 @@ export const SuperwallContextProvider = ({ children }) => {
         await refreshSubscriptionStatus();
       } else if (event === 'SIGNED_OUT') {
         setIsSubscribed(false);
-        setSubscriptionStatus(null);
+        setLocalSubscriptionStatus(null);
         setIsLoading(false);
       }
     });
@@ -125,7 +131,7 @@ export const SuperwallContextProvider = ({ children }) => {
 
   const value = {
     isSubscribed,
-    subscriptionStatus,
+    subscriptionStatus: localSubscriptionStatus,
     isLoading,
     refreshSubscriptionStatus,
     identifyUser,

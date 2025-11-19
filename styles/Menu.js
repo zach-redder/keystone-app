@@ -1,9 +1,12 @@
 import { StyleSheet } from 'react-native';
 
 const menuStyles = StyleSheet.create({
+  blurView: {
+    flex: 1,
+  },
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
     justifyContent: 'flex-start',
     alignItems: 'flex-start',
   },
@@ -11,18 +14,19 @@ const menuStyles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
-    backgroundColor: '#2B2B2B',
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: '#888',
+    backgroundColor: 'rgba(80, 80, 80, 0.45)',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.10)',
+    borderTopColor: 'rgba(255, 255, 255, 0.20)',
     paddingVertical: 6,
     paddingHorizontal: 0,
     minWidth: 220,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.18,
-    shadowRadius: 16,
-    elevation: 8,
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 5,
   },
   item: {
     flexDirection: 'row',

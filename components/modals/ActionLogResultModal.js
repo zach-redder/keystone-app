@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, Modal, TouchableOpacity, ScrollView } from 'react-native';
-import Markdown from 'react-native-markdown-display';
+import Markdown from '@ronradtke/react-native-markdown-display';
 
 const ActionLogResultModal = ({ visible, onClose, log }) => {
   if (!log) return null;
@@ -123,10 +123,18 @@ const styles = {
     textAlign: 'left',
   },
   resultBox: {
-    backgroundColor: '#393939',
+    backgroundColor: 'rgba(80, 80, 80, 0.45)',
     borderRadius: 12,
     padding: 16,
     marginBottom: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.10)',
+    borderTopColor: 'rgba(255, 255, 255, 0.20)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 5,
   },
   resultText: {
     color: '#fff',

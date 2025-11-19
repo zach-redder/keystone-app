@@ -611,7 +611,7 @@ export default function HomeScreen() {
           {/* Community Card Section */}
           <View style={homeStyles.sectionContainer}>
             <Text style={homeStyles.sectionTitle}>Community</Text>
-            <CommunityCard />
+            <CommunityCard onJoinPress={() => setCommunityModalVisible(true)} />
           </View>
 
           {/* Weekly Overview Section */}

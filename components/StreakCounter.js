@@ -149,9 +149,17 @@ const StreakCounter = ({ activeDays = [], dailyActivityCounts = {} }) => {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#3C3C3C',
+    backgroundColor: 'rgba(80, 80, 80, 0.45)',
     borderRadius: 12,
     padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.10)',
+    borderTopColor: 'rgba(255, 255, 255, 0.20)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 5,
   },
   title: {
     color: '#fff',

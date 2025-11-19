@@ -288,7 +288,7 @@ const AlignModal = ({ visible, onClose, onUpgradePress, onAffirmIdentity, onLogA
                 </TouchableOpacity>
               </Animated.View>
 
-              <Animated.View style={{ 
+              {/* <Animated.View style={{
                 opacity: shareIconAnim,
                 transform: [
                   { scale: shareScaleAnim },
@@ -304,7 +304,7 @@ const AlignModal = ({ visible, onClose, onUpgradePress, onAffirmIdentity, onLogA
                   <Ionicons name="share-social" size={20} color="#D4DE95" style={styles.buttonIcon} />
                   <Text style={styles.actionButtonText}>Share Progress</Text>
                 </TouchableOpacity>
-              </Animated.View>
+              </Animated.View> */}
               
               <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
                 <Text style={styles.cancelButtonText}>Cancel</Text>

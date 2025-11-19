@@ -144,12 +144,12 @@ export default function KeystoneBenefits() {
 
     const handleNext = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        
+
         if (currentPage < KEYSTONE_BENEFITS.length) {
             router.push(`/onboarding/benefits/${currentPage + 1}`);
         } else {
-            // Final screen - navigate to Benefits Deep Dive
-            router.push('/onboarding/BenefitsDeepDive');
+            // Final screen - navigate to referral code
+            router.push('/onboarding/ReferralCode');
         }
     };
 
@@ -196,13 +196,14 @@ export default function KeystoneBenefits() {
     }
 
     return (
-        <GestureDetector gesture={swipeGesture}>
-            <LinearGradient
-                colors={['#2B2B2B', '#2F2F2C', '#2B2B2B']}
-                style={styles.gradientContainer}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-            >
+        <View style={{ flex: 1 }}>
+            <GestureDetector gesture={swipeGesture}>
+                <LinearGradient
+                    colors={['#2B2B2B', '#2F2F2C', '#2B2B2B']}
+                    style={styles.gradientContainer}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                >
             {/* Keystone Logo */}
             <Animated.View 
                 style={[
@@ -216,12 +217,14 @@ export default function KeystoneBenefits() {
                 />
             </Animated.View>
 
-            <Animated.View 
+            <Animated.View
                 style={[
                     styles.benefitsContent,
                     {
                         opacity: fadeValue,
-                        transform: [{ translateY: slideValue }]
+                        transform: [{ translateY: slideValue }],
+                        flex: 1,
+                        justifyContent: 'center'
                     }
                 ]}
             >
@@ -275,9 +278,20 @@ export default function KeystoneBenefits() {
             {/* Dot Indicators */}
             {renderDotIndicators()}
 
-            {/* Next Button */}
-            <TouchableOpacity 
-                style={styles.benefitNextButton} 
+                </LinearGradient>
+            </GestureDetector>
+
+            {/* Next Button - MOVED OUTSIDE GestureDetector */}
+            <TouchableOpacity
+                style={[
+                    styles.benefitNextButton,
+                    {
+                        position: 'absolute',
+                        bottom: 100, // Positioned to not overlap dots
+                        left: 20,
+                        right: 20,
+                    }
+                ]}
                 onPress={handleNext}
                 activeOpacity={0.8}
             >
@@ -285,7 +299,6 @@ export default function KeystoneBenefits() {
                     Next
                 </Text>
             </TouchableOpacity>
-            </LinearGradient>
-        </GestureDetector>
+        </View>
     );
 }

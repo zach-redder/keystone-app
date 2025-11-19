@@ -77,7 +77,7 @@ const CommunityModal = ({ visible, onClose }) => {
 
   const handleJoinCommunity = async () => {
     try {
-      await Linking.openURL('https://whop.com/the-aligned-core');
+      await Linking.openURL('https://discord.me/thealignedcore');
       closeModal();
     } catch (error) {
       console.error('Error opening Whop link:', error);
@@ -113,7 +113,6 @@ const CommunityModal = ({ visible, onClose }) => {
 
   const communityPerks = [
     'Exclusive community discussions',
-    'Clip content for rewards',
     'Early access to new features',
     'Connect with like-minded people',
   ];

@@ -51,11 +51,18 @@ const DOUBT_CONSEQUENCES = [
 ];
 
 export default function DoubtConsequences() {
+    console.log('🔍 DoubtConsequences: Component rendering...');
+
     const router = useRouter();
     const { page } = useLocalSearchParams();
     const currentPage = parseInt(page) || 1;
+
+    console.log('🔍 DoubtConsequences: Current page:', currentPage);
+    console.log('🔍 DoubtConsequences: Total pages:', DOUBT_CONSEQUENCES.length);
+
     const currentItem = DOUBT_CONSEQUENCES[currentPage - 1];
-    
+    console.log('🔍 DoubtConsequences: Current item:', currentItem?.title);
+
     const fadeValue = useRef(new Animated.Value(0)).current;
     const slideValue = useRef(new Animated.Value(30)).current;
     const iconScale = useRef(new Animated.Value(0.8)).current;
@@ -63,6 +70,8 @@ export default function DoubtConsequences() {
     const logoScale = useRef(new Animated.Value(0.9)).current;
 
     useEffect(() => {
+        console.log('🔍 DoubtConsequences: useEffect triggered for page:', page);
+
         // Entrance animation
         Animated.parallel([
             Animated.timing(fadeValue, {
@@ -131,35 +140,64 @@ export default function DoubtConsequences() {
     }, [page]);
 
     const handleNext = () => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        
-        if (currentPage < DOUBT_CONSEQUENCES.length) {
-            router.push(`/onboarding/doubt-consequences/${currentPage + 1}`);
-        } else {
-            // Move to benefits sequence
-            router.push('/onboarding/benefits/1');
+        console.log('🔍 DoubtConsequences: handleNext called');
+        console.log('🔍 DoubtConsequences: currentPage =', currentPage);
+        console.log('🔍 DoubtConsequences: DOUBT_CONSEQUENCES.length =', DOUBT_CONSEQUENCES.length);
+
+        try {
+            console.log('🔍 DoubtConsequences: Triggering haptic feedback...');
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            console.log('🔍 DoubtConsequences: Haptic feedback completed');
+
+            if (currentPage < DOUBT_CONSEQUENCES.length) {
+                const nextPage = currentPage + 1;
+                const nextRoute = `/onboarding/doubt-consequences/${nextPage}`;
+                console.log('🔍 DoubtConsequences: Navigating to next page:', nextRoute);
+                router.push(nextRoute);
+                console.log('🔍 DoubtConsequences: Navigation initiated');
+            } else {
+                const benefitsRoute = '/onboarding/benefits/1';
+                console.log('🔍 DoubtConsequences: Last page! Navigating to benefits:', benefitsRoute);
+                router.push(benefitsRoute);
+                console.log('🔍 DoubtConsequences: Benefits navigation initiated');
+            }
+        } catch (error) {
+            console.error('❌ DoubtConsequences: Error in handleNext:', error);
+            console.error('❌ DoubtConsequences: Error stack:', error.stack);
+            console.error('❌ DoubtConsequences: Error message:', error.message);
+            // Fallback navigation
+            console.log('🔍 DoubtConsequences: Attempting fallback navigation...');
+            try {
+                router.push('/onboarding/benefits/1');
+            } catch (fallbackError) {
+                console.error('❌ DoubtConsequences: Fallback navigation also failed:', fallbackError);
+            }
         }
     };
 
     // Swipe gesture handlers
     const swipeGesture = Gesture.Pan()
         .onEnd((event) => {
-            const { velocityX, translationX } = event;
-            
-            if (Math.abs(translationX) > 50 || Math.abs(velocityX) > 500) {
-                if (translationX > 0 && currentPage > 1) {
-                    // Swipe right - go back
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    router.push(`/onboarding/doubt-consequences/${currentPage - 1}`);
-                } else if (translationX < 0 && currentPage < DOUBT_CONSEQUENCES.length) {
-                    // Swipe left - go forward
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                    router.push(`/onboarding/doubt-consequences/${currentPage + 1}`);
-                } else if (translationX < 0 && currentPage === DOUBT_CONSEQUENCES.length) {
-                    // Swipe left on last page - go to benefits
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                    router.push('/onboarding/benefits/1');
+            try {
+                const { velocityX, translationX } = event;
+
+                if (Math.abs(translationX) > 50 || Math.abs(velocityX) > 500) {
+                    if (translationX > 0 && currentPage > 1) {
+                        // Swipe right - go back
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        router.push(`/onboarding/doubt-consequences/${currentPage - 1}`);
+                    } else if (translationX < 0 && currentPage < DOUBT_CONSEQUENCES.length) {
+                        // Swipe left - go forward
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                        router.push(`/onboarding/doubt-consequences/${currentPage + 1}`);
+                    } else if (translationX < 0 && currentPage === DOUBT_CONSEQUENCES.length) {
+                        // Swipe left on last page - go to benefits
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                        router.push('/onboarding/benefits/1');
+                    }
                 }
+            } catch (error) {
+                console.error('Error in swipe gesture:', error);
             }
         });
 
@@ -188,13 +226,14 @@ export default function DoubtConsequences() {
     }
 
     return (
-        <GestureDetector gesture={swipeGesture}>
-            <LinearGradient
-                colors={currentPage === 5 ? ['#2B2B2B', '#2F2F2C', '#2B2B2B'] : ['#FF6B6B', '#FF4C4C', '#FF6B6B']}
-                style={styles.doubtConsequenceContainer}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-            >
+        <View style={{ flex: 1 }}>
+            <GestureDetector gesture={swipeGesture}>
+                <LinearGradient
+                    colors={currentPage === 5 ? ['#2B2B2B', '#2F2F2C', '#2B2B2B'] : ['#FF6B6B', '#FF4C4C', '#FF6B6B']}
+                    style={styles.doubtConsequenceContainer}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                >
                 {/* Keystone Logo
                 <Animated.View 
                     style={[
@@ -208,12 +247,14 @@ export default function DoubtConsequences() {
                     />
                 </Animated.View> */}
 
-                <Animated.View 
+                <Animated.View
                 style={[
                     styles.consequenceContent,
                     {
                         opacity: fadeValue,
-                        transform: [{ translateY: slideValue }]
+                        transform: [{ translateY: slideValue }],
+                        flex: 1,
+                        justifyContent: 'center'
                     }
                 ]}
             >
@@ -267,13 +308,27 @@ export default function DoubtConsequences() {
             {/* Dot Indicators */}
             {renderDotIndicators()}
 
-            {/* Next Button */}
-            <TouchableOpacity 
+                </LinearGradient>
+            </GestureDetector>
+
+            {/* Next Button - MOVED OUTSIDE GestureDetector */}
+            <TouchableOpacity
                 style={[
                     styles.consequenceNextButton,
-                    { backgroundColor: currentPage === 5 ? '#D4DE95' : 'rgba(255, 255, 255, 0.2)' }
-                ]} 
-                onPress={handleNext}
+                    {
+                        backgroundColor: currentPage === 5 ? '#D4DE95' : 'rgba(255, 255, 255, 0.2)',
+                        position: 'absolute',
+                        bottom: 100, // Increased from 60 to avoid overlapping dots
+                        left: 20,
+                        right: 20,
+                    }
+                ]}
+                onPress={() => {
+                    console.log('🔍 DoubtConsequences: Button TOUCHED!');
+                    handleNext();
+                }}
+                onPressIn={() => console.log('🔍 DoubtConsequences: onPressIn')}
+                onPressOut={() => console.log('🔍 DoubtConsequences: onPressOut')}
                 activeOpacity={0.8}
             >
                 <Text style={[
@@ -283,7 +338,6 @@ export default function DoubtConsequences() {
                     Next
                 </Text>
             </TouchableOpacity>
-            </LinearGradient>
-        </GestureDetector>
+        </View>
     );
 }

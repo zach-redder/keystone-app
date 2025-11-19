@@ -132,14 +132,39 @@ export default function QuizQuestion() {
         }
 
         // Auto-transition after selection (faster transition)
-        setTimeout(() => {
+        setTimeout(async () => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             const nextQuestionNum = parseInt(questionNumber) + 1;
             if (nextQuestionNum <= 6) {
                 router.push(`/onboarding/Quiz/${nextQuestionNum}`);
             } else {
-                // Quiz completed, go to user info screen
-                router.push('/onboarding/Quiz/UserInfo');
+                // Quiz completed, calculate alignment scores and go to Progress screen
+                try {
+                    const savedAnswers = await AsyncStorage.getItem('quiz_answers');
+                    if (savedAnswers) {
+                        const answers = JSON.parse(savedAnswers);
+                        const quizScores = {};
+
+                        // Extract numeric scores from quiz answers
+                        for (let i = 1; i <= 6; i++) {
+                            const scoreKey = `question_${i}_score`;
+                            if (answers[scoreKey] !== undefined) {
+                                quizScores[scoreKey] = answers[scoreKey];
+                            }
+                        }
+
+                        // Calculate alignment scores and save to AsyncStorage
+                        if (Object.keys(quizScores).length > 0) {
+                            const { calculateAlignmentScoresFromQuizAnswers } = await import('../../../services/alignmentService');
+                            const alignmentScores = calculateAlignmentScoresFromQuizAnswers(quizScores);
+                            await AsyncStorage.setItem('pending_alignment_scores', JSON.stringify(alignmentScores));
+                            console.log('Alignment scores calculated:', alignmentScores);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error processing quiz answers:', error);
+                }
+                router.push('/onboarding/FutureSelfVision');
             }
         }, 400);
     };

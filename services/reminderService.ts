@@ -125,14 +125,15 @@ export const setupReminderNotifications = async () => {
     // Request notification permissions
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
-    
+
     if (existingStatus !== 'granted') {
       const { status } = await Notifications.requestPermissionsAsync();
       finalStatus = status;
     }
-    
+
     if (finalStatus !== 'granted') {
-      throw new Error('Permission not granted for notifications');
+      console.log('Notification permissions not granted - notifications will not be scheduled');
+      return;
     }
 
     // Get user's preferred reminder time

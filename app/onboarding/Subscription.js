@@ -11,33 +11,34 @@ const { usePlacement, useUser, useSuperwallEvents } = getSuperwallImplementation
 export default function SubscriptionScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { getSubscriptionStatus } = useUser();
-  const { presentPlacement } = usePlacement();
+  const { subscriptionStatus } = useUser();
+  const { registerPlacement } = usePlacement({
+    onDismiss: (paywallInfo, result) => {
+      console.log('Paywall dismissed:', paywallInfo, result);
+      // For hard paywall: re-present if user is not subscribed
+      checkSubscriptionAndReact();
+    },
+  });
 
-  useSuperwallEvents((event) => {
-    console.log('Superwall event:', event.type, event.data);
-    
-    switch (event.type) {
-      case 'transaction_complete':
+  useSuperwallEvents({
+    onSubscriptionStatusChange: (status) => {
+      console.log('Subscription status changed:', status);
+      if (status?.status === 'ACTIVE') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         Alert.alert('Success', 'Welcome to Keystone Pro!', [
-          { text: 'Continue', onPress: () => router.replace('/') }
+          { text: 'Continue', onPress: () => router.replace('/register') }
         ]);
-        break;
-      case 'paywall_dismiss':
-        // For hard paywall: re-present if user is not subscribed
-        checkSubscriptionAndReact();
-        break;
-      case 'subscription_start':
-        console.log('Subscription started successfully');
-        break;
-    }
+      }
+    },
+    onSuperwallEvent: (eventInfo) => {
+      console.log('Superwall event:', eventInfo.event, eventInfo.params);
+    },
   });
 
   const checkSubscriptionAndReact = async () => {
     try {
-      const status = await getSubscriptionStatus();
-      if (!status.isActive) {
+      const status = subscriptionStatus;
+      if (status?.status !== 'ACTIVE') {
         // Hard paywall: user must subscribe to continue
         setTimeout(() => {
           presentHardPaywall();
@@ -54,7 +55,13 @@ export default function SubscriptionScreen() {
 
   const presentHardPaywall = async () => {
     try {
-      await presentPlacement('subscription_required');
+      await registerPlacement({
+        placement: 'onboarding_complete',
+        feature: () => {
+          console.log('User has subscription - routing to register');
+          router.replace('/register');
+        }
+      });
     } catch (error) {
       console.warn('Error presenting paywall:', error);
       Alert.alert('Error', 'Unable to load subscription options. Please try again.');
@@ -64,13 +71,13 @@ export default function SubscriptionScreen() {
   const handleRestorePurchases = async () => {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      
+
       // Check subscription status to restore
-      const status = await getSubscriptionStatus();
-      if (status.isActive) {
+      const status = subscriptionStatus;
+      if (status?.status === 'ACTIVE') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         Alert.alert('Success', 'Your subscription has been restored!', [
-          { text: 'Continue', onPress: () => router.replace('/') }
+          { text: 'Continue', onPress: () => router.replace('/register') }
         ]);
       } else {
         Alert.alert('No Subscription Found', 'No active subscription found to restore.');
@@ -78,6 +85,32 @@ export default function SubscriptionScreen() {
     } catch (error) {
       console.warn('Restore error:', error);
       Alert.alert('Error', 'Failed to restore purchases. Please try again.');
+    }
+  };
+
+  const handleRedeemCode = async () => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+      // Use Superwall's presentCodeRedemption method if available
+      const Superwall = await import('@superwall/react-native-superwall');
+      if (Superwall.default && Superwall.default.presentCodeRedemption) {
+        await Superwall.default.presentCodeRedemption();
+      } else {
+        // Fallback: show alert with instructions
+        Alert.alert(
+          'Redeem Offer Code',
+          'To redeem an App Store offer code:\n\n1. Go to the App Store app\n2. Tap your profile icon\n3. Tap "Redeem Gift Card or Code"\n4. Enter your code',
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      console.warn('Code redemption error:', error);
+      Alert.alert(
+        'Redeem Code',
+        'Please go to the App Store to redeem your offer code.',
+        [{ text: 'OK' }]
+      );
     }
   };
 
@@ -93,13 +126,22 @@ export default function SubscriptionScreen() {
         {/* Header with restore link */}
         <View style={styles.header}>
           <Text style={styles.title}>Keystone</Text>
-          <TouchableOpacity 
-            onPress={handleRestorePurchases}
-            style={{ position: 'absolute', right: 20, top: 10, padding: 8 }}
-            activeOpacity={0.7}
-          >
-            <Text style={{ color: '#2B2B2B', fontWeight: '700' }}>Restore</Text>
-          </TouchableOpacity>
+          <View style={{ position: 'absolute', right: 20, top: 10, flexDirection: 'row', gap: 12 }}>
+            <TouchableOpacity
+              onPress={handleRedeemCode}
+              style={{ padding: 8 }}
+              activeOpacity={0.7}
+            >
+              <Text style={{ color: '#2B2B2B', fontWeight: '700' }}>Redeem Code</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleRestorePurchases}
+              style={{ padding: 8 }}
+              activeOpacity={0.7}
+            >
+              <Text style={{ color: '#2B2B2B', fontWeight: '700' }}>Restore</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Main content */}

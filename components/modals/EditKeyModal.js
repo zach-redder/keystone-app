@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { BlurView } from 'expo-blur';
 
 export default function EditKeyModal({ visible, onClose, onSave, initialValue, keyType }) {
   const [value, setValue] = useState('');
@@ -22,42 +23,44 @@ export default function EditKeyModal({ visible, onClose, onSave, initialValue, k
       visible={visible}
       onRequestClose={onClose}
     >
-      <TouchableOpacity 
-        style={styles.centeredView} 
-        activeOpacity={1} 
-        onPress={onClose}
-      >
-        <TouchableOpacity 
-          style={styles.modalView} 
+      <BlurView intensity={20} tint="dark" style={styles.centeredView}>
+        <TouchableOpacity
+          style={styles.blurOverlay}
           activeOpacity={1}
-          onPress={(e) => e.stopPropagation()}
+          onPress={onClose}
         >
-          <Text style={styles.modalTitle}>Edit {keyType}</Text>
-          <TextInput
-            style={styles.input}
-            value={value}
-            onChangeText={setValue}
-            multiline={true}
-            placeholderTextColor="#666"
-            autoFocus={true}
-            selectionColor="#d4de95"
-          />
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={[styles.button, styles.cancelButton]}
-              onPress={onClose}
-            >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.button, styles.saveButton]}
-              onPress={handleSave}
-            >
-              <Text style={styles.saveButtonText}>Save</Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            style={styles.modalView}
+            activeOpacity={1}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <Text style={styles.modalTitle}>Edit {keyType}</Text>
+            <TextInput
+              style={styles.input}
+              value={value}
+              onChangeText={setValue}
+              multiline={true}
+              placeholderTextColor="#666"
+              autoFocus={true}
+              selectionColor="#d4de95"
+            />
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity
+                style={[styles.button, styles.cancelButton]}
+                onPress={onClose}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, styles.saveButton]}
+                onPress={handleSave}
+              >
+                <Text style={styles.saveButtonText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
         </TouchableOpacity>
-      </TouchableOpacity>
+      </BlurView>
     </Modal>
   );
 }
@@ -67,15 +70,29 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+  },
+  blurOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
   },
   modalView: {
-    backgroundColor: '#2b2b2b',
+    backgroundColor: 'rgba(80, 80, 80, 0.45)',
     borderRadius: 25,
     padding: 20,
     width: '80%',
     maxWidth: 350,
     marginBottom: 250,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.10)',
+    borderTopColor: 'rgba(255, 255, 255, 0.20)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 5,
   },
   modalTitle: {
     color: 'white',

@@ -1,7 +1,7 @@
 // components/SignInForm.js
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Image, Alert } from 'react-native';
-import { signInUser, resetPassword } from '../../services/auth';
+import { signInUser, resetPassword, signInWithGoogle, signInWithApple } from '../../services/auth';
 import { styles } from '../../styles/authentication';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,6 +15,7 @@ export default function SignInForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [resetLoading, setResetLoading] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState(false);
 
   const handleSignIn = async () => {
     setLoading(true);
@@ -65,6 +66,50 @@ export default function SignInForm() {
     router.push('/onboarding/Welcome');
   };
 
+  const handleGoogleSignIn = async () => {
+    try {
+      setOauthLoading(true);
+      setError(null);
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+      const user = await signInWithGoogle();
+
+      if (user) {
+        console.log('Google sign-in successful, navigating to home...');
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        router.replace('/tabs/home');
+      }
+    } catch (err) {
+      console.error('Google sign-in error:', err);
+      setError(err.message || 'Failed to sign in with Google');
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setOauthLoading(false);
+    }
+  };
+
+  const handleAppleSignIn = async () => {
+    try {
+      setOauthLoading(true);
+      setError(null);
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+      const user = await signInWithApple();
+
+      if (user) {
+        console.log('Apple sign-in successful, navigating to home...');
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        router.replace('/tabs/home');
+      }
+    } catch (err) {
+      console.error('Apple sign-in error:', err);
+      setError(err.message || 'Failed to sign in with Apple');
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setOauthLoading(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.headerContainer}>
@@ -104,27 +149,36 @@ export default function SignInForm() {
 
       {error && <Text style={styles.error}>{error}</Text>}
 
-      <TouchableOpacity style={styles.registerButton} onPress={handleSignIn} disabled={loading}>
+      <TouchableOpacity
+        style={[styles.registerButton, (loading || oauthLoading) && styles.disabledButton]}
+        onPress={handleSignIn}
+        disabled={loading || oauthLoading}
+      >
         <Text style={styles.buttonText}>Log In</Text>
       </TouchableOpacity>
 
-      {/* <View style={styles.dividerContainer}>
+      <View style={styles.dividerContainer}>
         <View style={styles.divider} />
         <Text style={styles.orText}>OR</Text>
         <View style={styles.divider} />
       </View>
 
       <View style={styles.signInSocialContainer}>
-        <TouchableOpacity style={styles.socialButton}>
-          <Image source={require('../../assets/google.png')} style={styles.socialIcon} />
+        <TouchableOpacity
+          style={[styles.socialButton, oauthLoading && styles.disabledButton]}
+          onPress={handleGoogleSignIn}
+          disabled={loading || oauthLoading}
+        >
+          <Ionicons name="logo-google" size={40} color="#fff" />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.socialButton}>
-          <Image source={require('../../assets/apple.png')} style={styles.socialIcon} />
+        <TouchableOpacity
+          style={[styles.socialButton, oauthLoading && styles.disabledButton]}
+          onPress={handleAppleSignIn}
+          disabled={loading || oauthLoading}
+        >
+          <Ionicons name="logo-apple" size={40} color="#fff" />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.socialButton}>
-          <Image source={require('../../assets/x.png')} style={styles.socialIcon} />
-        </TouchableOpacity>
-      </View> */}
+      </View>
     </View>
   );
 }

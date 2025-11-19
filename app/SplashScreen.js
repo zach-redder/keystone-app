@@ -4,7 +4,11 @@ import { View, Image, StyleSheet } from 'react-native';
 export default function SplashScreen() {
   return (
     <View style={styles.container}>
-      <Image source={require('../assets/keystone_transparent.png')} style={styles.logo} />
+      <Image
+        source={require('../assets/keystone_transparent.png')}
+        style={styles.logo}
+        resizeMode="contain"
+      />
     </View>
   );
 }
@@ -19,6 +23,5 @@ const styles = StyleSheet.create({
   logo: {
     width: 200, // Adjust size as needed
     height: 200, // Adjust size as needed
-    resizeMode: 'contain',
   },
 }); 

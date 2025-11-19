@@ -3,6 +3,24 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { addIdentityKeysBatch, IdentityKey } from './userKeys';
 import { handleNewUserEmailList } from './emailListService';
 import { createFirstReminder } from './reminderService';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import { Platform } from 'react-native';
+
+// Lazy load Google Sign In to avoid crashes during development
+let GoogleSignin: any = null;
+try {
+  const googleSigninModule = require('@react-native-google-signin/google-signin');
+  GoogleSignin = googleSigninModule.GoogleSignin;
+
+  // Configure Google Sign In
+  GoogleSignin.configure({
+    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '',
+    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || '',
+    offlineAccess: true,
+  });
+} catch (error) {
+  console.warn('Google Sign In module not available - rebuild app to enable');
+}
 
 interface Preferences {
   timezone?: string;
@@ -104,6 +122,183 @@ export const signInUser = async (email: string, password: string) => {
       console.error('Error in signInUser:', error);
       throw error;
     }
+  }
+};
+
+export const signInWithGoogle = async () => {
+  try {
+    if (!GoogleSignin) {
+      throw new Error('Google Sign In not available. Please rebuild the app with: npx expo run:ios');
+    }
+
+    console.log('Starting native Google Sign-In...');
+
+    // Check if Google Play Services are available
+    await GoogleSignin.hasPlayServices();
+
+    // Sign in with Google
+    const response = await GoogleSignin.signIn();
+    console.log('Google sign-in response:', JSON.stringify(response, null, 2));
+
+    // Get the ID token - handle both old and new response formats
+    const idToken = response?.data?.idToken || response?.idToken;
+    const user = response?.data?.user || response?.user;
+
+    console.log('Google user info received:', user);
+
+    if (!idToken) {
+      console.error('No idToken in response. Full response:', response);
+      throw new Error('No ID token received from Google. Make sure webClientId is configured correctly.');
+    }
+
+    // Get access token if available
+    const tokens = await GoogleSignin.getTokens();
+    console.log('Google tokens:', { hasAccessToken: !!tokens?.accessToken, hasIdToken: !!tokens?.idToken });
+
+    console.log('Signing in to Supabase with Google ID token...');
+
+    // Sign in to Supabase with the Google ID token
+    // Use the idToken from getTokens() if available, otherwise use the one from signIn response
+    const { data, error } = await supabase.auth.signInWithIdToken({
+      provider: 'google',
+      token: tokens?.idToken || idToken,
+      access_token: tokens?.accessToken,
+    });
+
+    if (error) {
+      console.error('Supabase Google sign-in error:', error);
+
+      // Handle specific Supabase errors
+      if (error.message?.includes('nonce')) {
+        throw new Error('Authentication configuration error. Please try again or use email sign-in.');
+      } else if (error.message?.includes('Invalid token')) {
+        throw new Error('Google authentication failed. Please try again.');
+      } else if (error.message?.includes('User not found')) {
+        throw new Error('Account not found. Please register first.');
+      }
+
+      throw error;
+    }
+
+    if (!data.user) {
+      throw new Error('Sign in succeeded but no user returned');
+    }
+
+    console.log('Successfully signed in with Google:', data.user?.id);
+
+    // Check if user profile exists, if not create it
+    const profileExists = await checkUserProfileExists();
+    if (!profileExists) {
+      console.log('Creating profile for new Google user...');
+      // Get preferences from AsyncStorage or use defaults
+      const savedPrefs = await AsyncStorage.getItem('final_preferences');
+      const preferences = savedPrefs ? JSON.parse(savedPrefs) : {
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        notification_opt_in: true,
+        preferred_reminder_time: '12:00:00',
+        preferred_ai_persona: 'Gentle Guide',
+      };
+      await insertUserProfileAfterConfirmation(preferences);
+    }
+
+    return data.user;
+  } catch (error: any) {
+    console.error('Error in signInWithGoogle:', error);
+
+    // Handle specific Google Sign-In errors
+    if (error.code === 'SIGN_IN_CANCELLED' || error.message?.includes('cancelled')) {
+      throw new Error('Sign in cancelled by user');
+    } else if (error.code === 'IN_PROGRESS') {
+      throw new Error('Sign in already in progress');
+    } else if (error.code === 'PLAY_SERVICES_NOT_AVAILABLE') {
+      throw new Error('Google Play Services not available');
+    }
+
+    throw error;
+  }
+};
+
+export const signInWithApple = async () => {
+  try {
+    // Check if Apple Authentication is available
+    if (Platform.OS !== 'ios') {
+      throw new Error('Apple Sign In is only available on iOS');
+    }
+
+    const isAvailable = await AppleAuthentication.isAvailableAsync();
+
+    if (!isAvailable) {
+      throw new Error('Apple Sign In is not available on this device');
+    }
+
+    console.log('Starting native Apple Sign-In...');
+
+    // Request Apple authentication
+    const credential = await AppleAuthentication.signInAsync({
+      requestedScopes: [
+        AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+        AppleAuthentication.AppleAuthenticationScope.EMAIL,
+      ],
+    });
+
+    console.log('Apple credential received');
+
+    // Get the identity token
+    const { identityToken } = credential;
+
+    if (!identityToken) {
+      throw new Error('No identity token received from Apple');
+    }
+
+    console.log('Signing in to Supabase with Apple ID token...');
+
+    // Sign in to Supabase with the Apple ID token
+    const { data, error } = await supabase.auth.signInWithIdToken({
+      provider: 'apple',
+      token: identityToken,
+    });
+
+    if (error) {
+      console.error('Supabase Apple sign-in error:', error);
+      throw error;
+    }
+
+    // If this is the user's first sign-in, save their name
+    if (credential.fullName && (credential.fullName.givenName || credential.fullName.familyName)) {
+      const fullName = `${credential.fullName.givenName || ''} ${credential.fullName.familyName || ''}`.trim();
+      if (fullName) {
+        await AsyncStorage.setItem('@user_name', fullName);
+        console.log('Saved Apple user name:', fullName);
+      }
+    }
+
+    console.log('Successfully signed in with Apple:', data.user?.id);
+
+    // Check if user profile exists, if not create it
+    const profileExists = await checkUserProfileExists();
+    if (!profileExists) {
+      console.log('Creating profile for new Apple user...');
+      // Get preferences from AsyncStorage or use defaults
+      const savedPrefs = await AsyncStorage.getItem('final_preferences');
+      const preferences = savedPrefs ? JSON.parse(savedPrefs) : {
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        notification_opt_in: true,
+        preferred_reminder_time: '12:00:00',
+        preferred_ai_persona: 'Gentle Guide',
+      };
+      await insertUserProfileAfterConfirmation(preferences);
+    }
+
+    return data.user;
+  } catch (error: any) {
+    console.error('Error in signInWithApple:', error);
+
+    // Handle Apple Sign-In specific errors
+    if (error.code === 'ERR_CANCELED' || error.message?.includes('cancelled')) {
+      throw new Error('Sign in cancelled by user');
+    }
+
+    throw error;
   }
 };
 

@@ -1,11 +1,13 @@
 // components/RegisterForm.js
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
-import { signUpUser, checkEmailExists } from '../../services/auth';
+import { signUpUser, checkEmailExists, signInWithGoogle, signInWithApple } from '../../services/auth';
 import { styles } from '../../styles/authentication';
 import WaitForEmailConfirmation from '../../app/emailconfirmation';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function RegisterForm() {
   const [email, setEmail] = useState('');
@@ -15,11 +17,8 @@ export default function RegisterForm() {
   const [error, setError] = useState(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [preferences, setPreferences] = useState(null);
+  const [oauthLoading, setOauthLoading] = useState(false);
   const router = useRouter();
-
-  const handleBack = () => {
-    router.replace('/onboarding/SuperwallPaywall');
-  };
 
   const handleSignUp = async () => {
     if (!email || !password || !confirmPassword) {
@@ -98,6 +97,50 @@ export default function RegisterForm() {
     }
   };
 
+  const handleGoogleSignIn = async () => {
+    try {
+      setOauthLoading(true);
+      setError(null);
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+      const user = await signInWithGoogle();
+
+      if (user) {
+        console.log('Google sign-in successful, navigating to home...');
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        router.replace('/tabs/home');
+      }
+    } catch (err) {
+      console.error('Google sign-in error:', err);
+      setError(err.message || 'Failed to sign in with Google');
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setOauthLoading(false);
+    }
+  };
+
+  const handleAppleSignIn = async () => {
+    try {
+      setOauthLoading(true);
+      setError(null);
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+      const user = await signInWithApple();
+
+      if (user) {
+        console.log('Apple sign-in successful, navigating to home...');
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        router.replace('/tabs/home');
+      }
+    } catch (err) {
+      console.error('Apple sign-in error:', err);
+      setError(err.message || 'Failed to sign in with Apple');
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setOauthLoading(false);
+    }
+  };
+
   if (showConfirmation) {
     return (
       <WaitForEmailConfirmation 
@@ -148,10 +191,10 @@ export default function RegisterForm() {
 
       {error && <Text style={styles.error}>{error}</Text>}
 
-      <TouchableOpacity 
-        style={[styles.registerButton, loading && styles.disabledButton]} 
-        onPress={handleSignUp} 
-        disabled={loading}
+      <TouchableOpacity
+        style={[styles.registerButton, (loading || oauthLoading) && styles.disabledButton]}
+        onPress={handleSignUp}
+        disabled={loading || oauthLoading}
       >
         {loading ? (
           <ActivityIndicator color="#2b2b2b" />
@@ -160,23 +203,28 @@ export default function RegisterForm() {
         )}
       </TouchableOpacity>
 
-      {/* <View style={styles.dividerContainer}>
+      <View style={styles.dividerContainer}>
         <View style={styles.divider} />
         <Text style={styles.orText}>OR</Text>
         <View style={styles.divider} />
       </View>
 
       <View style={styles.socialContainer}>
-        <TouchableOpacity style={styles.socialButton}>
-          <Image source={require('../../assets/google.png')} style={styles.socialIcon} />
+        <TouchableOpacity
+          style={[styles.socialButton, oauthLoading && styles.disabledButton]}
+          onPress={handleGoogleSignIn}
+          disabled={loading || oauthLoading}
+        >
+          <Ionicons name="logo-google" size={40} color="#fff" />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.socialButton}>
-          <Image source={require('../../assets/apple.png')} style={styles.socialIcon} />
+        <TouchableOpacity
+          style={[styles.socialButton, oauthLoading && styles.disabledButton]}
+          onPress={handleAppleSignIn}
+          disabled={loading || oauthLoading}
+        >
+          <Ionicons name="logo-apple" size={40} color="#fff" />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.socialButton}>
-          <Image source={require('../../assets/x.png')} style={styles.socialIcon} />
-        </TouchableOpacity>
-      </View> */}
+      </View>
     </View>
   );
 }

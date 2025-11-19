@@ -15,12 +15,13 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.reddermedia.keystone",
+      "usesAppleSignIn": true,
       "infoPlist": {
         "CFBundleURLTypes": [
           {
-            "CFBundleURLName": "com.reddermedia.keystone",
             "CFBundleURLSchemes": [
-              "keystone"
+              "keystone",
+              "com.googleusercontent.apps.793290335936-m3lqjiaq6fcbe725ue6ridugnuafom9o"
             ]
           }
         ],
@@ -55,12 +56,12 @@
     },
     "plugins": [
       [
-        "expo-build-properties",
+        "@react-native-google-signin/google-signin",
         {
-          "android": { "minSdkVersion": 26 },
-          "ios": { "deploymentTarget": "14.0" }
+          "iosUrlScheme": "com.googleusercontent.apps.793290335936-m3lqjiaq6fcbe725ue6ridugnuafom9o"
         }
-      ]
+      ],
+      "expo-apple-authentication"
     ],
     "extra": {
       "eas": {

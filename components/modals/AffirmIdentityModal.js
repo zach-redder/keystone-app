@@ -2,9 +2,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, Modal, ScrollView, TextInput, KeyboardAvoidingView, Platform, TouchableOpacity, Alert } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { getPreferredAiPersona } from '../../services/userPreferences';
-import { generateAIMessage, fetchAIChatMessages, insertAIChatMessagePair, fetchTodaysAIChatMessagePairCount, deleteAllAIChatMessages } from '../../services/affirmationService';
+import { generateAIMessage, fetchAIChatMessages, insertAIChatMessagePair, deleteAllAIChatMessages } from '../../services/affirmationService';
 // Removed checkUserProStatus import - app is now fully paid-only
-import Markdown from 'react-native-markdown-display';
+import Markdown from '@ronradtke/react-native-markdown-display';
 
 const AffirmIdentityModal = ({ visible, onClose, onRequestProUpgrade }) => {
   const [messages, setMessages] = useState([]);
@@ -256,7 +256,7 @@ const styles = {
   },
   aiMsg: {
     alignSelf: 'flex-start',
-    backgroundColor: '#3C3C3C',
+    backgroundColor: 'rgba(80, 80, 80, 0.45)',
     borderRadius: 16,
     borderBottomLeftRadius: 4,
     padding: 12,
@@ -264,6 +264,14 @@ const styles = {
     marginRight: 40,
     marginLeft: 0,
     maxWidth: '80%',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.10)',
+    borderTopColor: 'rgba(255, 255, 255, 0.20)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 5,
   },
   msgText: {
     color: '#fff',

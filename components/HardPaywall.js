@@ -11,14 +11,19 @@ const { usePlacement, useUser } = getSuperwallImplementation();
 export default function HardPaywall({ onSubscribed }) {
   const insets = useSafeAreaInsets();
   const [isLoading, setIsLoading] = useState(false);
-  const { presentPlacement } = usePlacement();
-  const { getSubscriptionStatus } = useUser();
+  const { registerPlacement } = usePlacement();
+  const { subscriptionStatus } = useUser();
   const { isSubscribed, refreshSubscriptionStatus } = useSuperwallContext();
 
   const presentHardPaywall = async () => {
     try {
       setIsLoading(true);
-      await presentPlacement('subscription_required');
+      await registerPlacement({
+        placement: 'onboarding_complete',
+        feature: () => {
+          console.log('User has access to subscription features');
+        }
+      });
     } catch (error) {
       console.warn('Error presenting paywall:', error);
       Alert.alert('Error', 'Unable to load subscription options. Please try again.');
@@ -31,12 +36,12 @@ export default function HardPaywall({ onSubscribed }) {
     try {
       setIsLoading(true);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      
+
       // Refresh subscription status to check for restored purchases
       await refreshSubscriptionStatus();
-      
-      const status = await getSubscriptionStatus();
-      if (status?.isActive) {
+
+      const status = subscriptionStatus;
+      if (status?.status === 'ACTIVE') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         Alert.alert('Success', 'Your subscription has been restored!');
         if (onSubscribed) {

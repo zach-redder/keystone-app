@@ -8,44 +8,7 @@ export default function OnboardingLayout() {
         headerShown: false,
         gestureEnabled: true,
         gestureDirection: 'horizontal',
-        // Custom slide animation from right to left
         animation: 'slide_from_right',
-        animationDuration: 300,
-        // For Android, use custom transition spec
-        ...(Platform.OS === 'android' && {
-          transitionSpec: {
-            open: {
-              animation: 'timing',
-              config: {
-                duration: 300,
-              },
-            },
-            close: {
-              animation: 'timing',
-              config: {
-                duration: 300,
-              },
-            },
-          },
-          cardStyleInterpolator: ({ current, layouts }) => {
-            return {
-              cardStyle: {
-                transform: [
-                  {
-                    translateX: current.progress.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [layouts.screen.width, 0],
-                    }),
-                  },
-                ],
-                opacity: current.progress.interpolate({
-                  inputRange: [0, 0.5, 1],
-                  outputRange: [0, 0.8, 1],
-                }),
-              },
-            };
-          },
-        }),
       }}
     >
       <Stack.Screen 
@@ -92,15 +55,15 @@ export default function OnboardingLayout() {
           animation: 'slide_from_right',
         }}
       />
-      <Stack.Screen 
-        name="doubt-consequences/[page]" 
+      <Stack.Screen
+        name="doubt-consequences"
         options={{
           animation: 'slide_from_right',
           gestureEnabled: false, // No back gesture in doubt sequence
         }}
       />
-      <Stack.Screen 
-        name="benefits/[page]" 
+      <Stack.Screen
+        name="benefits"
         options={{
           animation: 'slide_from_right',
           gestureEnabled: false, // No back gesture in benefits sequence
@@ -133,20 +96,6 @@ export default function OnboardingLayout() {
       />
       <Stack.Screen 
         name="AnimatedProfileCard" 
-        options={{
-          animation: 'slide_from_right',
-          gestureEnabled: false,
-        }}
-      />
-      <Stack.Screen 
-        name="SuperwallPaywall" 
-        options={{
-          animation: 'slide_from_right',
-          gestureEnabled: false, // Disable back gesture during paywall
-        }}
-      />
-      <Stack.Screen 
-        name="PaywallTrial" 
         options={{
           animation: 'slide_from_right',
           gestureEnabled: false,
