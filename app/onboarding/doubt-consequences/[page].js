@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Animated, Image } from 'react-native';
+import { View, Text, TouchableOpacity, Animated } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { styles } from '../../../styles/onboarding';
 import * as Haptics from 'expo-haptics';
@@ -55,7 +55,7 @@ export default function DoubtConsequences() {
 
     const router = useRouter();
     const { page } = useLocalSearchParams();
-    const currentPage = parseInt(page) || 1;
+    const currentPage = Number.parseInt(page, 10) || 1;
 
     console.log('🔍 DoubtConsequences: Current page:', currentPage);
     console.log('🔍 DoubtConsequences: Total pages:', DOUBT_CONSEQUENCES.length);
@@ -67,7 +67,6 @@ export default function DoubtConsequences() {
     const slideValue = useRef(new Animated.Value(30)).current;
     const iconScale = useRef(new Animated.Value(0.8)).current;
     const iconAnimation = useRef(new Animated.Value(0)).current;
-    const logoScale = useRef(new Animated.Value(0.9)).current;
 
     useEffect(() => {
         console.log('🔍 DoubtConsequences: useEffect triggered for page:', page);
@@ -204,9 +203,9 @@ export default function DoubtConsequences() {
     const renderDotIndicators = () => {
         return (
             <View style={styles.dotIndicatorContainer}>
-                {DOUBT_CONSEQUENCES.map((_, index) => (
+                {DOUBT_CONSEQUENCES.map((item, index) => (
                     <View
-                        key={index}
+                        key={item.id}
                         style={[
                             styles.dotIndicator,
                             {
@@ -254,9 +253,10 @@ export default function DoubtConsequences() {
                         opacity: fadeValue,
                         transform: [{ translateY: slideValue }],
                         flex: 1,
-                        justifyContent: 'center'
+                        justifyContent: 'center',
                     }
-                ]}
+                    ]
+                }
             >
                 {/* Animated Icon */}
                 <Animated.View 
@@ -318,7 +318,7 @@ export default function DoubtConsequences() {
                     {
                         backgroundColor: currentPage === 5 ? '#D4DE95' : 'rgba(255, 255, 255, 0.2)',
                         position: 'absolute',
-                        bottom: 100, // Increased from 60 to avoid overlapping dots
+                        bottom: 100, // Positioned to not overlap dots
                         left: 20,
                         right: 20,
                     }

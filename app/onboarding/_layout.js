@@ -102,6 +102,13 @@ export default function OnboardingLayout() {
         }}
       />
       <Stack.Screen 
+        name="FreeTrial" 
+        options={{
+          animation: 'slide_from_right',
+          gestureEnabled: false,
+        }}
+      />
+      <Stack.Screen 
         name="Subscription" 
         options={{
           animation: 'slide_from_right',
