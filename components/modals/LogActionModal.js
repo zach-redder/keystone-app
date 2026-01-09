@@ -3,7 +3,7 @@ import { View, Text, Modal, TouchableOpacity, TextInput, ScrollView, ActivityInd
 import * as Haptics from 'expo-haptics';
 import { fetchIdentityKeys } from '../../services/userKeys';
 import { submitActionLogWithAI } from '../../services/actionLogs';
-// Removed checkUserProStatus import - app is now fully paid-only
+import { checkUserProStatus } from '../../services/auth';
 
 const LogActionModal = ({ visible, onClose, onSubmit }) => {
   const [action, setAction] = useState('');
@@ -47,8 +47,9 @@ const LogActionModal = ({ visible, onClose, onSubmit }) => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       setLoading(true);
       try {
-            // 🔒 PAID-ONLY APP: All users have full AI access
-    const savedLog = await submitActionLogWithAI(action, selectedKeys, true);
+        // Check user pro status
+        const isPro = await checkUserProStatus();
+        const savedLog = await submitActionLogWithAI(action, selectedKeys, isPro);
         setAction('');
         setSelectedKeys([]);
         setLoading(false);

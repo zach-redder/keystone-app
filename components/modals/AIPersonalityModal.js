@@ -4,17 +4,19 @@ import { useState, useEffect } from 'react';
 import * as Haptics from 'expo-haptics';
 import { getPreferredAiPersona, setPreferredAiPersona } from '../../services/userPreferences';
 import { fetchCustomPersonalities, createCustomPersonality, deleteCustomPersonality } from '../../services/customPersonalitiesService';
-// Removed checkUserProStatus import - app is now fully paid-only
+import { checkUserProStatus } from '../../services/auth';
 import keysStyles from '../../styles/keys';
+import ProUpgradeModal from './ProUpgradeModal';
 
 const AIPersonalityModal = ({ visible, onClose, onUpgradePress }) => {
   const [selectedPersonality, setSelectedPersonality] = useState('Default');
-  // Removed isPro state - app is now fully paid-only
+  const [isPro, setIsPro] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showCustomForm, setShowCustomForm] = useState(false);
   const [customName, setCustomName] = useState('');
   const [customDescription, setCustomDescription] = useState('');
   const [customPersonalities, setCustomPersonalities] = useState([]);
+  const [showProUpgradeModal, setShowProUpgradeModal] = useState(false);
 
           // Basic personalities available to all users
   const basicPersonalities = [
@@ -87,10 +89,20 @@ const AIPersonalityModal = ({ visible, onClose, onUpgradePress }) => {
   useEffect(() => {
     if (visible) {
       loadCurrentPersonality();
-      // Removed checkProStatus call - app is now fully paid-only
+      checkProStatus();
       loadCustomPersonalities();
     }
   }, [visible]);
+
+  const checkProStatus = async () => {
+    try {
+      const proStatus = await checkUserProStatus();
+      setIsPro(proStatus);
+    } catch (error) {
+      console.error('Error checking pro status:', error);
+      setIsPro(false);
+    }
+  };
 
   const loadCurrentPersonality = async () => {
     try {
@@ -123,13 +135,20 @@ const AIPersonalityModal = ({ visible, onClose, onUpgradePress }) => {
     if (isCustom) {
       selected = customPersonalities.find(p => p.name === personalityName);
     } else {
-              // All personalities are now available to all users
       const allPersonalities = [...basicPersonalities, ...advancedPersonalities];
       selected = allPersonalities.find(p => p.name === personalityName);
     }
 
     if (!selected) {
       console.warn("Selected personality not found.");
+      return;
+    }
+
+    // Check if it's an advanced personality and user is not pro
+    const isAdvancedPersonality = advancedPersonalities.some(p => p.name === personalityName);
+    if (isAdvancedPersonality && !isPro) {
+      // Show ProUpgradeModal (AIPersonalityModal will be hidden automatically)
+      setShowProUpgradeModal(true);
       return;
     }
 
@@ -341,13 +360,14 @@ const AIPersonalityModal = ({ visible, onClose, onUpgradePress }) => {
   );
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={handleClose}
-    >
-      <View style={keysStyles.infoModalContainer}>
+    <>
+      <Modal
+        visible={visible && !showProUpgradeModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={handleClose}
+      >
+        <View style={keysStyles.infoModalContainer}>
         <View style={keysStyles.horizontalBar} />
         
         <View style={styles.header}>
@@ -459,7 +479,18 @@ const AIPersonalityModal = ({ visible, onClose, onUpgradePress }) => {
           <View style={styles.bottomSpacing} />
         </ScrollView>
       </View>
-    </Modal>
+      </Modal>
+      <ProUpgradeModal
+        visible={showProUpgradeModal}
+        onClose={() => {
+          setShowProUpgradeModal(false);
+          // Reopen the personality modal after ProUpgradeModal closes
+          if (visible) {
+            // Modal will reopen automatically since visible is still true
+          }
+        }}
+      />
+    </>
   );
 };
 

@@ -3,6 +3,9 @@ import { View, Text, TouchableOpacity, Modal, Animated, Dimensions, PanResponder
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import { getSuperwallImplementation } from '../../utils/superwallCompat';
+
+const { usePlacement } = getSuperwallImplementation();
 
 const { height: screenHeight } = Dimensions.get('window');
 
@@ -12,6 +15,7 @@ const ProUpgradeModal = ({ visible, onClose, currentPage }) => {
   const dragOffset = useRef(new Animated.Value(0)).current;
   const isClosing = useRef(false);
   const router = useRouter();
+  const { registerPlacement } = usePlacement();
 
   // Pan responder for drag gestures - applies only to draggable content area
   const panResponder = useRef(
@@ -107,9 +111,22 @@ const ProUpgradeModal = ({ visible, onClose, currentPage }) => {
   const handleUpgradePress = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     
-    // For now, just close the modal since we're removing paywall logic
-    // You can add your own upgrade logic here later
-    handleClose();
+    try {
+      // Close the ProUpgradeModal first
+      handleClose();
+      
+      // Small delay to allow modal to close before opening Superwall paywall
+      setTimeout(async () => {
+        await registerPlacement({
+          placement: 'pro_upgrade',
+          feature: () => {
+            console.log('User has access to pro features');
+          }
+        });
+      }, 300);
+    } catch (error) {
+      console.warn('Error presenting paywall:', error);
+    }
   };
 
   if (!visible) return null;

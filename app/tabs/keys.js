@@ -18,9 +18,10 @@ import AffirmIdentityModal from '../../components/modals/AffirmIdentityModal';
 import ShareProgressModal from '../../components/modals/ShareProgressModal';
 // Removed ReferralModal - now using direct app sharing
 import { fetchIdentityKeys, deleteIdentityKey, updateIdentityKey, addIdentityKey } from '../../services/userKeys';
-// Removed checkUserProStatus import - app is now fully paid-only
+import { checkUserProStatus } from '../../services/auth';
 import { getAppStoreLink, APP_NAME } from '../../constants/appStore';
 import { getUserDayStreak } from '../../services/userPreferences';
+import ProUpgradeModal from '../../components/modals/ProUpgradeModal';
 
 function AppButton({ title, onPress, style, icon, iconRight, plusMarginRight }) {
   const handlePress = () => {
@@ -141,6 +142,7 @@ export default function Keys() {
   // Removed referralModalVisible - now using direct app sharing
   const [resultModalVisible, setResultModalVisible] = useState(false);
   const [resultLog, setResultLog] = useState(null);
+  const [proUpgradeModalVisible, setProUpgradeModalVisible] = useState(false);
 
   const scrollViewRef = useRef(null);
 
@@ -233,7 +235,22 @@ export default function Keys() {
   };
 
   const handleMenuItemSelect = async (item) => {
-    // 🔒 PAID-ONLY APP: All categories are now available to all users
+    // Check if this is a pro-only category
+    const proOnlyCategories = ['identity_traits', 'motivations', 'avoidances'];
+    const isProOnlyCategory = proOnlyCategories.includes(item.category);
+    
+    if (isProOnlyCategory) {
+      // Check if user is pro
+      const isPro = await checkUserProStatus();
+      if (!isPro) {
+        // Close menu and show ProUpgradeModal
+        setMenuVisible(false);
+        setTimeout(() => {
+          setProUpgradeModalVisible(true);
+        }, 300);
+        return;
+      }
+    }
     
     // Only change if actually changing category
     if (item.category !== selectedItem.category) {
@@ -500,6 +517,10 @@ export default function Keys() {
         <ShareProgressModal
           visible={shareProgressModalVisible}
           onClose={() => setShareProgressModalVisible(false)}
+        />
+        <ProUpgradeModal
+          visible={proUpgradeModalVisible}
+          onClose={() => setProUpgradeModalVisible(false)}
         />
     </SafeAreaView>
   );

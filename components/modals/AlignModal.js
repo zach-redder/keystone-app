@@ -6,7 +6,8 @@ import AffirmIdentityModal from './AffirmIdentityModal';
 import LogActionModal from './LogActionModal';
 import ActionLogResultModal from './ActionLogResultModal';
 import ShareProgressModal from './ShareProgressModal';
-// Removed checkUserProStatus import - app is now fully paid-only
+import ProUpgradeModal from './ProUpgradeModal';
+import { checkUserProStatus } from '../../services/auth';
 import { fetchTodaysActionLogCount } from '../../services/actionLogs';
 
 const { height: screenHeight } = Dimensions.get('window');
@@ -17,8 +18,8 @@ const AlignModal = ({ visible, onClose, onUpgradePress, onAffirmIdentity, onLogA
   const dragOffset = useRef(new Animated.Value(0)).current;
   const isClosing = useRef(false);
   const [showLogActionModal, setShowLogActionModal] = useState(false);
-  // Removed checkingLimit state - no longer needed in paid-only app
   const [showShareProgressModal, setShowShareProgressModal] = useState(false);
+  const [showProUpgradeModal, setShowProUpgradeModal] = useState(false);
 
   // Animation refs for sequential icon fade-ins
   const affirmIconAnim = useRef(new Animated.Value(0)).current;
@@ -128,8 +129,24 @@ const AlignModal = ({ visible, onClose, onUpgradePress, onAffirmIdentity, onLogA
 
   const handleLogAction = createButtonPressHandler(
     logScaleAnim,
-    () => {
-      // 🔒 PAID-ONLY APP: All users have unlimited access to action logging
+    async () => {
+      // Check if user is pro
+      const isPro = await checkUserProStatus();
+      
+      if (!isPro) {
+        // Check daily limit for free users (3 per day)
+        const todaysCount = await fetchTodaysActionLogCount();
+        if (todaysCount >= 3) {
+          // Close current modal and show ProUpgradeModal
+          closeModal();
+          setTimeout(() => {
+            setShowProUpgradeModal(true);
+          }, 300);
+          return;
+        }
+      }
+      
+      // User is pro or under limit, allow action logging
       setShowLogActionModal(true);
     }
   );
@@ -334,6 +351,11 @@ const AlignModal = ({ visible, onClose, onUpgradePress, onAffirmIdentity, onLogA
       <ShareProgressModal
         visible={showShareProgressModal}
         onClose={handleShareProgressClose}
+      />
+      
+      <ProUpgradeModal
+        visible={showProUpgradeModal}
+        onClose={() => setShowProUpgradeModal(false)}
       />
     </>
   );

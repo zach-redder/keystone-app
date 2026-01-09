@@ -2,9 +2,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, Modal, ScrollView, TextInput, KeyboardAvoidingView, Platform, TouchableOpacity, Alert } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { getPreferredAiPersona } from '../../services/userPreferences';
-import { generateAIMessage, fetchAIChatMessages, insertAIChatMessagePair, deleteAllAIChatMessages } from '../../services/affirmationService';
-// Removed checkUserProStatus import - app is now fully paid-only
+import { generateAIMessage, fetchAIChatMessages, insertAIChatMessagePair, deleteAllAIChatMessages, fetchTodaysAIChatMessagePairCount } from '../../services/affirmationService';
+import { checkUserProStatus } from '../../services/auth';
 import Markdown from '@ronradtke/react-native-markdown-display';
+import ProUpgradeModal from './ProUpgradeModal';
 
 const AffirmIdentityModal = ({ visible, onClose, onRequestProUpgrade }) => {
   const [messages, setMessages] = useState([]);
@@ -13,6 +14,7 @@ const AffirmIdentityModal = ({ visible, onClose, onRequestProUpgrade }) => {
   const [loadingAI, setLoadingAI] = useState(false);
   const scrollViewRef = useRef(null);
   const [thinkingDots, setThinkingDots] = useState('');
+  const [showProUpgradeModal, setShowProUpgradeModal] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -51,9 +53,22 @@ const AffirmIdentityModal = ({ visible, onClose, onRequestProUpgrade }) => {
 
   const handleSend = async () => {
     if (!input.trim()) return;
+    
+    // Check if user is pro
+    const isPro = await checkUserProStatus();
+    
+    if (!isPro) {
+      // Check daily limit for free users (10 chats per day)
+      const todaysCount = await fetchTodaysAIChatMessagePairCount();
+      if (todaysCount >= 10) {
+        // Show ProUpgradeModal and don't send the message
+        setShowProUpgradeModal(true);
+        return;
+      }
+    }
+    
     setLoadingAI(true);
     try {
-      // 🔒 PAID-ONLY APP: All users have unlimited AI chat access
       const userMsg = { role: 'user', content: input };
       const prevMessages = [...messages, userMsg];
       setMessages(prevMessages);
@@ -186,6 +201,10 @@ const AffirmIdentityModal = ({ visible, onClose, onRequestProUpgrade }) => {
             </View>
           </View>
         </KeyboardAvoidingView>
+        <ProUpgradeModal
+          visible={showProUpgradeModal}
+          onClose={() => setShowProUpgradeModal(false)}
+        />
       </View>
     </Modal>
   );
