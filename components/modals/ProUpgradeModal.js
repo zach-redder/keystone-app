@@ -4,18 +4,44 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { getSuperwallImplementation } from '../../utils/superwallCompat';
+import { useSuperwallContext } from '../../contexts/SuperwallContext';
 
-const { usePlacement } = getSuperwallImplementation();
+const { usePlacement, useSuperwallEvents } = getSuperwallImplementation();
 
 const { height: screenHeight } = Dimensions.get('window');
 
-const ProUpgradeModal = ({ visible, onClose, currentPage }) => {
+const ProUpgradeModal = ({ visible, onClose, currentPage, onSubscriptionChange }) => {
   const slideAnim = useRef(new Animated.Value(screenHeight)).current;
   const overlayOpacity = useRef(new Animated.Value(0)).current;
   const dragOffset = useRef(new Animated.Value(0)).current;
   const isClosing = useRef(false);
   const router = useRouter();
-  const { registerPlacement } = usePlacement();
+  const { refreshSubscriptionStatus } = useSuperwallContext();
+  const { registerPlacement } = usePlacement({
+    onDismiss: (paywallInfo, result) => {
+      console.log('ProUpgradeModal paywall dismissed:', paywallInfo, result);
+      // Refresh subscription status after paywall dismissal
+      refreshSubscriptionStatus();
+      // Notify parent if callback provided
+      if (onSubscriptionChange) {
+        onSubscriptionChange(result);
+      }
+    },
+  });
+
+  // Listen for subscription status changes
+  useSuperwallEvents({
+    onSubscriptionStatusChange: (status) => {
+      console.log('ProUpgradeModal - Subscription status changed:', status);
+      if (status?.status === 'ACTIVE') {
+        // User subscribed, close modal and notify parent
+        handleClose();
+        if (onSubscriptionChange) {
+          onSubscriptionChange({ purchased: true });
+        }
+      }
+    },
+  });
 
   // Pan responder for drag gestures - applies only to draggable content area
   const panResponder = useRef(
@@ -112,18 +138,16 @@ const ProUpgradeModal = ({ visible, onClose, currentPage }) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     
     try {
-      // Close the ProUpgradeModal first
-      handleClose();
-      
-      // Small delay to allow modal to close before opening Superwall paywall
-      setTimeout(async () => {
-        await registerPlacement({
-          placement: 'pro_upgrade',
-          feature: () => {
-            console.log('User has access to pro features');
-          }
-        });
-      }, 300);
+      // Show Superwall paywall directly without closing the modal first
+      await registerPlacement({
+        placement: 'pro_upgrade',
+        feature: () => {
+          console.log('User has access to pro features');
+          // User already has subscription, close the modal
+          handleClose();
+        }
+      });
+      // Note: If paywall is dismissed (purchased or not), onDismiss callback will handle it
     } catch (error) {
       console.warn('Error presenting paywall:', error);
     }
@@ -190,20 +214,6 @@ const ProUpgradeModal = ({ visible, onClose, currentPage }) => {
             
             {/* Header */}
             <View style={{ alignItems: 'center', marginBottom: 30 }}>
-              <View
-                style={{
-                  width: 60,
-                  height: 60,
-                  borderRadius: 30,
-                  backgroundColor: '#B9C096',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  marginBottom: 15,
-                }}
-              >
-                <Ionicons name="star" size={30} color="#2B2B2B" />
-              </View>
-              
               <Text
                 style={{
                   fontSize: 24,
@@ -211,6 +221,7 @@ const ProUpgradeModal = ({ visible, onClose, currentPage }) => {
                   color: '#fff',
                   textAlign: 'center',
                   marginBottom: 8,
+                  marginTop: 10,
                 }}
               >
                 Unlock Premium
@@ -275,11 +286,16 @@ const ProUpgradeModal = ({ visible, onClose, currentPage }) => {
             {/* Upgrade button */}
             <TouchableOpacity
               style={{
-                backgroundColor: '#B9C096',
+                backgroundColor: '#D4DE95',
                 borderRadius: 12,
                 paddingVertical: 16,
                 alignItems: 'center',
                 marginBottom: 15,
+                shadowColor: '#D4DE95',
+                shadowOffset: { width: 0, height: 0 },
+                shadowOpacity: 0.7,
+                shadowRadius: 10,
+                elevation: 12,
               }}
               onPress={handleUpgradePress}
               activeOpacity={0.8}

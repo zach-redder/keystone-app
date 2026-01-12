@@ -77,7 +77,7 @@ const CommunityModal = ({ visible, onClose }) => {
 
   const handleJoinCommunity = async () => {
     try {
-      await Linking.openURL('https://discord.me/thealignedcore');
+      await Linking.openURL('https://discord.me/thekeystonecollective');
       closeModal();
     } catch (error) {
       console.error('Error opening Whop link:', error);

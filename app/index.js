@@ -3,9 +3,23 @@ import { Redirect } from 'expo-router';
 import { checkUserStatus } from '../services/auth';
 import SplashScreen from './SplashScreen';
 import SubscriptionGate from '../components/SubscriptionGate';
+import { getSuperwallImplementation } from '../utils/superwallCompat';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const { usePlacement } = getSuperwallImplementation();
 
 export default function Index() {
   const [redirectTo, setRedirectTo] = useState(null);
+  const [hasShownOnboardingPaywall, setHasShownOnboardingPaywall] = useState(false);
+  const { registerPlacement } = usePlacement({
+    onDismiss: (paywallInfo, result) => {
+      console.log('Onboarding paywall dismissed:', paywallInfo, result);
+      // After paywall is dismissed (whether purchased or not), proceed to main app
+      setHasShownOnboardingPaywall(true);
+      // Navigate to main app
+      setRedirectTo('/tabs/home');
+    },
+  });
 
   useEffect(() => {
     const check = async () => {
@@ -52,9 +66,38 @@ export default function Index() {
           break;
           
         case 'complete':
-          // User has completed onboarding - check subscription before routing to main app
-          console.log('Main app routing - User onboarding complete, checking subscription...');
-          setRedirectTo('/tabs/home');
+          // User has completed onboarding - show paywall before routing to main app
+          console.log('Main app routing - User onboarding complete, showing paywall...');
+          
+          // Check if we've already shown the paywall for this onboarding session
+          const hasShownPaywall = await AsyncStorage.getItem('onboarding_paywall_shown');
+          
+          if (!hasShownPaywall && !hasShownOnboardingPaywall) {
+            // Mark that we're showing the paywall
+            await AsyncStorage.setItem('onboarding_paywall_shown', 'true');
+            
+            // Trigger Superwall paywall
+            try {
+              await registerPlacement({
+                placement: 'onboarding_complete',
+                feature: () => {
+                  console.log('User has subscription - proceeding to main app');
+                  // If user already has subscription, proceed directly
+                  setHasShownOnboardingPaywall(true);
+                  setRedirectTo('/tabs/home');
+                }
+              });
+              // Note: If paywall is shown and dismissed, onDismiss callback will handle navigation
+            } catch (error) {
+              console.warn('Error presenting onboarding paywall:', error);
+              // On error, proceed to main app anyway
+              setHasShownOnboardingPaywall(true);
+              setRedirectTo('/tabs/home');
+            }
+          } else {
+            // Already shown paywall, proceed to main app
+            setRedirectTo('/tabs/home');
+          }
           break;
           
         case 'error':
@@ -74,7 +117,7 @@ export default function Index() {
     };
   
     check();
-  }, []);
+  }, [hasShownOnboardingPaywall]);
 
   if (!redirectTo) {
     return <SplashScreen />;
