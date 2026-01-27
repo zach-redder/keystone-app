@@ -1,19 +1,31 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, Animated, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import { styles } from '../../styles/onboarding';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { PRIMARY_SUBSCRIPTION, AUTO_RENEW_NOTICE, BILLING_DISCLOSURE } from '../../constants/subscriptions';
-import { PRIVACY_POLICY_URL, TERMS_OF_USE_URL } from '../../constants/legal';
+import { getSuperwallImplementation, isExpoGo } from '../../utils/superwallCompat';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const { usePlacement } = getSuperwallImplementation();
 
 export default function FreeTrial() {
     const router = useRouter();
+    const [hasShownPaywall, setHasShownPaywall] = useState(false);
     const fadeValue = useRef(new Animated.Value(0)).current;
     const slideValue = useRef(new Animated.Value(30)).current;
     const scaleValue = useRef(new Animated.Value(0.9)).current;
     const pulseValue = useRef(new Animated.Value(1)).current;
+    
+    const { registerPlacement } = usePlacement({
+        onDismiss: (paywallInfo, result) => {
+            console.log('Paywall dismissed from FreeTrial:', paywallInfo, result);
+            // After paywall is dismissed, proceed to registration
+            setHasShownPaywall(true);
+            router.replace('/register');
+        },
+    });
 
     useEffect(() => {
         // Entrance animation
@@ -72,9 +84,40 @@ export default function FreeTrial() {
         }).start();
     };
 
-    const handleTryForFree = () => {
+    const handleTryForFree = async () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        router.push('/onboarding/Subscription');
+        
+        // In dev mode (Expo Go), skip paywall and go straight to registration as free user
+        if (isExpoGo()) {
+            console.log('🔄 Dev mode detected - skipping paywall, proceeding to registration as free user');
+            await AsyncStorage.setItem('onboarding_paywall_shown', 'true');
+            setHasShownPaywall(true);
+            router.replace('/register');
+            return;
+        }
+        
+        // In production, show the paywall
+        // Mark that we've shown the paywall
+        await AsyncStorage.setItem('onboarding_paywall_shown', 'true');
+        
+        // Trigger Superwall paywall
+        try {
+            await registerPlacement({
+                placement: 'onboarding_complete',
+                feature: () => {
+                    console.log('User has subscription - proceeding to register');
+                    // If user already has subscription, proceed directly
+                    setHasShownPaywall(true);
+                    router.replace('/register');
+                }
+            });
+            // Note: If paywall is shown and dismissed, onDismiss callback will handle navigation
+        } catch (error) {
+            console.warn('Error presenting paywall:', error);
+            // On error, proceed to registration anyway
+            setHasShownPaywall(true);
+            router.replace('/register');
+        }
     };
 
     const openExternalLink = async (url) => {
@@ -217,7 +260,7 @@ export default function FreeTrial() {
                         paddingHorizontal: 20,
                     }}
                 >
-                    After your 3-day free trial, your subscription will automatically continue. You can cancel anytime in your App Store settings.
+                    After your 3-day free trial, your subscription will automatically continue. You can cancel anytime.
                 </Text>
 
                 {/* Try for Free Button */}

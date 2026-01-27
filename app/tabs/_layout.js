@@ -2,11 +2,9 @@ import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import SubscriptionGate from '../../components/SubscriptionGate';
 
 export default function TabLayout() {
   return (
-    <SubscriptionGate>
       <Tabs
       screenOptions={() => ({
         tabBarStyle: {
@@ -88,6 +86,5 @@ export default function TabLayout() {
       })}
       />
       </Tabs>
-    </SubscriptionGate>
   );
 }

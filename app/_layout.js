@@ -4,11 +4,12 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
 import * as Linking from 'expo-linking';
 import { supabase } from '../lib/supabase';
-import { AppState, View, Text } from 'react-native';
+import { AppState } from 'react-native';
 import { setupReminderNotifications } from '../services/reminderService';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { SuperwallContextProvider } from '../contexts/SuperwallContext';
 import { getSuperwallImplementation } from '../utils/superwallCompat';
+import SplashScreen from './SplashScreen';
 
 // Get Superwall components (mock in Expo Go, real in production)
 const { SuperwallProvider, SuperwallLoading, SuperwallLoaded } = getSuperwallImplementation();
@@ -134,9 +135,7 @@ export default function RootLayout() {
   return (
     <SuperwallProvider apiKeys={{ ios: apiKey, android: apiKey }}>
       <SuperwallLoading>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#B9C096' }}>
-          <Text style={{ fontSize: 18, fontWeight: '600', color: '#2B2B2B' }}>Loading Keystone...</Text>
-        </View>
+        <SplashScreen />
       </SuperwallLoading>
       <SuperwallLoaded>
         <SuperwallContextProvider>
