@@ -5,7 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import * as Linking from 'expo-linking';
 import { supabase } from '../lib/supabase';
 import { AppState } from 'react-native';
-import { setupReminderNotifications } from '../services/reminderService';
+import { setupReminderNotifications } from '../services/features/reminderService';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { SuperwallContextProvider } from '../contexts/SuperwallContext';
 import { getSuperwallImplementation } from '../utils/superwallCompat';

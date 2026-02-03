@@ -5,8 +5,8 @@ import { styles } from '../../../styles/onboarding';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import OnboardingProgressHeader from '../OnboardingProgressHeader';
-import { calculateAlignmentScoresFromQuizAnswers } from '../../../services/alignmentService';
+import OnboardingProgressHeader from '../components/OnboardingProgressHeader';
+import { calculateAlignmentScoresFromQuizAnswers } from '../../../services/features/alignmentService';
 
 export default function UserInfo() {
     const router = useRouter();

@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { getSuperwallImplementation } from '../utils/superwallCompat';
 import { supabase } from '../lib/supabase';
-import { handleSuperwallPurchaseComplete, migrateFromIAPToSuperwall } from '../services/superwallService';
+import { handleSuperwallPurchaseComplete, migrateFromIAPToSuperwall } from '../services/integrations/superwallService';
 
 const { useUser, useSuperwallEvents } = getSuperwallImplementation();
 

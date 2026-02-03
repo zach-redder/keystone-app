@@ -2,8 +2,8 @@ import { View, Text, Modal, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect } from 'react';
 import * as Haptics from 'expo-haptics';
-import { getPreferredReminderTime, updatePreferredReminderTime } from '../../services/userPreferences';
-import CustomTimePicker from '../../app/onboarding/CustomTimePicker';
+import { getPreferredReminderTime, updatePreferredReminderTime } from '../../services/user/userPreferences';
+import CustomTimePicker from '../../app/onboarding/components/CustomTimePicker';
 import keysStyles from '../../styles/keys';
 
 const ReminderTimeModal = ({ visible, onClose, onTimeUpdated }) => {

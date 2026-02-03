@@ -1,9 +1,9 @@
 // components/RegisterForm.js
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
-import { signUpUser, checkEmailExists, signInWithGoogle, signInWithApple } from '../../services/auth';
+import { signUpUser, checkEmailExists, signInWithGoogle, signInWithApple } from '../../services/auth/auth';
 import { styles } from '../../styles/authentication';
-import WaitForEmailConfirmation from '../../app/emailconfirmation';
+import WaitForEmailConfirmation from '../../app/(auth)/emailconfirmation';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -158,7 +158,7 @@ export default function RegisterForm() {
 
   return (
     <View style={styles.container}>
-      <Image source={require('../../assets/keystone_transparent.png')} style={styles.logo} />
+      <Image source={require('../../assets/images/logos/keystone_transparent.png')} style={styles.logo} />
       <Text style={styles.title}>Register to get started!</Text>
 
       <TextInput

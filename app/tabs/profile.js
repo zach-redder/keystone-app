@@ -6,11 +6,11 @@ import * as Notifications from 'expo-notifications';
 import * as StoreReview from 'expo-store-review';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { signOutUser } from '../../services/auth';
+import { signOutUser } from '../../services/auth/auth';
 // Removed checkUserProStatus import - app is now fully paid-only
-import { fetchIdentityKeys } from '../../services/userKeys';
-import { getPreferredAiPersona, updateNotificationOptIn, getUserEmail, getPreferredReminderTime, getUserDayStreak, getUserLongestStreak} from '../../services/userPreferences';
-import { getUserSubscriptionDetails } from '../../services/referralService';
+import { fetchIdentityKeys } from '../../services/user/userKeys';
+import { getPreferredAiPersona, updateNotificationOptIn, getUserEmail, getPreferredReminderTime, getUserDayStreak, getUserLongestStreak} from '../../services/user/userPreferences';
+import { getUserSubscriptionDetails } from '../../services/user/referralService';
 import { getAppStoreLink, APP_NAME } from '../../constants/appStore';
 import profileStyles from '../../styles/profile';
 // Removed ProUpgradeModal import - no longer needed in paid-only app

@@ -2,7 +2,7 @@ import { View, Text, Modal, ScrollView, TouchableOpacity, TextInput, Alert } fro
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import * as Haptics from 'expo-haptics';
-import { submitMessage } from '../../services/messageService';
+import { submitMessage } from '../../services/features/messageService';
 import keysStyles from '../../styles/keys';
 
 const ContactReportModal = ({ visible, onClose, type = 'contact' }) => {

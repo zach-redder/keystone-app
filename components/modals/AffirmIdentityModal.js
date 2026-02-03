@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, Modal, ScrollView, TextInput, KeyboardAvoidingView, Platform, TouchableOpacity, Alert } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { getPreferredAiPersona } from '../../services/userPreferences';
-import { generateAIMessage, fetchAIChatMessages, insertAIChatMessagePair, deleteAllAIChatMessages, fetchTodaysAIChatMessagePairCount } from '../../services/affirmationService';
-import { checkUserProStatus } from '../../services/auth';
+import { getPreferredAiPersona } from '../../services/user/userPreferences';
+import { generateAIMessage, fetchAIChatMessages, insertAIChatMessagePair, deleteAllAIChatMessages, fetchTodaysAIChatMessagePairCount } from '../../services/features/affirmationService';
+import { checkUserProStatus } from '../../services/auth/auth';
 import Markdown from '@ronradtke/react-native-markdown-display';
 import ProUpgradeModal from './ProUpgradeModal';
 

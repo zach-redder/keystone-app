@@ -5,7 +5,7 @@ export default function SplashScreen() {
   return (
     <View style={styles.container}>
       <Image
-        source={require('../assets/keystone_transparent.png')}
+        source={require('../assets/images/logos/keystone_transparent.png')}
         style={styles.logo}
         resizeMode="contain"
       />

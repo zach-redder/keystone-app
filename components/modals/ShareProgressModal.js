@@ -13,15 +13,15 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { captureRef } from 'react-native-view-shot';
-import { shareApp } from '../../services/shareService';
-import { fetchAlignmentValue } from '../../services/alignmentService';
-import { fetchRecentActionLog } from '../../services/actionLogs';
-import { fetchTodayReminder } from '../../services/reminderService';
-import { fetchIdentityKeys } from '../../services/userKeys';
+import { shareApp } from '../../services/features/shareService';
+import { fetchAlignmentValue } from '../../services/features/alignmentService';
+import { fetchRecentActionLog } from '../../services/features/actionLogs';
+import { fetchTodayReminder } from '../../services/features/reminderService';
+import { fetchIdentityKeys } from '../../services/user/userKeys';
 import { getAppStoreLink } from '../../constants/appStore';
-import { getUserReferralInfo } from '../../services/referralService';
+import { getUserReferralInfo } from '../../services/user/referralService';
 import ReferralModal from './ReferralModal';
-import ShareProgressCardEnhanced from '../ShareProgressCardEnhanced';
+import ShareProgressCardEnhanced from '../cards/ShareProgressCardEnhanced';
 
 const ShareProgressModal = ({ visible, onClose }) => {
   const shareCardRef = useRef(null);

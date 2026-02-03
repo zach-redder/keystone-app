@@ -141,7 +141,7 @@ export default function AlignButton({ onPress }) {
           >
             <View style={alignButtonStyles.alignContent}>
               <Image
-                source={require('../../assets/checkmark.png')}
+                source={require('../../assets/images/icons/checkmark.png')}
                 style={alignButtonStyles.plusImage}
               />
               <Text style={alignButtonStyles.alignText}>Align Now</Text>

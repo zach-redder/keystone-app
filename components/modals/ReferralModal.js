@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { getUserReferralInfo } from '../../services/referralService';
+import { getUserReferralInfo } from '../../services/user/referralService';
 
 const ReferralModal = ({ visible, onClose }) => {
   const [referralInfo, setReferralInfo] = useState(null);

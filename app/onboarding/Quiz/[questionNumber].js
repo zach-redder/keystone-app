@@ -5,7 +5,7 @@ import { styles } from '../../../styles/onboarding';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import OnboardingProgressHeader from '../OnboardingProgressHeader';
+import OnboardingProgressHeader from '../components/OnboardingProgressHeader';
 
 const QUIZ_QUESTIONS = [
     {
@@ -155,7 +155,7 @@ export default function QuizQuestion() {
 
                         // Calculate alignment scores and save to AsyncStorage
                         if (Object.keys(quizScores).length > 0) {
-                            const { calculateAlignmentScoresFromQuizAnswers } = await import('../../../services/alignmentService');
+                            const { calculateAlignmentScoresFromQuizAnswers } = await import('../../../services/features/alignmentService');
                             const alignmentScores = calculateAlignmentScoresFromQuizAnswers(quizScores);
                             await AsyncStorage.setItem('pending_alignment_scores', JSON.stringify(alignmentScores));
                             console.log('Alignment scores calculated:', alignmentScores);

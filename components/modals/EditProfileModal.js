@@ -13,7 +13,7 @@ import keysStyles from '../../styles/keys';
 import {
   updateUserName,
   getUserName,
-} from '../../services/userPreferences';
+} from '../../services/user/userPreferences';
 
 const EditProfileModal = ({ visible, onClose, userEmail }) => {
   const [email, setEmail] = useState(userEmail || '');

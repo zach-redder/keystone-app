@@ -212,7 +212,7 @@ export default function KeystoneBenefits() {
                 ]}
             >
                 <Image 
-                    source={require('../../../assets/keystone_transparent.png')} 
+                    source={require('../../../assets/images/logos/keystone_transparent.png')} 
                     style={styles.benefitsLogo} 
                 />
             </Animated.View>

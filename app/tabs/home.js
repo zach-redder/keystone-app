@@ -11,12 +11,12 @@ import AlignModal from '../../components/modals/AlignModal';
 import AlignButton from '../../components/buttons/AlignButton';
 import LogActionModal from '../../components/modals/LogActionModal';
 import ShareProgressModal from '../../components/modals/ShareProgressModal';
-import CommunityCard from '../../components/CommunityCard';
+import CommunityCard from '../../components/cards/CommunityCard';
 // Removed ReferralModal - now using direct app sharing
 // Removed checkUserProStatus import - app is now fully paid-only
-import { fetchRecentActionLog, fetchActionLogs, fetchCurrentWeekActionLogs } from '../../services/actionLogs';
+import { fetchRecentActionLog, fetchActionLogs, fetchCurrentWeekActionLogs } from '../../services/features/actionLogs';
 import { getAppStoreLink, APP_NAME } from '../../constants/appStore';
-import { fetchTodayReminder, setupReminderNotifications } from '../../services/reminderService';
+import { fetchTodayReminder, setupReminderNotifications } from '../../services/features/reminderService';
 import { 
   fetchAlignmentValue, 
   fetchLatestWeeklySnapshot, 
@@ -24,15 +24,15 @@ import {
   KEY_TYPE_LABELS,
   getScoreLabel,
   getScoreColor
-} from '../../services/alignmentService';
-import { getUserDayStreak, getUserLongestStreak, getUserActiveDays, getUserDailyActivityCounts } from '../../services/userPreferences';
-import { checkForStreakMilestone, markMilestoneAsShown } from '../../services/streakRewardsService';
-import { fetchTotalAIChatMessagePairCount, fetchCurrentWeekAIChatMessagePairCount } from '../../services/affirmationService';
+} from '../../services/features/alignmentService';
+import { getUserDayStreak, getUserLongestStreak, getUserActiveDays, getUserDailyActivityCounts } from '../../services/user/userPreferences';
+import { checkForStreakMilestone, markMilestoneAsShown } from '../../services/features/streakRewardsService';
+import { fetchTotalAIChatMessagePairCount, fetchCurrentWeekAIChatMessagePairCount } from '../../services/features/affirmationService';
 import * as Haptics from 'expo-haptics';
 import ActionLogResultModal from '../../components/modals/ActionLogResultModal';
 import AffirmIdentityModal from '../../components/modals/AffirmIdentityModal';
 import StreakRewardModal from '../../components/modals/StreakRewardModal';
-import StreakCounter from '../../components/StreakCounter';
+import StreakCounter from '../../components/cards/StreakCounter';
 
 export default function HomeScreen() {
   // Removed proModalVisible state - no longer needed in paid-only app

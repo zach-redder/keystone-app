@@ -17,10 +17,10 @@ import CommunityModal from '../../components/modals/CommunityModal';
 import AffirmIdentityModal from '../../components/modals/AffirmIdentityModal';
 import ShareProgressModal from '../../components/modals/ShareProgressModal';
 // Removed ReferralModal - now using direct app sharing
-import { fetchIdentityKeys, deleteIdentityKey, updateIdentityKey, addIdentityKey } from '../../services/userKeys';
-import { checkUserProStatus } from '../../services/auth';
+import { fetchIdentityKeys, deleteIdentityKey, updateIdentityKey, addIdentityKey } from '../../services/user/userKeys';
+import { checkUserProStatus } from '../../services/auth/auth';
 import { getAppStoreLink, APP_NAME } from '../../constants/appStore';
-import { getUserDayStreak } from '../../services/userPreferences';
+import { getUserDayStreak } from '../../services/user/userPreferences';
 import ProUpgradeModal from '../../components/modals/ProUpgradeModal';
 
 function AppButton({ title, onPress, style, icon, iconRight, plusMarginRight }) {
@@ -41,7 +41,7 @@ function AppButton({ title, onPress, style, icon, iconRight, plusMarginRight }) 
         {icon && <Text style={keysStyles.buttonIcon}>{icon}</Text>}
         <Text style={keysStyles.buttonText}>{title}</Text>
         {iconRight && (
-          <Image source={require('../../assets/plus.png')} style={{ ...keysStyles.plusImage, marginRight: plusMarginRight }} />
+          <Image source={require('../../assets/images/icons/plus.png')} style={{ ...keysStyles.plusImage, marginRight: plusMarginRight }} />
         )}
       </View>
     </TouchableOpacity>
@@ -74,7 +74,7 @@ function KeyRow({ keyData, onEdit, onDelete }) {
         onPress={handleDeletePress}
         activeOpacity={0.7}
       >
-        <Image source={require('../../assets/delete.png')} style={{ width: 28, height: 28 }} resizeMode="contain" />
+        <Image source={require('../../assets/images/icons/delete.png')} style={{ width: 28, height: 28 }} resizeMode="contain" />
       </TouchableOpacity>
     </View>
   );

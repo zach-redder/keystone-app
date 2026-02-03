@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, Modal, TouchableOpacity, TextInput, ScrollView, ActivityIndicator, StyleSheet } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { fetchIdentityKeys } from '../../services/userKeys';
-import { submitActionLogWithAI } from '../../services/actionLogs';
-import { checkUserProStatus } from '../../services/auth';
+import { fetchIdentityKeys } from '../../services/user/userKeys';
+import { submitActionLogWithAI } from '../../services/features/actionLogs';
+import { checkUserProStatus } from '../../services/auth/auth';
 
 const LogActionModal = ({ visible, onClose, onSubmit }) => {
   const [action, setAction] = useState('');

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Redirect } from 'expo-router';
-import { checkUserStatus } from '../services/auth';
+import { checkUserStatus } from '../services/auth/auth';
 import SplashScreen from './SplashScreen';
 
 export default function Index() {

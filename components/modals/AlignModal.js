@@ -7,8 +7,8 @@ import LogActionModal from './LogActionModal';
 import ActionLogResultModal from './ActionLogResultModal';
 import ShareProgressModal from './ShareProgressModal';
 import ProUpgradeModal from './ProUpgradeModal';
-import { checkUserProStatus } from '../../services/auth';
-import { fetchTodaysActionLogCount } from '../../services/actionLogs';
+import { checkUserProStatus } from '../../services/auth/auth';
+import { fetchTodaysActionLogCount } from '../../services/features/actionLogs';
 
 const { height: screenHeight } = Dimensions.get('window');
 

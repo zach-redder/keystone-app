@@ -2,9 +2,9 @@ import { View, Text, Modal, ScrollView, TouchableOpacity, TextInput } from 'reac
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect } from 'react';
 import * as Haptics from 'expo-haptics';
-import { getPreferredAiPersona, setPreferredAiPersona } from '../../services/userPreferences';
-import { fetchCustomPersonalities, createCustomPersonality, deleteCustomPersonality } from '../../services/customPersonalitiesService';
-import { checkUserProStatus } from '../../services/auth';
+import { getPreferredAiPersona, setPreferredAiPersona } from '../../services/user/userPreferences';
+import { fetchCustomPersonalities, createCustomPersonality, deleteCustomPersonality } from '../../services/features/customPersonalitiesService';
+import { checkUserProStatus } from '../../services/auth/auth';
 import keysStyles from '../../styles/keys';
 import ProUpgradeModal from './ProUpgradeModal';
 

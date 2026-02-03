@@ -1,7 +1,7 @@
 // components/SignInForm.js
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Image, Alert } from 'react-native';
-import { signInUser, resetPassword, signInWithGoogle, signInWithApple } from '../../services/auth';
+import { signInUser, resetPassword, signInWithGoogle, signInWithApple } from '../../services/auth/auth';
 import { styles } from '../../styles/authentication';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -117,7 +117,7 @@ export default function SignInForm() {
           <Ionicons name="arrow-back" size={48} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
-      <Image source={require('../../assets/keystone_transparent.png')} style={styles.logo} />
+      <Image source={require('../../assets/images/logos/keystone_transparent.png')} style={styles.logo} />
       <Text style={styles.title}>Log in to your account.</Text>
 
       <TextInput

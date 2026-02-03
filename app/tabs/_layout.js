@@ -29,8 +29,8 @@ export default function TabLayout() {
           <Image
             source={
               focused
-                ? require('../../assets/keystone_transparent.png')
-                : require('../../assets/keystone_grey.png')
+                ? require('../../assets/images/logos/keystone_transparent.png')
+                : require('../../assets/images/logos/keystone_grey.png')
             }
             style={{ 
               width: focused ? 46 : 38, 
