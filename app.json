@@ -5,10 +5,10 @@
     "scheme": "keystone",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/keystone.png",
+    "icon": "./assets/images/logos/keystone.png",
     "userInterfaceStyle": "automatic",
     "splash": {
-      "image": "./assets/keystone.png",
+      "image": "./assets/images/logos/keystone.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -31,7 +31,7 @@
     "android": {
       "package": "com.reddermedia.keystone",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/keystone.png",
+        "foregroundImage": "./assets/images/logos/keystone.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
@@ -52,7 +52,7 @@
       ]
     },
     "web": {
-      "favicon": "./assets/keystone.png"
+      "favicon": "./assets/images/logos/keystone.png"
     },
     "plugins": [
       [

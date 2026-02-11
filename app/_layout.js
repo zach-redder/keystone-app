@@ -77,7 +77,7 @@ function RootShell() {
           
           if (type === 'recovery') {
             console.log('Password reset callback detected');
-            router.replace('/resetpassword');
+            router.replace('/auth/resetpassword');
             return;
           }
           const { data, error } = await supabase.auth.exchangeCodeForSession(url);
