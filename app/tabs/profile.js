@@ -20,6 +20,7 @@ import FAQModal from '../../components/modals/FAQModal';
 import AIPersonalityModal from '../../components/modals/AIPersonalityModal';
 import ReminderTimeModal from '../../components/modals/ReminderTimeModal';
 import EditProfileModal from '../../components/modals/EditProfileModal';
+import DeleteAccountModal from '../../components/modals/DeleteAccountModal';
 // Removed ReferralModal and shareProfilePage - now using direct app sharing
 
 export default function ProfileScreen() {
@@ -35,6 +36,7 @@ export default function ProfileScreen() {
   const [aiPersonalityModalVisible, setAiPersonalityModalVisible] = useState(false);
   const [reminderTimeModalVisible, setReminderTimeModalVisible] = useState(false);
   const [editProfileModalVisible, setEditProfileModalVisible] = useState(false);
+  const [deleteAccountModalVisible, setDeleteAccountModalVisible] = useState(false);
   // Removed referralModalVisible - now using direct app sharing
   const [keyCount, setKeyCount] = useState(0);
   // Removed isPro state - all users are considered pro in paid-only app
@@ -545,6 +547,18 @@ export default function ProfileScreen() {
             <Ionicons name="log-out-outline" size={20} color="#fff" style={profileStyles.signOutIcon} />
             <Text style={profileStyles.signOutButtonText}>Log Out</Text>
           </TouchableOpacity>
+
+          {/* Delete Account Button */}
+          <TouchableOpacity 
+            style={[profileStyles.signOutButton, { marginTop: 12, backgroundColor: 'rgba(255, 87, 87, 0.15)', borderWidth: 1, borderColor: 'rgba(255, 87, 87, 0.3)' }]} 
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              setDeleteAccountModalVisible(true);
+            }}
+          >
+            <Ionicons name="trash-outline" size={20} color="#FF5757" style={profileStyles.signOutIcon} />
+            <Text style={[profileStyles.signOutButtonText, { color: '#FF5757' }]}>Delete Account</Text>
+          </TouchableOpacity>
         </ScrollView>
       </View>
 
@@ -581,6 +595,10 @@ export default function ProfileScreen() {
         onClose={() => setEditProfileModalVisible(false)}
         userEmail={userEmail}
         onSave={() => {}}
+      />
+      <DeleteAccountModal
+        visible={deleteAccountModalVisible}
+        onClose={() => setDeleteAccountModalVisible(false)}
       />
       {/* Removed ReferralModal - now using direct app sharing */}
     </SafeAreaView>

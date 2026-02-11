@@ -1108,3 +1108,133 @@ export const updateUserPassword = async (newPassword: string) => {
     throw error;
   }
 };
+
+export const deleteUserAccount = async (): Promise<boolean> => {
+  try {
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      throw new Error('User not authenticated');
+    }
+
+    const userId = user.id;
+    console.log('Starting account deletion for user:', userId);
+
+    // Delete all user-related data from database tables
+    // Note: These should ideally be handled by database triggers/cascades,
+    // but we'll delete them explicitly to ensure complete cleanup
+
+    // Delete user preferences
+    const { error: prefsError } = await supabase
+      .from('user_preferences')
+      .delete()
+      .eq('user_id', userId);
+    if (prefsError) console.error('Error deleting user preferences:', prefsError);
+
+    // Delete action logs
+    const { error: logsError } = await supabase
+      .from('action_logs')
+      .delete()
+      .eq('user_id', userId);
+    if (logsError) console.error('Error deleting action logs:', logsError);
+
+    // Delete user keys
+    const { error: keysError } = await supabase
+      .from('user_keys')
+      .delete()
+      .eq('user_id', userId);
+    if (keysError) console.error('Error deleting user keys:', keysError);
+
+    // Delete reminders
+    const { error: reminderError } = await supabase
+      .from('user_reminders')
+      .delete()
+      .eq('user_id', userId);
+    if (reminderError) console.error('Error deleting reminders:', reminderError);
+
+    // Delete daily reminders
+    const { error: dailyReminderError } = await supabase
+      .from('user_daily_reminders')
+      .delete()
+      .eq('user_id', userId);
+    if (dailyReminderError) console.error('Error deleting daily reminders:', dailyReminderError);
+
+    // Delete weekly alignment snapshots
+    const { error: snapshotError } = await supabase
+      .from('weekly_alignment_snapshots')
+      .delete()
+      .eq('user_id', userId);
+    if (snapshotError) console.error('Error deleting weekly snapshots:', snapshotError);
+
+    // Delete alignment score changes
+    const { error: alignmentChangesError } = await supabase
+      .from('alignment_score_changes')
+      .delete()
+      .eq('user_id', userId);
+    if (alignmentChangesError) console.error('Error deleting alignment changes:', alignmentChangesError);
+
+    // Delete user alignment scores
+    const { error: alignmentScoresError } = await supabase
+      .from('user_alignment_scores')
+      .delete()
+      .eq('user_id', userId);
+    if (alignmentScoresError) console.error('Error deleting alignment scores:', alignmentScoresError);
+
+    // Delete referral redemptions
+    const { error: referralError } = await supabase
+      .from('referral_redemptions')
+      .delete()
+      .eq('user_id', userId);
+    if (referralError) console.error('Error deleting referral redemptions:', referralError);
+
+    // Delete AI chat logs
+    const { error: chatLogsError } = await supabase
+      .from('ai_chat_logs')
+      .delete()
+      .eq('user_id', userId);
+    if (chatLogsError) console.error('Error deleting chat logs:', chatLogsError);
+
+    // Delete messages
+    const { error: messagesError } = await supabase
+      .from('messages')
+      .delete()
+      .eq('user_id', userId);
+    if (messagesError) console.error('Error deleting messages:', messagesError);
+
+    // Delete custom personalities
+    const { error: personalitiesError } = await supabase
+      .from('custom_personalities')
+      .delete()
+      .eq('user_id', userId);
+    if (personalitiesError) console.error('Error deleting custom personalities:', personalitiesError);
+
+    // Delete user profile from users table
+    const { error: userDeleteError } = await supabase
+      .from('users')
+      .delete()
+      .eq('id', userId);
+    if (userDeleteError) {
+      console.error('Error deleting user profile:', userDeleteError);
+      throw userDeleteError;
+    }
+
+    // Sign out the user before deletion
+    await supabase.auth.signOut();
+    
+    // Clear all AsyncStorage
+    await AsyncStorage.clear();
+
+    // Note: The auth.users deletion will be handled by a database trigger
+    // that listens for deletions in the public.users table
+    // See the SQL migration file for the trigger setup
+
+    console.log('Account deleted successfully. Auth user deletion will be handled by database trigger.');
+    return true;
+  } catch (error) {
+    console.error('Error deleting user account:', error);
+    throw error;
+  }
+};
