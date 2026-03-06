@@ -5,29 +5,50 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 export const handleSuperwallPurchaseComplete = async (transactionData: any) => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
-    
+
     if (!user) {
       console.error('No authenticated user for purchase completion');
       return false;
     }
 
-    // Update user pro status in database
-    const { error: updateError } = await supabase
+    const { data: existing } = await supabase
       .from('users')
-      .update({ 
-        is_pro: true,
-        subscription_source: 'superwall'
-      })
-      .eq('id', user.id);
+      .select('id')
+      .eq('id', user.id)
+      .maybeSingle();
 
-    if (updateError) {
-      console.error('Error updating user pro status:', updateError);
-      throw updateError;
+    if (existing) {
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({
+          is_pro: true,
+          subscription_source: 'superwall',
+        })
+        .eq('id', user.id);
+
+      if (updateError) {
+        console.error('Error updating user pro status:', updateError);
+        throw updateError;
+      }
+    } else {
+      const { error: insertError } = await supabase.from('users').insert([
+        {
+          id: user.id,
+          email: user.email ?? null,
+          name: null,
+          is_pro: true,
+          subscription_source: 'superwall',
+          onboarding_complete: false,
+        },
+      ]);
+
+      if (insertError) {
+        console.error('Error inserting user on purchase (pro):', insertError);
+        throw insertError;
+      }
     }
 
-    // Clear any pending subscription data from old IAP system
     await AsyncStorage.removeItem('pending_subscription');
-
     console.log('Successfully processed Superwall purchase completion');
     return true;
   } catch (error) {

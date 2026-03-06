@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { getSuperwallImplementation } from '../../../utils/superwallCompat';
+import { useSuperwallContext } from '../../../contexts/SuperwallContext';
 import { PRIMARY_SUBSCRIPTION, AUTO_RENEW_NOTICE, BILLING_DISCLOSURE } from '../../../constants/subscriptions';
 import { PRIVACY_POLICY_URL, TERMS_OF_USE_URL } from '../../../constants/legal';
 
@@ -13,24 +14,31 @@ const { usePlacement, useUser, useSuperwallEvents } = getSuperwallImplementation
 export default function SubscriptionScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { isSubscribed } = useSuperwallContext();
   const { subscriptionStatus } = useUser();
   const [paywallUnavailable, setPaywallUnavailable] = useState(false);
   const { registerPlacement } = usePlacement({
     onDismiss: (paywallInfo, result) => {
       console.log('Paywall dismissed:', paywallInfo, result);
-      // For hard paywall: re-present if user is not subscribed
       checkSubscriptionAndReact();
     },
   });
+
+  // Navigate immediately when subscription becomes active (no Alert to tap)
+  useEffect(() => {
+    if (isSubscribed) {
+      console.log('Subscription screen: isSubscribed true – navigating to register');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      router.replace('/register');
+    }
+  }, [isSubscribed]);
 
   useSuperwallEvents({
     onSubscriptionStatusChange: (status) => {
       console.log('Subscription status changed:', status);
       if (status?.status === 'ACTIVE') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        Alert.alert('Success', 'Welcome to Keystone Pro!', [
-          { text: 'Continue', onPress: () => router.replace('/register') }
-        ]);
+        router.replace('/register');
       }
     },
     onSuperwallEvent: (eventInfo) => {

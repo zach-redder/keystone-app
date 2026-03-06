@@ -30,17 +30,21 @@ export const SuperwallContextProvider = ({ children }) => {
       const isActive = status?.status === 'ACTIVE';
       setIsSubscribed(isActive);
 
-      // If subscription is active, update database
       if (isActive) {
         try {
           await handleSuperwallPurchaseComplete(status);
+          if (refresh) await refresh();
         } catch (error) {
           console.error('Error updating database with subscription:', error);
         }
       }
     },
     onSuperwallEvent: (eventInfo) => {
+      const eventName = eventInfo?.event?.event;
       console.log('Superwall event received:', eventInfo.event, eventInfo.params);
+      if (eventName === 'transactionComplete') {
+        console.log('Transaction complete – subscription should update shortly');
+      }
     },
   });
 

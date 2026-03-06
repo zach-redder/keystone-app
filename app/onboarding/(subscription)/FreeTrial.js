@@ -7,23 +7,58 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { getSuperwallImplementation, isExpoGo } from '../../../utils/superwallCompat';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useSuperwallContext } from '../../../contexts/SuperwallContext';
 
-const { usePlacement } = getSuperwallImplementation();
+const { usePlacement, useSuperwallEvents } = getSuperwallImplementation();
 
 export default function FreeTrial() {
     const router = useRouter();
+    const { isSubscribed } = useSuperwallContext();
     const [hasShownPaywall, setHasShownPaywall] = useState(false);
+    const hasNavigatedRef = useRef(false);
     const fadeValue = useRef(new Animated.Value(0)).current;
     const slideValue = useRef(new Animated.Value(30)).current;
     const scaleValue = useRef(new Animated.Value(0.9)).current;
     const pulseValue = useRef(new Animated.Value(1)).current;
+
+    const navigateToRegister = () => {
+        if (hasNavigatedRef.current) return;
+        hasNavigatedRef.current = true;
+        setHasShownPaywall(true);
+        router.replace('/register');
+    };
+
+    // Navigate when subscription becomes active (e.g. after purchase) – context updates from SuperwallContext
+    useEffect(() => {
+        if (isSubscribed) {
+            console.log('FreeTrial: isSubscribed true – navigating to register');
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            navigateToRegister();
+        }
+    }, [isSubscribed]);
+
+    useSuperwallEvents({
+        onSubscriptionStatusChange: (status) => {
+            if (status?.status === 'ACTIVE') {
+                console.log('FreeTrial: subscription ACTIVE – navigating to register');
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                navigateToRegister();
+            }
+        },
+        onSuperwallEvent: (eventInfo) => {
+            const eventName = eventInfo?.event?.event;
+            if (eventName === 'transactionComplete') {
+                console.log('FreeTrial: transactionComplete – navigating to register');
+                navigateToRegister();
+            }
+        },
+    });
     
     const { registerPlacement } = usePlacement({
         onDismiss: (paywallInfo, result) => {
             console.log('Paywall dismissed from FreeTrial:', paywallInfo, result);
-            // After paywall is dismissed, proceed to registration
-            setHasShownPaywall(true);
-            router.replace('/register');
+            // If they dismissed without purchasing, still proceed (free user). If they purchased, context/events will also trigger navigation.
+            navigateToRegister();
         },
     });
 
