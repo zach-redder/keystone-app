@@ -5,7 +5,6 @@ import { Ionicons } from '@expo/vector-icons';
 import globalStyles from '../../styles/global';
 import keysStyles from '../../styles/keys';
 import homeStyles from '../../styles/home';
-// Removed ProUpgradeModal import - no longer needed in paid-only app
 import CommunityModal from '../../components/modals/CommunityModal';
 import AlignModal from '../../components/modals/AlignModal';
 import AlignButton from '../../components/buttons/AlignButton';
@@ -13,7 +12,6 @@ import LogActionModal from '../../components/modals/LogActionModal';
 import ShareProgressModal from '../../components/modals/ShareProgressModal';
 import CommunityCard from '../../components/cards/CommunityCard';
 // Removed ReferralModal - now using direct app sharing
-// Removed checkUserProStatus import - app is now fully paid-only
 import { fetchRecentActionLog, fetchActionLogs, fetchCurrentWeekActionLogs } from '../../services/features/actionLogs';
 import { getAppStoreLink, APP_NAME } from '../../constants/appStore';
 import { fetchTodayReminder, setupReminderNotifications } from '../../services/features/reminderService';
@@ -35,7 +33,6 @@ import StreakRewardModal from '../../components/modals/StreakRewardModal';
 import StreakCounter from '../../components/cards/StreakCounter';
 
 export default function HomeScreen() {
-  // Removed proModalVisible state - no longer needed in paid-only app
   const [communityModalVisible, setCommunityModalVisible] = useState(false);
   const [alignModalVisible, setAlignModalVisible] = useState(false);
   const [dayStreak, setDayStreak] = useState(0);
@@ -377,7 +374,8 @@ export default function HomeScreen() {
     return `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
   };
 
-  // Removed handleRequestProUpgrade - no longer needed in paid-only app
+  // AffirmIdentityModal now shows its own ProUpgradeModal internally when a free user
+  // hits the daily chat limit, so no upgrade callback is needed here.
 
   // Handler for Affirm Identity from AlignModal
   const handleAffirmIdentity = () => {
@@ -701,8 +699,6 @@ export default function HomeScreen() {
             setResultModalVisible(true);
           }}
         />
-        
-        {/* Removed ProUpgradeModal - no longer needed in paid-only app */}
         
         <CommunityModal
           visible={communityModalVisible}

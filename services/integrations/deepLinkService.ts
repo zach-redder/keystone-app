@@ -1,38 +1,18 @@
-import { Linking } from 'react-native';
-import { trackReferralDownload } from './referralService';
+import { trackReferralDownload } from '../user/referralService';
 
-// Handle deep links when app is opened
-export const handleDeepLink = async (url: string) => {
+// Called from app/_layout.js's central deep-link listener when a keystone://...?ref=CODE
+// link is received. Not a standalone listener itself -- _layout.js owns the single
+// Linking subscription for the whole app.
+export const handleReferralDeepLink = async (url: string) => {
   try {
     const urlObj = new URL(url);
     const referralCode = urlObj.searchParams.get('ref');
-    
+
     if (referralCode) {
-      console.log('Referral code detected:', referralCode);
+      console.log('Referral code detected in deep link:', referralCode);
       await trackReferralDownload(referralCode);
     }
   } catch (error) {
-    console.error('Error handling deep link:', error);
+    console.error('Error handling referral deep link:', error);
   }
 };
-
-// Set up deep link listener
-export const setupDeepLinkListener = () => {
-  const handleUrl = (url: string) => {
-    handleDeepLink(url);
-  };
-
-  // Handle initial URL if app was opened via deep link
-  Linking.getInitialURL().then((url) => {
-    if (url) {
-      handleUrl(url);
-    }
-  });
-
-  // Listen for deep links when app is already open
-  const subscription = Linking.addEventListener('url', (event) => {
-    handleUrl(event.url);
-  });
-
-  return subscription;
-}; 

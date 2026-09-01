@@ -18,7 +18,7 @@ import AffirmIdentityModal from '../../components/modals/AffirmIdentityModal';
 import ShareProgressModal from '../../components/modals/ShareProgressModal';
 // Removed ReferralModal - now using direct app sharing
 import { fetchIdentityKeys, deleteIdentityKey, updateIdentityKey, addIdentityKey } from '../../services/user/userKeys';
-import { checkUserProStatus } from '../../services/auth/auth';
+import { checkUserProStatus } from '../../services/subscription/subscriptionService';
 import { getAppStoreLink, APP_NAME } from '../../constants/appStore';
 import { getUserDayStreak } from '../../services/user/userPreferences';
 import ProUpgradeModal from '../../components/modals/ProUpgradeModal';

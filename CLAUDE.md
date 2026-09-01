@@ -4,80 +4,126 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Keystone is a React Native application built with Expo that implements a psychological profiling and self-improvement app. The app uses **Superwall** (`expo-superwall@0.3.2`) for paywall and subscription management, with Supabase for backend services, authentication, and user data management.
+Keystone is an Expo/React Native app implementing a psychological self-improvement / identity-alignment product. Users define "identity keys" across six categories (Core Values, Identity Traits, Future Self Vision, Life Goals, Avoidances, Motivations) and track alignment scores for each via AI chat and logged actions. The app uses **Superwall** (`expo-superwall@0.3.2`) for paywall/subscription management and **Supabase** for auth, data, and two Edge Functions checked into this repo. AI features call the sibling `keystone-ai-service` backend.
+
+## Tech Stack
+
+- Expo ~54, Expo Router ~6 (file-based routing), React Native 0.81, React 19
+- TypeScript for `services/`, JavaScript for most `app/`/`components/` screens
+- Supabase (`@supabase/supabase-js`) — auth, Postgres, `handle-subscription` + `generate-daily-message` Edge Functions
+- Superwall (`expo-superwall`) — subscriptions
+- EAS Build for native builds
 
 ## Development Commands
 
-- `npm start` - Start Expo development server
-- `npm run android` - Run on Android device/emulator
-- `npm run ios` - Run on iOS device/simulator
-- `npm run web` - Run on web browser
+- `npm start` — Start Expo development server
+- `npm run android` — Run on Android device/emulator
+- `npm run ios` — Run on iOS device/simulator
+- `npm run web` — Run on web browser
 
-For development after making changes:
+After changing native dependencies:
 ```bash
 npx expo prebuild --clean
 cd ios && pod install && cd ..
 ```
 
-## Architecture Overview
+There is no `test` or `lint` script — no automated test suite exists in this repo.
+
+## Architecture
 
 ### Core Structure
-- **Expo Router**: File-based routing system located in `/app` directory
-- **Supabase**: Backend service for authentication, data storage, and receipt validation
-- **Context API**: State management via React Context (SuperwallContext)
+- **Expo Router**: file-based routing in `/app`, using route groups (`(auth)`, `(identity)`, `(quiz)`, `(subscription)`, etc.) to organize onboarding sub-flows without affecting the URL path.
+- **Supabase**: backend for authentication, Postgres data, and receipt validation.
+- **Context API**: global state via React Context (`SuperwallContext`); no Redux/Zustand.
 
 ### Key Directories
-- `/app` - Main application screens and routing
-  - `/tabs` - Bottom tab navigation (home.js, keys.js, profile.js)
-  - `/onboarding` - User onboarding flow including quiz and subscription
-- `/contexts` - React Context providers for global state
-- `/services` - Business logic services (userKeys.ts, reminderService, etc.)
-- `/lib` - Core utilities including Supabase client configuration
+- `/app` — screens and routing
+  - `/app/tabs` — bottom tab navigation (`home.js`, `keys.js`, `profile.js`)
+  - `/app/onboarding` — identity key selection, quiz, benefits deep-dives, subscription paywall
+  - `/app/(auth)` — sign in, register, reset password, email confirmation
+- `/contexts` — React Context providers for global state (`SuperwallContext.js`)
+- `/services` — business logic, split into `auth/`, `features/`, `integrations/`, `subscription/`, `user/`
+- `/lib` — `apiConfig.ts` (keystone-ai-service base URL) and `supabase.ts` (client config)
+- `/supabase/functions` — `handle-subscription` (Superwall webhook receiver) and `generate-daily-message` (cron that calls keystone-ai-service) Edge Functions, deployed to the shared Supabase project (see Subscriptions below)
 
 ### Navigation Flow
-The app uses Expo Router with the following structure:
-- Root layout (`_layout.js`) handles app-wide providers and deep linking
-- Main screens in `/app` for authentication (signin, register, email confirmation)
-- Tab navigation for authenticated users in `/app/tabs`
-- Onboarding flow in `/app/onboarding` for new users
+`app/index.js` computes a status via `checkUserStatus()` (`services/auth/auth.ts`) — one of `no_session`, `needs_email_confirmation`, `needs_onboarding`, `needs_quiz`, `needs_user_info`, `needs_referral_code`, `complete`, `error` — by inspecting the Supabase session, `users` table, and AsyncStorage onboarding markers, then redirects accordingly. This status machine is the core navigation pattern; when adding a new onboarding step, it usually needs a new status here plus a corresponding redirect target.
 
-### Subscription System
-The app uses **Superwall** for paywall presentation and subscription management:
-- **SuperwallProvider**: Root provider that initializes the Superwall SDK with API keys
-- **SuperwallLoading/SuperwallLoaded**: Components that conditionally render based on SDK initialization state
-- **usePlacement hook**: For presenting paywalls (e.g., `presentPlacement('subscription_required')`)
-- **useUser hook**: For getting subscription status and identifying users
-- **useSuperwallEvents hook**: For handling transaction and subscription events
+Root layout (`_layout.js`) handles app-wide providers and deep linking (see Deep Linking below). Tab navigation for authenticated users lives in `/app/tabs`. Onboarding flow lives in `/app/onboarding`.
 
-The app implements a freemium model with subscription products managed through Superwall's dashboard. Product IDs are configured in the Superwall web interface, not hardcoded in the app.
+### Deep Linking
+
+`app/_layout.js` owns a single `Linking.addEventListener('url', ...)` listener for the whole app — don't add a second one elsewhere. It:
+1. Parses `keystone://<path>?<query>#<hash>` manually (splitting on `?`/`#`) rather than trusting `Linking.parse()`, since that API's hostname-vs-path handling for custom schemes is ambiguous.
+2. For `resetpassword`/`emailconfirmation`/`signin` paths, tries three ways to establish a session depending on what Supabase actually sent — `token_hash`+`type` via `verifyOtp` (works from any client, no local state needed), `access_token`/`refresh_token` via `setSession` (implicit-flow style), or a PKCE `code` via `exchangeCodeForSession` (only works if this same app instance's `AsyncStorage` holds the matching verifier, i.e. this app initiated the original request) — then navigates to the matching route.
+3. For `?ref=CODE` links, delegates to `services/integrations/deepLinkService.ts`'s `handleReferralDeepLink`, which validates the code and stages it in `pending_referral_code` (AsyncStorage) for the existing onboarding redemption flow to pick up.
+
+These links are generated by `keystone-landingpage`'s `/verify` route. **Important**: that page deliberately does NOT call `exchangeCodeForSession` itself — a PKCE code is single-use and can only be redeemed by the client that requested it (this app, via its own `AsyncStorage`-stored verifier). It just forwards whatever Supabase sent, unmodified, onto the `keystone://` URI.
+
+`app/(auth)/resetpassword.js` no longer re-parses the URL or re-attempts the exchange — it just checks `supabase.auth.getSession()` on mount, trusting that `_layout.js` already established the session before navigating there.
+
+### Subscription System (Superwall)
+
+The app uses **Superwall** for paywall presentation and subscription management, and is a **freemium** product (not fully paid-only, despite some stale comments that used to say otherwise — see Gotchas):
+- **SuperwallProvider**: root provider that initializes the SDK with the API key.
+- **SuperwallLoading/SuperwallLoaded**: conditionally render based on SDK init state.
+- **usePlacement hook**: presents paywalls (e.g., `presentPlacement('subscription_required')`).
+- **useUser hook**: subscription status + user identification. `identify(user.id)` is called with the Supabase auth user's UUID, so Superwall's `originalAppUserId` in webhooks/exports is always that same UUID, not a Superwall-generated alias.
+- **useSuperwallEvents hook**: transaction/subscription event handling.
+
+Product IDs and paywall placements are configured in the Superwall dashboard, not hardcoded in the app (`constants/subscriptions.js` has display-only copies for onboarding UI — keep them in sync manually if pricing changes).
+
+**Two sync paths keep `users.is_pro` current:**
+1. **Client-side**: `SuperwallContext` calls `services/subscription/subscriptionService.ts`'s `handleSuperwallPurchaseComplete` whenever `useSuperwallEvents`' `onSubscriptionStatusChange` fires with an active status, writing `is_pro`/`subscription_source` directly.
+2. **Server-side (source of truth)**: `supabase/functions/handle-subscription/` receives Superwall's webhook, verifies its Svix HMAC signature (`svix-id`/`svix-timestamp`/`svix-signature` headers — deployed with `verify_jwt: false` since a real webhook can't present a Supabase JWT), and updates `is_pro`/`pro_expires_at`/`subscription_source` based on the real event name in `data.name` (`initial_purchase`/`renewal`/`uncancellation`/`non_renewing_purchase` activate; `expiration`/`subscription_paused` deactivate; `cancellation`/`billing_issue` are deliberately left alone — cancelling only turns off auto-renew, access continues until an actual `expiration` event). Requires `SUPERWALL_WEBHOOK_SECRET` (from Superwall's webhook dashboard) set as a Supabase secret — without it, the function rejects every webhook.
+
+There is no raw-IAP fallback anymore. The old `supabase/functions/iap-verify-apple` (native Apple receipt verification, bypassing Superwall) has been removed from this repo since Superwall is the confirmed system. If it's still deployed on Supabase, it needs a separate manual `supabase functions delete iap-verify-apple` — deployment tooling doesn't support deleting functions.
 
 ### State Management
-- **SuperwallContext**: Manages subscription status and handles Superwall events
-- Uses React Context API for global state sharing
-- AsyncStorage for offline persistence of subscription data
-- Supabase `users` table stores `is_pro` status and `subscription_source` for backend validation
+- React Context (`SuperwallContext`) for subscription state; otherwise local `useState`/`useEffect` per screen.
+- AsyncStorage for onboarding progress, cached user info, offline subscription persistence.
+- Supabase is the source of truth for authenticated/server state — no React Query/SWR cache layer.
 
 ### Key Services
-- **reminderService**: Handles push notification scheduling
-- **userKeys.ts**: Manages user profile and psychological profiling data
-- **superwallService.ts**: Handles Superwall purchase completion and subscription status checks
-- **superwallCompat.js**: Provides mock Superwall hooks for Expo Go development (automatically switches to real Superwall SDK in dev/production builds)
+- **`services/auth/auth.ts`** — sign up/in (email, Google, Apple), `checkUserStatus()` routing, account deletion (cascades across ~13 Supabase tables).
+- **`services/features/reminderService`** — push notification scheduling (rescheduled on foreground + local midnight).
+- **`services/user/userKeys.ts`** — identity key / alignment data.
+- **`services/subscription/subscriptionService.ts`** — sole owner of pro/free status logic: `checkUserProStatus`, `upgradeUserToPro`, `downgradeUserToFree`, `getUserSubscriptionDetails`, `handleSuperwallPurchaseComplete`, `migrateFromIAPToSuperwall`. This used to be split three ways across `auth.ts`, `referralService.ts`, and a now-deleted `superwallService.ts` — consolidate any new pro-status logic here too rather than adding a fourth location.
+- **`services/integrations/deepLinkService.ts`** — `handleReferralDeepLink`, called from `_layout.js`'s central listener for `?ref=CODE` links.
+- **`utils/superwallCompat.js`** — mock Superwall hooks for Expo Go; switches to the real SDK automatically in dev/production builds. The same "environment-aware compatibility shim" pattern is used in `services/auth/auth.ts` for lazily loading `@react-native-google-signin` in a try/catch, so it doesn't crash in environments without the native module.
+- **`services/features/affirmationService.ts` / `actionLogs.ts`** — call `keystone-ai-service`'s `/generate-ai-message` and `/action-log-response` via `lib/apiConfig.ts`'s `BASE_URL`.
 
-## Important Development Notes
+## Environment Variables
 
-- The app uses **expo-superwall** (NOT react-native-iap) for all subscription functionality
-- Superwall API key must be set in `.env.local` as `EXPO_PUBLIC_SUPERWALL_API_KEY`
-- All subscription logic flows through the SuperwallContext provider
-- Push notifications are rescheduled on app foreground and at midnight
-- Paywall placements are configured in the Superwall dashboard (https://superwall.com)
-- The app uses TypeScript for services but primarily JavaScript for React components
-- **superwallCompat.js** provides mock implementations for Expo Go testing
+| Variable | Purpose |
+|---|---|
+| `EXPO_PUBLIC_SUPABASE_URL` | Supabase project URL |
+| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key |
+| `EXPO_PUBLIC_API_URL` | `keystone-ai-service` base URL |
+| `EXPO_PUBLIC_SUPERWALL_API_KEY` | Superwall SDK key |
+| `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` / `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` | Google Sign-In |
+
+`lib/supabase.ts` and `lib/apiConfig.ts` throw at import time if their required vars are missing. See `.env.example`.
+
+## Related Repos
+
+- **`../keystone-ai-service`** — Python/FastAPI backend called via `EXPO_PUBLIC_API_URL` for AI chat and action-log evaluation. Shares the same Supabase project/`users` table. This repo's `supabase/functions/generate-daily-message/` Edge Function calls that service's `/generate-daily-message` on a schedule.
+- **`../keystone-landingpage`** — marketing/waitlist site. Shares the same Supabase auth project; the `keystone://` deep-link scheme is how the landing page's `/verify` route hands email-confirmation, email-change, and password-reset callbacks back to this app (`keystone://emailconfirmation`, `keystone://signin`, `keystone://resetpassword`, each carrying the actual Supabase session payload as a query string or hash fragment — see Deep Linking above).
+
+## Gotchas / Known Gaps
+
+- **No automated tests, no active CI.** iOS deploys are automated at the infrastructure level instead: an EAS "build trigger" (Expo dashboard → Project Settings → GitHub) watches pushes to `main` and runs `eas build --profile production` then `eas submit` automatically, using the App Store Connect API key stored in EAS's credential service — no GitHub Actions workflow, no repo secrets. `eas.json`'s `submit.production` block is intentionally empty to make it resolve credentials that way.
+- **`app.config.js` has a stale `// Superwall removed` comment** even though Superwall is still fully wired into the app — don't trust that comment as documentation.
+- **Legacy/new table fallback pattern** — some read functions (e.g. `fetchAlignmentValue`, `fetchLatestWeeklySnapshot`) try a new normalized table first, then fall back to a legacy table/column. This means a normalized data-model migration is in progress; don't remove the legacy fallback without confirming the migration is finished.
+- **Universal links are only half-configured** — `app.json` has `associatedDomains`/App Links config pointed at `thekeystoneapp.com`, but the landing page's `.well-known/apple-app-site-association` and `assetlinks.json` still have placeholder values for the Apple Team ID and Android signing-cert fingerprint. Custom-scheme (`keystone://`) links work regardless; HTTPS universal links don't yet.
+- **`handle-subscription` rejects everything until `SUPERWALL_WEBHOOK_SECRET` is set** as a Supabase secret (get it from Superwall's webhook config when setting up the webhook URL there).
+- The app uses TypeScript for `services/` but mostly plain JavaScript for screens/components — match whichever convention the file you're editing already uses.
+- Non-blocking side effects are a deliberate pattern (e.g. Resend email-list sync is wrapped in `setTimeout` + try/catch so failures don't block account creation) — preserve this pattern for similar "best-effort" integrations.
+- **"Fully paid-only" comments in `home.js`/`profile.js` are stale and wrong** — the app is freemium. Each feature modal (`AlignModal`, `AffirmIdentityModal`, `AIPersonalityModal`, `LogActionModal`) self-contains its own `checkUserProStatus()` check, daily free-tier limit, and `ProUpgradeModal` — that gating is real and current, the removed top-level `home.js`/`profile.js` upgrade-prompt wiring was just redundant with it, not a functional gap.
 
 ## Testing Considerations
 
-- **Development Builds**: Use `npx expo run:ios` to test real Superwall integration
-- **Expo Go**: Uses mock Superwall implementation (no real purchases)
-- Superwall handles all App Store Connect configuration and receipt validation automatically
-- Test subscription flows using Superwall's test mode in their dashboard
-- Sandbox Apple IDs required for testing real purchases in development builds
-- Monitor Superwall events in the console using `useSuperwallEvents` hook
+- **Development builds**: use `npx expo run:ios` to test real Superwall integration.
+- **Expo Go**: uses the mock Superwall implementation — no real purchases.
+- Sandbox Apple IDs are required to test real purchases in development builds.
+- Monitor Superwall events in the console via `useSuperwallEvents`.

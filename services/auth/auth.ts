@@ -529,36 +529,9 @@ export const insertUserProfileAfterConfirmation = async (
     // Don't throw - non-critical error
   }
 
-  // Handle migration from old IAP system to Superwall
-  try {
-    console.log('Checking for Superwall migration...');
-    const pendingSubscription = await AsyncStorage.getItem('pending_subscription');
-    
-    if (pendingSubscription) {
-      console.log('Found pending IAP subscription - migrating to Superwall system');
-      
-      // Mark user as pro from migrated IAP subscription
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({ 
-          is_pro: true,
-          subscription_source: 'migrated_from_iap'
-        })
-        .eq('id', userId);
-      
-      if (updateError) {
-        console.error('Error updating user pro status during migration:', updateError);
-      } else {
-        console.log('Successfully migrated IAP subscription to Superwall system');
-      }
-      
-      // Clear the pending subscription data
-      await AsyncStorage.removeItem('pending_subscription');
-    }
-  } catch (migrationError) {
-    console.error('Error handling IAP to Superwall migration:', migrationError);
-    // Don't throw - non-critical error
-  }
+  // IAP-to-Superwall migration is handled once per session by
+  // services/subscription/subscriptionService.ts's migrateFromIAPToSuperwall(),
+  // called from SuperwallContext's user-init effect -- this used to be duplicated here.
 
   // Get identity keys from AsyncStorage
   try {
@@ -919,88 +892,10 @@ export const resendConfirmationEmail = async (email: string) => {
   return true;
 };
 
-export const checkUserProStatus = async () => {
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      return false;
-    }
-
-    const { data: userData } = await supabase
-      .from('users')
-      .select('is_pro')
-      .eq('id', user.id)
-      .single();
-
-    return userData?.is_pro || false;
-  } catch (error) {
-    console.error('Error checking user pro status:', error);
-    return false;
-  }
-};
-
-export const upgradeUserToPro = async (userId?: string) => {
-  try {
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-    
-    if (authError || !user) {
-      throw new Error('User not authenticated');
-    }
-
-    const targetUserId = userId || user.id;
-
-    // Update user to pro status in database
-    const { error: updateError } = await supabase
-      .from('users')
-      .update({ is_pro: true })
-      .eq('id', targetUserId);
-
-    if (updateError) {
-      throw updateError;
-    }
-
-    console.log('Successfully upgraded user to pro:', targetUserId);
-    return true;
-  } catch (error) {
-    console.error('Error upgrading user to pro:', error);
-    throw error;
-  }
-};
-
-export const downgradeUserToFree = async (userId?: string) => {
-  try {
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-    
-    if (authError || !user) {
-      throw new Error('User not authenticated');
-    }
-
-    const targetUserId = userId || user.id;
-
-    // Update user to free status in database
-    const { error: updateError } = await supabase
-      .from('users')
-      .update({ is_pro: false })
-      .eq('id', targetUserId);
-
-    if (updateError) {
-      throw updateError;
-    }
-
-    console.log('Successfully downgraded user to free:', targetUserId);
-    return true;
-  } catch (error) {
-    console.error('Error downgrading user to free:', error);
-    throw error;
-  }
-};
+// checkUserProStatus, upgradeUserToPro, downgradeUserToFree moved to
+// services/subscription/subscriptionService.ts (consolidated with the other
+// pro-status logic that used to be scattered across this file, referralService.ts,
+// and superwallService.ts).
 
 export const checkUserProfileExists = async (): Promise<boolean> => {
   try {

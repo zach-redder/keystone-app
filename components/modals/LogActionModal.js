@@ -3,7 +3,7 @@ import { View, Text, Modal, TouchableOpacity, TextInput, ScrollView, ActivityInd
 import * as Haptics from 'expo-haptics';
 import { fetchIdentityKeys } from '../../services/user/userKeys';
 import { submitActionLogWithAI } from '../../services/features/actionLogs';
-import { checkUserProStatus } from '../../services/auth/auth';
+import { checkUserProStatus } from '../../services/subscription/subscriptionService';
 
 const LogActionModal = ({ visible, onClose, onSubmit }) => {
   const [action, setAction] = useState('');

@@ -2,7 +2,7 @@ import { supabase } from '../../lib/supabase';
 import { BASE_URL } from '../../lib/apiConfig';
 import { fetchIdentityKeys } from '../user/userKeys';
 import { getPreferredAiPersona } from '../user/userPreferences';
-import { checkUserProStatus } from '../auth/auth';
+import { checkUserProStatus } from '../subscription/subscriptionService';
 import { AlignmentKeys, AlignmentScores } from './alignmentService';
 
 interface Message {

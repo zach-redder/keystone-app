@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import * as Haptics from 'expo-haptics';
 import { getPreferredAiPersona, setPreferredAiPersona } from '../../services/user/userPreferences';
 import { fetchCustomPersonalities, createCustomPersonality, deleteCustomPersonality } from '../../services/features/customPersonalitiesService';
-import { checkUserProStatus } from '../../services/auth/auth';
+import { checkUserProStatus } from '../../services/subscription/subscriptionService';
 import keysStyles from '../../styles/keys';
 import ProUpgradeModal from './ProUpgradeModal';
 

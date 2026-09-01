@@ -3,7 +3,7 @@ import { View, Text, Modal, ScrollView, TextInput, KeyboardAvoidingView, Platfor
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { getPreferredAiPersona } from '../../services/user/userPreferences';
 import { generateAIMessage, fetchAIChatMessages, insertAIChatMessagePair, deleteAllAIChatMessages, fetchTodaysAIChatMessagePairCount } from '../../services/features/affirmationService';
-import { checkUserProStatus } from '../../services/auth/auth';
+import { checkUserProStatus } from '../../services/subscription/subscriptionService';
 import Markdown from '@ronradtke/react-native-markdown-display';
 import ProUpgradeModal from './ProUpgradeModal';
 

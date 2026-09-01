@@ -1,5 +1,5 @@
 import { supabase } from '../../lib/supabase';
-import { upgradeUserToPro, downgradeUserToFree } from '../auth/auth';
+import { upgradeUserToPro, downgradeUserToFree } from '../subscription/subscriptionService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface ReferralCode {
@@ -392,101 +392,33 @@ export const debugReferralDatabase = async (): Promise<void> => {
 };
 
 /**
- * Get user's detailed subscription information including type
+ * Called when the app is opened via a referral deep link (?ref=CODE), before the user
+ * has an account. Validates the code and stores it exactly the way the onboarding
+ * ReferralCode screen does, so the existing pending_referral_code flow (applied in
+ * services/auth/auth.ts after signup) picks it up regardless of how the code arrived.
  */
-export const getUserSubscriptionDetails = async (): Promise<{
-  isPro: boolean;
-  subscriptionType: 'monthly' | 'yearly' | 'lifetime' | 'free';
-  displayName: string;
-  source: 'referral' | 'purchase' | 'free';
-  expiresAt?: string;
-}> => {
+export const trackReferralDownload = async (code: string): Promise<void> => {
   try {
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      return {
-        isPro: false,
-        subscriptionType: 'free',
-        displayName: 'Free Plan',
-        source: 'free'
-      };
+    const validation = await validateReferralCode(code);
+    if (!validation.valid || !validation.referralCode) {
+      console.log('Referral deep link code is invalid, ignoring:', code, validation.error);
+      return;
     }
 
-    // Get user data including subscription details
-    const { data: userData, error } = await supabase
-      .from('users')
-      .select('is_pro, referral_subscription_type, pro_expires_at')
-      .eq('id', user.id)
-      .single();
-
-    if (error || !userData) {
-      return {
-        isPro: false,
-        subscriptionType: 'free',
-        displayName: 'Free Plan',
-        source: 'free'
-      };
-    }
-
-    if (!userData.is_pro) {
-      return {
-        isPro: false,
-        subscriptionType: 'free',
-        displayName: 'Free Plan',
-        source: 'free'
-      };
-    }
-
-    // Check if it's a referral subscription
-    if (userData.referral_subscription_type) {
-      const type = userData.referral_subscription_type as 'monthly' | 'yearly' | 'lifetime';
-      
-      // Check if referral subscription has expired
-      if (userData.pro_expires_at && type !== 'lifetime') {
-        const expiresAt = new Date(userData.pro_expires_at);
-        const now = new Date();
-        
-        if (now > expiresAt) {
-          return {
-            isPro: false,
-            subscriptionType: 'free',
-            displayName: 'Free Plan (Expired)',
-            source: 'free'
-          };
-        }
-      }
-
-      const displayNames = {
-        monthly: 'Pro Monthly',
-        yearly: 'Pro Yearly', 
-        lifetime: 'Pro Lifetime'
-      };
-  
-  return {
-        isPro: true,
-        subscriptionType: type,
-        displayName: displayNames[type],
-        source: 'referral',
-        expiresAt: userData.pro_expires_at
-      };
-    }
-
-    // If pro but no referral type, assume it's a regular purchase
-    // You could enhance this by checking app store receipt data
-    return {
-      isPro: true,
-      subscriptionType: 'yearly', // Default assumption for purchased subscriptions
-      displayName: 'Pro Plan',
-      source: 'purchase'
+    const referralInfo = {
+      code: code.toUpperCase().trim(),
+      subscriptionType: validation.referralCode.subscription_type,
+      description: validation.referralCode.description,
+      durationMonths: validation.referralCode.duration_months,
+      redeemedAt: new Date().toISOString(),
     };
 
+    await AsyncStorage.setItem('pending_referral_code', JSON.stringify(referralInfo));
+    console.log('Referral code from deep link saved for onboarding:', referralInfo);
   } catch (error) {
-    console.error('Error getting subscription details:', error);
-    return {
-      isPro: false,
-      subscriptionType: 'free',
-      displayName: 'Free Plan',
-      source: 'free'
-    };
+    console.error('Error tracking referral download:', error);
   }
-}; 
+};
+
+// getUserSubscriptionDetails moved to services/subscription/subscriptionService.ts
+// (it wasn't referral-specific -- it belongs with the rest of the pro-status logic).

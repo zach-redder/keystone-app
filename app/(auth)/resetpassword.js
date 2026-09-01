@@ -3,7 +3,6 @@ import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Alert, Imag
 import { updateUserPassword } from '../../services/auth/auth';
 import { styles } from '../../styles/authentication';
 import { useRouter } from 'expo-router';
-import * as Linking from 'expo-linking';
 import { supabase } from '../../lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -17,43 +16,24 @@ export default function ResetPasswordScreen() {
   const [isProcessingDeepLink, setIsProcessingDeepLink] = useState(true);
 
   useEffect(() => {
-    const handlePasswordResetDeepLink = async () => {
+    // The session (if any) is already established by app/_layout.js's central deep-link
+    // handler before it navigates here -- this just confirms one exists rather than
+    // re-parsing the URL and re-attempting the exchange a second time.
+    const checkSession = async () => {
       try {
-        const url = await Linking.getInitialURL();
-        if (url && url.includes('auth/callback') && url.includes('type=recovery')) {
-          console.log('Processing password reset deep link:', url);
-          
-          // Exchange the recovery code for a session
-          const { data, error } = await supabase.auth.exchangeCodeForSession(url);
-          
-          if (error) {
-            console.error('Error processing password reset deep link:', error);
-            setError('Invalid or expired password reset link. Please request a new one.');
-            setIsProcessingDeepLink(false);
-            return;
-          }
-          
-          if (data.session) {
-            console.log('Password reset session established successfully');
-            setIsProcessingDeepLink(false);
-          } else {
-            console.error('No session established from password reset link');
-            setError('Invalid password reset link. Please request a new one.');
-            setIsProcessingDeepLink(false);
-          }
-        } else {
-          // No deep link, user navigated directly to this screen
-          console.log('No password reset deep link found');
-          setIsProcessingDeepLink(false);
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          setError('Invalid or expired password reset link. Please request a new one.');
         }
       } catch (error) {
-        console.error('Error handling password reset deep link:', error);
+        console.error('Error checking session for password reset:', error);
         setError('Error processing password reset link. Please try again.');
+      } finally {
         setIsProcessingDeepLink(false);
       }
     };
 
-    handlePasswordResetDeepLink();
+    checkSession();
   }, []);
 
   const handleResetPassword = async () => {

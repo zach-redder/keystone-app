@@ -7,13 +7,11 @@ import * as StoreReview from 'expo-store-review';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { signOutUser } from '../../services/auth/auth';
-// Removed checkUserProStatus import - app is now fully paid-only
 import { fetchIdentityKeys } from '../../services/user/userKeys';
 import { getPreferredAiPersona, updateNotificationOptIn, getUserEmail, getPreferredReminderTime, getUserDayStreak, getUserLongestStreak} from '../../services/user/userPreferences';
-import { getUserSubscriptionDetails } from '../../services/user/referralService';
+import { getUserSubscriptionDetails } from '../../services/subscription/subscriptionService';
 import { getAppStoreLink, APP_NAME } from '../../constants/appStore';
 import profileStyles from '../../styles/profile';
-// Removed ProUpgradeModal import - no longer needed in paid-only app
 import CommunityModal from '../../components/modals/CommunityModal';
 import ContactReportModal from '../../components/modals/ContactReportModal';
 import FAQModal from '../../components/modals/FAQModal';
@@ -28,7 +26,6 @@ export default function ProfileScreen() {
   const appState = useRef(AppState.currentState);
   const lastNotificationStatus = useRef(false);
   // Removed badgeText - replaced with streak UI
-  // Removed proModalVisible state - no longer needed in paid-only app
   const [communityModalVisible, setCommunityModalVisible] = useState(false);
   const [contactModalVisible, setContactModalVisible] = useState(false);
   const [reportModalVisible, setReportModalVisible] = useState(false);
@@ -39,7 +36,6 @@ export default function ProfileScreen() {
   const [deleteAccountModalVisible, setDeleteAccountModalVisible] = useState(false);
   // Removed referralModalVisible - now using direct app sharing
   const [keyCount, setKeyCount] = useState(0);
-  // Removed isPro state - all users are considered pro in paid-only app
   const [subscriptionDetails, setSubscriptionDetails] = useState({
     isPro: false,
     subscriptionType: 'free',
@@ -54,7 +50,6 @@ export default function ProfileScreen() {
   const [userEmail, setUserEmail] = useState('');
 
   useEffect(() => {
-    // Removed checkProStatus call - all users are pro in paid-only app
     loadSubscriptionDetails();
     loadKeyCount();
     loadAiPersona();
@@ -90,8 +85,6 @@ export default function ProfileScreen() {
       checkAndUpdateNotificationPermissions();
     }, [])
   );
-
-  // Removed checkProStatus function - all users are pro in paid-only app
 
   const loadKeyCount = async () => {
     try {
@@ -149,16 +142,17 @@ export default function ProfileScreen() {
     try {
       const details = await getUserSubscriptionDetails();
       setSubscriptionDetails(details);
-      // All users are considered pro in paid-only app
     } catch (error) {
       console.error('Error loading subscription details:', error);
+      // Fail closed to Free, matching getUserSubscriptionDetails' own error fallback --
+      // this used to default to a fake "Pro Plan" display, which would misrepresent a
+      // free (or errored) user's actual access.
       setSubscriptionDetails({
-        isPro: true,
-        subscriptionType: 'yearly',
-        displayName: 'Pro Plan',
-        source: 'purchase'
+        isPro: false,
+        subscriptionType: 'free',
+        displayName: 'Free Plan',
+        source: 'free'
       });
-      // All users are considered pro in paid-only app
     }
   };
 
@@ -302,7 +296,8 @@ export default function ProfileScreen() {
     setAiPersonalityModalVisible(true);
   };
 
-  // Removed handleUpgradeFromAI - no longer needed in paid-only app
+  // AIPersonalityModal now shows its own ProUpgradeModal internally when a free user
+  // picks an advanced persona, so no upgrade callback is needed here.
 
   const handleReminderTime = () => {
     setReminderTimeModalVisible(true);
@@ -562,7 +557,6 @@ export default function ProfileScreen() {
         </ScrollView>
       </View>
 
-      {/* Removed ProUpgradeModal - no longer needed in paid-only app */}
       <CommunityModal
         visible={communityModalVisible}
         onClose={() => setCommunityModalVisible(false)}

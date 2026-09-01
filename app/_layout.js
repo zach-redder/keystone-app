@@ -4,6 +4,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
 import * as Linking from 'expo-linking';
 import { supabase } from '../lib/supabase';
+import { handleReferralDeepLink } from '../services/integrations/deepLinkService';
 import { AppState } from 'react-native';
 import { setupReminderNotifications } from '../services/features/reminderService';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -60,46 +61,80 @@ function RootShell() {
   }, []);
 
   useEffect(() => {
+    // keystone://<path>?<query>#<hash> -- split without relying on URL/Linking.parse's
+    // ambiguous hostname-vs-path handling for custom schemes.
+    const parseDeepLink = (url) => {
+      const withoutScheme = url.replace(/^keystone:\/\//, '');
+      const [pathAndQuery, hashPart] = withoutScheme.split('#');
+      const [path, queryString] = pathAndQuery.split('?');
+      return {
+        path,
+        queryParams: new URLSearchParams(queryString || ''),
+        hashParams: new URLSearchParams(hashPart || ''),
+      };
+    };
+
+    // Supabase can hand us a session in three different shapes depending on the auth
+    // flow: a token_hash+type pair (verifyOtp, works from any client), a full
+    // access_token/refresh_token pair (implicit flow, in the hash), or a PKCE code
+    // (exchangeCodeForSession -- only works if this client's storage holds the
+    // matching verifier, i.e. this same app instance initiated the request).
+    const establishSessionFromDeepLink = async (queryParams, hashParams, url) => {
+      const type = queryParams.get('type') || hashParams.get('type');
+      const tokenHash = queryParams.get('token_hash');
+      const code = queryParams.get('code');
+      const accessToken = hashParams.get('access_token');
+      const refreshToken = hashParams.get('refresh_token');
+
+      if (tokenHash && type) {
+        return supabase.auth.verifyOtp({ type, token_hash: tokenHash });
+      }
+      if (accessToken && refreshToken) {
+        return supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+      }
+      if (code) {
+        return supabase.auth.exchangeCodeForSession(url);
+      }
+      return { data: null, error: new Error('Deep link did not contain a recognizable auth payload') };
+    };
+
+    const AUTH_LINK_PATHS = ['resetpassword', 'emailconfirmation', 'signin'];
+
     const handleDeepLink = async (event) => {
       const { url } = event;
       console.log('Deep link received:', url);
-      
-      if (!url) {
-        console.log('No URL in deep link event');
+
+      if (!url || !url.startsWith('keystone://')) {
+        console.log('No usable URL in deep link event');
         return;
       }
 
       try {
-        if (url.includes('auth/callback')) {
-          console.log('Processing Supabase auth callback...');
-          const urlObj = new URL(url);
-          const type = urlObj.searchParams.get('type');
-          
-          if (type === 'recovery') {
-            console.log('Password reset callback detected');
-            router.replace('/auth/resetpassword');
-            return;
-          }
-          const { data, error } = await supabase.auth.exchangeCodeForSession(url);
+        const { path, queryParams, hashParams } = parseDeepLink(url);
+
+        if (AUTH_LINK_PATHS.includes(path) && (Array.from(queryParams.keys()).length || Array.from(hashParams.keys()).length)) {
+          console.log('Processing auth deep link for', path);
+          const { data, error } = await establishSessionFromDeepLink(queryParams, hashParams, url);
           if (error) {
-            console.error('Auth redirect error:', error);
-            return;
-          }
-          if (data.session) {
-            console.log('Session recovered from deep link!', {
+            console.error('Failed to establish session from deep link:', error);
+          } else if (data?.session) {
+            console.log('Session established from deep link!', {
               userId: data.session.user.id,
               email: data.session.user.email,
-              emailConfirmed: data.session.user.email_confirmed_at
             });
-            router.replace('/');
-          } else {
-            console.log('No session recovered from deep link');
           }
-        } else {
-          console.log('Processing other deep link:', url);
-          if (url.includes('home')) {
-            router.push('/tabs/home');
-          }
+          router.replace(`/${path}`);
+          return;
+        }
+
+        const referralCode = queryParams.get('ref');
+        if (referralCode) {
+          await handleReferralDeepLink(url);
+          return;
+        }
+
+        if (path === 'home') {
+          router.push('/tabs/home');
         }
       } catch (error) {
         console.error('Error handling deep link:', error);
