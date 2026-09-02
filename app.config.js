@@ -1,3 +1,5 @@
+const withModularHeaders = require("./plugins/withModularHeaders");
+
 module.exports = ({ config }) => {
   return {
     ...config,
@@ -12,12 +14,16 @@ module.exports = ({ config }) => {
     },
     scheme: "keystone",
     plugins: [
+      // Preserve plugins declared in app.json (google-signin, apple-authentication) —
+      // this array used to overwrite them entirely instead of merging.
+      ...(config.plugins || []),
       [
         "expo-router",
         {
           origin: "https://thekeystoneapp.com",
         },
       ],
+      withModularHeaders,
     ],
   };
 };
