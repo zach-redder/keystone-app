@@ -22,7 +22,7 @@ jobs:
       profile: production
 
   submit_android:
-    name: Submit Android to Play Store
+    name: Submit Android
     type: submit
     needs: [build_android]
     params:
@@ -30,8 +30,8 @@ jobs:
       build_id: ${{ needs.build_android.outputs.build_id }}
 
   submit_ios:
-    name: Submit iOS to TestFlight
-    type: submit
+    name: Submit iOS
+    type: submit # 'testflight' for testing
     needs: [build_ios]
     params:
       build_id: ${{ needs.build_ios.outputs.build_id }}
