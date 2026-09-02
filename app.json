@@ -23,8 +23,7 @@
         "CFBundleURLTypes": [
           {
             "CFBundleURLSchemes": [
-              "keystone",
-              "com.googleusercontent.apps.793290335936-m3lqjiaq6fcbe725ue6ridugnuafom9o"
+              "keystone"
             ]
           }
         ],

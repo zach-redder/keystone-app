@@ -12,10 +12,19 @@ module.exports = ({ config }) => {
     },
     scheme: "keystone",
     plugins: [
+      ...(config.plugins || []),
       [
         "expo-router",
         {
           origin: "https://thekeystoneapp.com",
+        },
+      ],
+      [
+        "expo-build-properties",
+        {
+          ios: {
+            useFrameworks: "static",
+          },
         },
       ],
     ],
