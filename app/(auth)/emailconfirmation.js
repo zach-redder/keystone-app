@@ -13,6 +13,10 @@ export default function WaitForEmailConfirmationScreen({ email, preferences: ini
   const [isChecking, setIsChecking] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
+  // Reached as a route via the `keystone://emailconfirmation` deep link (no `email` prop) --
+  // app/_layout.js already established the session before navigating here, so check it
+  // directly instead of showing the (blank, since we have no `email`) "check your inbox" UI.
+  const [isCheckingRouteSession, setIsCheckingRouteSession] = useState(!email);
 
   const checkEmailConfirmation = async () => {
     try {
@@ -67,23 +71,40 @@ export default function WaitForEmailConfirmationScreen({ email, preferences: ini
   };
 
   useEffect(() => {
+    if (!email) {
+      // No `email` prop means this route was reached via the `keystone://emailconfirmation`
+      // deep link, not via RegisterForm. app/_layout.js already established the session
+      // (verifyOtp/exchangeCodeForSession) before navigating here -- its SIGNED_IN event may
+      // have already fired before the onAuthStateChange listener below ever subscribed, so
+      // check directly rather than relying solely on that event or the password-polling loop.
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session) {
+          handleConfirmedEmail();
+        } else {
+          setIsCheckingRouteSession(false);
+        }
+      });
+    }
+  }, []);
+
+  useEffect(() => {
     // Debug session state on mount
     debugSessionState();
-    
+
     // Listen for auth state changes (email confirmation)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth state change:', event, session ? 'with session' : 'no session');
-      
-      if (event === 'SIGNED_IN' && session) {
+
+      if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session) {
         console.log('User signed in after email confirmation!');
         setPolling(false);
         await handleConfirmedEmail();
       }
     });
-    
+
     let isSubscribed = true;
     const interval = setInterval(async () => {
-      if (!polling) return;
+      if (!polling || !email) return;
 
       try {
         const result = await checkEmailConfirmation();
@@ -188,6 +209,7 @@ export default function WaitForEmailConfirmationScreen({ email, preferences: ini
       setPolling(true); // Resume polling if insertion fails
     } finally {
       setIsChecking(false);
+      setIsCheckingRouteSession(false);
     }
   };
 
@@ -281,6 +303,14 @@ export default function WaitForEmailConfirmationScreen({ email, preferences: ini
     
     console.log('==================');
   };
+
+  if (isCheckingRouteSession) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator size="large" color="#D4DE95" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
