@@ -41,7 +41,7 @@ const CommunityCard = ({ onJoinPress }) => {
       if (onJoinPress) {
         onJoinPress();
       } else {
-        const whopLink = 'https://discord.me/thealignedcore';
+        const whopLink = 'https://discord.gg/qn7mVrX6cp';
         await Linking.openURL(whopLink);
       }
     } catch (error) {

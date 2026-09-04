@@ -77,7 +77,7 @@ const CommunityModal = ({ visible, onClose }) => {
 
   const handleJoinCommunity = async () => {
     try {
-      await Linking.openURL('https://discord.me/thekeystonecollective');
+      await Linking.openURL('https://discord.gg/qn7mVrX6cp');
       closeModal();
     } catch (error) {
       console.error('Error opening Whop link:', error);
@@ -144,7 +144,7 @@ const CommunityModal = ({ visible, onClose }) => {
             </View>
 
             {/* Title */}
-            <Text style={styles.title}>Join The Aligned Core</Text>
+            <Text style={styles.title}>Join The Keystone Family</Text>
 
             {/* Community Perks */}
             <View style={styles.perksContainer}>

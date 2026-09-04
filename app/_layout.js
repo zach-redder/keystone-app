@@ -105,6 +105,10 @@ function RootShell() {
       console.log('Deep link received:', url);
 
       if (!url || !url.startsWith('keystone://')) {
+        // Not our custom scheme -- most likely a Universal Link to
+        // https://thekeystoneapp.com/verify (see public/.well-known/apple-app-site-association
+        // in keystone-landingpage). Those are handled entirely by app/(auth)/verify.js via
+        // Expo Router's own linking match, since this listener only understands keystone://.
         console.log('No usable URL in deep link event');
         return;
       }

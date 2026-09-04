@@ -187,7 +187,6 @@ const ProUpgradeModal = ({ visible, onClose, currentPage, onSubscriptionChange }
               },
             ],
           }}
-          {...panResponder.panHandlers}
         >
           <View
             style={{
@@ -200,89 +199,92 @@ const ProUpgradeModal = ({ visible, onClose, currentPage, onSubscriptionChange }
               minHeight: 400,
             }}
           >
-            {/* Drag indicator */}
-            <View
-              style={{
-                width: 40,
-                height: 4,
-                backgroundColor: '#666',
-                borderRadius: 2,
-                alignSelf: 'center',
-                marginBottom: 20,
-              }}
-            />
-            
-            {/* Header */}
-            <View style={{ alignItems: 'center', marginBottom: 30 }}>
-              <Text
+            {/* Draggable content area - drag indicator, header, and feature list only */}
+            <View {...panResponder.panHandlers}>
+              {/* Drag indicator */}
+              <View
                 style={{
-                  fontSize: 24,
-                  fontWeight: 'bold',
-                  color: '#fff',
-                  textAlign: 'center',
-                  marginBottom: 8,
-                  marginTop: 10,
+                  width: 40,
+                  height: 4,
+                  backgroundColor: '#666',
+                  borderRadius: 2,
+                  alignSelf: 'center',
+                  marginBottom: 20,
                 }}
-              >
-                Unlock Premium
-              </Text>
-              
-              <Text
-                style={{
-                  fontSize: 16,
-                  color: '#ccc',
-                  textAlign: 'center',
-                  lineHeight: 22,
-                }}
-              >
-                Get unlimited access to all features and take your alignment to the next level
-              </Text>
-            </View>
-            
-            {/* Features list */}
-            <View style={{ marginBottom: 30 }}>
-              {[
-                { icon: 'infinite', text: 'Unlimited daily alignments' },
-                { icon: 'sparkles', text: 'Advanced AI feedback' },
-                { icon: 'key', text: 'Unlimited identity keys' },
-                { icon: 'people', text: 'Community access' },
-                { icon: 'trending-up', text: 'Detailed progress insights' },
-              ].map((feature, index) => (
-                <View
-                  key={index}
+              />
+
+              {/* Header */}
+              <View style={{ alignItems: 'center', marginBottom: 30 }}>
+                <Text
                   style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    marginBottom: 15,
+                    fontSize: 24,
+                    fontWeight: 'bold',
+                    color: '#fff',
+                    textAlign: 'center',
+                    marginBottom: 8,
+                    marginTop: 10,
                   }}
                 >
+                  Unlock Premium
+                </Text>
+
+                <Text
+                  style={{
+                    fontSize: 16,
+                    color: '#ccc',
+                    textAlign: 'center',
+                    lineHeight: 22,
+                  }}
+                >
+                  Get unlimited access to all features and take your alignment to the next level
+                </Text>
+              </View>
+
+              {/* Features list */}
+              <View style={{ marginBottom: 30 }}>
+                {[
+                  { icon: 'infinite', text: 'Unlimited daily alignments' },
+                  { icon: 'sparkles', text: 'Advanced AI feedback' },
+                  { icon: 'key', text: 'Unlimited identity keys' },
+                  { icon: 'people', text: 'Community access' },
+                  { icon: 'trending-up', text: 'Detailed progress insights' },
+                ].map((feature, index) => (
                   <View
+                    key={index}
                     style={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: 16,
-                      backgroundColor: '#B9C096',
-                      justifyContent: 'center',
+                      flexDirection: 'row',
                       alignItems: 'center',
-                      marginRight: 15,
+                      marginBottom: 15,
                     }}
                   >
-                    <Ionicons name={feature.icon} size={18} color="#2B2B2B" />
+                    <View
+                      style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: 16,
+                        backgroundColor: '#B9C096',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        marginRight: 15,
+                      }}
+                    >
+                      <Ionicons name={feature.icon} size={18} color="#2B2B2B" />
+                    </View>
+
+                    <Text
+                      style={{
+                        fontSize: 16,
+                        color: '#fff',
+                        flex: 1,
+                      }}
+                    >
+                      {feature.text}
+                    </Text>
                   </View>
-                  
-                  <Text
-                    style={{
-                      fontSize: 16,
-                      color: '#fff',
-                      flex: 1,
-                    }}
-                  >
-                    {feature.text}
-                  </Text>
-                </View>
-              ))}
+                ))}
+              </View>
             </View>
-            
+
             {/* Upgrade button */}
             <TouchableOpacity
               style={{

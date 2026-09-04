@@ -30,6 +30,7 @@ import * as Haptics from 'expo-haptics';
 import ActionLogResultModal from '../../components/modals/ActionLogResultModal';
 import AffirmIdentityModal from '../../components/modals/AffirmIdentityModal';
 import StreakRewardModal from '../../components/modals/StreakRewardModal';
+import StreakInfoModal from '../../components/modals/StreakInfoModal';
 import StreakCounter from '../../components/cards/StreakCounter';
 
 export default function HomeScreen() {
@@ -56,6 +57,7 @@ export default function HomeScreen() {
   // Removed referralModalVisible - now using direct app sharing
   const [streakRewardModalVisible, setStreakRewardModalVisible] = useState(false);
   const [currentMilestone, setCurrentMilestone] = useState(null);
+  const [streakInfoModalVisible, setStreakInfoModalVisible] = useState(false);
 
   // New analytics state
   const [weeklyLogCount, setWeeklyLogCount] = useState(0);
@@ -389,10 +391,17 @@ export default function HomeScreen() {
         <View style={globalStyles.headerRow}>
           <Text style={globalStyles.header}>Keystone</Text>
           <View style={globalStyles.headerButtons}>
-            <View style={homeStyles.streakBadgeWrap}>
+            <TouchableOpacity
+              style={homeStyles.streakBadgeWrap}
+              activeOpacity={0.8}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setStreakInfoModalVisible(true);
+              }}
+            >
               <Ionicons name="flame" size={16} color="#D4DE95" />
               <Text style={homeStyles.streakBadge}>{dayStreak}</Text>
-            </View>
+            </TouchableOpacity>
             <TouchableOpacity style={keysStyles.shareButton} onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               handleSharePress();
@@ -734,6 +743,12 @@ export default function HomeScreen() {
             setStreakRewardModalVisible(false);
             setCurrentMilestone(null);
           }}
+        />
+        <StreakInfoModal
+          visible={streakInfoModalVisible}
+          currentStreak={dayStreak}
+          longestStreak={longestStreak}
+          onClose={() => setStreakInfoModalVisible(false)}
         />
       </View>
     </SafeAreaView>
