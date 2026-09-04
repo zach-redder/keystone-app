@@ -37,7 +37,7 @@ export const signUpUser = async (email: string, password: string) => {
       email,
       password,
       options: {
-        emailRedirectTo: 'keystone://emailconfirmation', // Deep link back to app
+        emailRedirectTo: 'https://thekeystoneapp.com/verify', // Landing page hands off to keystone://emailconfirmation
       },
     });
 
@@ -304,7 +304,7 @@ export const signInWithApple = async () => {
 
 export const resetPassword = async (email: string) => {
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: 'keystone://resetpassword',
+    redirectTo: 'https://thekeystoneapp.com/verify', // Landing page hands off to keystone://resetpassword
   });
 
   if (error) throw error;
