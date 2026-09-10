@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { addIdentityKeysBatch, IdentityKey } from '../user/userKeys';
 import { handleNewUserEmailList } from '../integrations/emailListService';
 import { createFirstReminder } from '../features/reminderService';
+import { redeemReferralCode } from '../user/referralService';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { Platform } from 'react-native';
 
@@ -419,73 +420,18 @@ export const insertUserProfileAfterConfirmation = async (
     // Don't throw - non-critical error
   }
 
-  // Handle pending referral code if user redeemed one during onboarding
+  // Handle pending referral code if user staged one during onboarding. Redemption
+  // (validation, usage-limit/expiry checks, users/referral_redemptions writes) is
+  // owned entirely by referralService.redeemReferralCode() -- re-validating live
+  // here instead of trusting the AsyncStorage snapshot from onboarding time.
   try {
     console.log('Checking for pending referral code...');
     const pendingReferralCode = await AsyncStorage.getItem('pending_referral_code');
-    
+
     if (pendingReferralCode) {
-      const referralInfo = JSON.parse(pendingReferralCode);
-      console.log('Found pending referral code:', referralInfo);
-      
-      // Apply the referral code benefits
-      const expiresAt = referralInfo.durationMonths 
-        ? new Date(Date.now() + referralInfo.durationMonths * 30 * 24 * 60 * 60 * 1000).toISOString()
-        : null;
-      
-      // Update user with referral subscription info
-      const updateData: any = { 
-        is_pro: true,
-        referral_subscription_type: referralInfo.subscriptionType
-      };
-      
-      if (expiresAt && referralInfo.subscriptionType !== 'lifetime') {
-        updateData.pro_expires_at = expiresAt;
-      }
-      
-      const { error: updateError } = await supabase
-        .from('users')
-        .update(updateData)
-        .eq('id', userId);
-      
-      if (updateError) {
-        console.error('Error updating user with referral subscription:', updateError);
-      } else {
-        console.log('Successfully applied referral code benefits to user');
-        
-        // Record the redemption
-        const { error: redemptionError } = await supabase
-          .from('referral_redemptions')
-          .insert([{
-            user_id: userId,
-            referral_code: referralInfo.code,
-            subscription_type: referralInfo.subscriptionType,
-            redeemed_at: referralInfo.redeemedAt,
-            expires_at: expiresAt
-          }]);
-        
-        if (redemptionError) {
-          console.error('Error recording referral redemption:', redemptionError);
-        } else {
-          console.log('Successfully recorded referral redemption');
-        }
-        
-        // Update usage count in referral_codes table
-        const { data: currentCode } = await supabase
-          .from('referral_codes')
-          .select('used_count')
-          .eq('code', referralInfo.code)
-          .single();
-        
-        if (currentCode) {
-          await supabase
-            .from('referral_codes')
-            .update({ used_count: currentCode.used_count + 1 })
-            .eq('code', referralInfo.code);
-        }
-      }
-      
-      // Clear the pending referral code
+      const { code } = JSON.parse(pendingReferralCode);
+      const result = await redeemReferralCode(code);
+      console.log('Referral redemption result post-registration:', result);
       await AsyncStorage.removeItem('pending_referral_code');
     }
   } catch (referralError) {

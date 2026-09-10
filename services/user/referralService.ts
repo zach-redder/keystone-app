@@ -1,5 +1,5 @@
 import { supabase } from '../../lib/supabase';
-import { upgradeUserToPro, downgradeUserToFree } from '../subscription/subscriptionService';
+import { upgradeUserToPro } from '../subscription/subscriptionService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface ReferralCode {
@@ -169,7 +169,25 @@ export const redeemReferralCode = async (code: string): Promise<{ success: boole
     if (hasUsedCode) {
       return { success: false, message: 'You have already used a referral code' };
     }
-    
+
+    // Real (Superwall/Apple/Google-billed) subscriptions always win -- a comp code
+    // must never touch a real subscriber's account.
+    const { data: currentUserData } = await supabase
+      .from('users')
+      .select('subscription_source, is_pro, free_month_granted_at')
+      .eq('id', user.id)
+      .single();
+
+    if (currentUserData?.subscription_source === 'superwall' && currentUserData?.is_pro) {
+      return { success: false, message: "You're already a Pro subscriber — no need to redeem a code." };
+    }
+
+    // Only one comp/promo grant per account, regardless of channel (referral code
+    // or the free-month email offer) -- whichever completes first wins.
+    if (currentUserData?.free_month_granted_at) {
+      return { success: false, message: "You've already claimed a promotional Pro grant on this account." };
+    }
+
     // Validate the code
     const validation = await validateReferralCode(code);
     if (!validation.valid || !validation.referralCode) {
@@ -212,9 +230,10 @@ export const redeemReferralCode = async (code: string): Promise<{ success: boole
         .eq('code', upperCode);
       
       // 4. Store subscription info in user table with expiration
-      const updateData: any = { 
+      const updateData: any = {
         is_pro: true,
-        referral_subscription_type: referralCode.subscription_type
+        referral_subscription_type: referralCode.subscription_type,
+        free_month_granted_at: new Date().toISOString()
       };
       
       if (expiresAt && referralCode.subscription_type !== 'lifetime') {
@@ -293,32 +312,6 @@ export const getUserReferralInfo = async (): Promise<ReferralRedemption | null> 
   } catch (error) {
     console.error('Error in getUserReferralInfo:', error);
     return null;
-  }
-};
-
-/**
- * Check if user's referral subscription has expired
- */
-export const checkReferralExpiration = async (): Promise<{ expired: boolean; expiresAt?: string }> => {
-  try {
-    const referralInfo = await getUserReferralInfo();
-    if (!referralInfo || !referralInfo.expires_at) {
-      return { expired: false };
-    }
-    
-    const now = new Date();
-    const expiresAt = new Date(referralInfo.expires_at);
-    const expired = now > expiresAt;
-    
-    if (expired && referralInfo.subscription_type !== 'lifetime') {
-      // Downgrade user if their referral subscription expired
-      await downgradeUserToFree();
-    }
-    
-    return { expired, expiresAt: referralInfo.expires_at };
-  } catch (error) {
-    console.error('Error checking referral expiration:', error);
-    return { expired: false };
   }
 };
 

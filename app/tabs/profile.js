@@ -19,6 +19,7 @@ import AIPersonalityModal from '../../components/modals/AIPersonalityModal';
 import ReminderTimeModal from '../../components/modals/ReminderTimeModal';
 import EditProfileModal from '../../components/modals/EditProfileModal';
 import DeleteAccountModal from '../../components/modals/DeleteAccountModal';
+import ReferralCodeModal from '../../components/modals/ReferralCodeModal';
 // Removed ReferralModal and shareProfilePage - now using direct app sharing
 
 export default function ProfileScreen() {
@@ -34,6 +35,7 @@ export default function ProfileScreen() {
   const [reminderTimeModalVisible, setReminderTimeModalVisible] = useState(false);
   const [editProfileModalVisible, setEditProfileModalVisible] = useState(false);
   const [deleteAccountModalVisible, setDeleteAccountModalVisible] = useState(false);
+  const [referralCodeModalVisible, setReferralCodeModalVisible] = useState(false);
   // Removed referralModalVisible - now using direct app sharing
   const [keyCount, setKeyCount] = useState(0);
   const [subscriptionDetails, setSubscriptionDetails] = useState({
@@ -381,7 +383,7 @@ export default function ProfileScreen() {
               </View>
             </TouchableOpacity> */}
 
-            <TouchableOpacity style={[profileStyles.profileItem, profileStyles.profileItemLast]} onPress={async () => {
+            <TouchableOpacity style={profileStyles.profileItem} onPress={async () => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               const url = Platform.OS === 'ios'
                 ? 'https://apps.apple.com/account/subscriptions'
@@ -396,6 +398,17 @@ export default function ProfileScreen() {
               <Text style={profileStyles.profileItemText}>My Subscription</Text>
               <View style={profileStyles.profileItemRight}>
                 <Text style={profileStyles.profileItemValue}>{subscriptionDetails.displayName}</Text>
+                <Ionicons name="chevron-forward" size={16} color="#fff" />
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={[profileStyles.profileItem, profileStyles.profileItemLast]} onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setReferralCodeModalVisible(true);
+            }}>
+              <Ionicons name="gift-outline" size={20} color="#B9C096" style={profileStyles.profileItemIcon} />
+              <Text style={profileStyles.profileItemText}>Enter Referral Code</Text>
+              <View style={profileStyles.profileItemRight}>
                 <Ionicons name="chevron-forward" size={16} color="#fff" />
               </View>
             </TouchableOpacity>
@@ -593,6 +606,11 @@ export default function ProfileScreen() {
       <DeleteAccountModal
         visible={deleteAccountModalVisible}
         onClose={() => setDeleteAccountModalVisible(false)}
+      />
+      <ReferralCodeModal
+        visible={referralCodeModalVisible}
+        onClose={() => setReferralCodeModalVisible(false)}
+        onRedeemed={loadSubscriptionDetails}
       />
       {/* Removed ReferralModal - now using direct app sharing */}
     </SafeAreaView>

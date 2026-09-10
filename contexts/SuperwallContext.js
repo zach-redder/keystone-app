@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { getSuperwallImplementation } from '../utils/superwallCompat';
 import { supabase } from '../lib/supabase';
-import { handleSuperwallPurchaseComplete, migrateFromIAPToSuperwall } from '../services/subscription/subscriptionService';
+import { handleSuperwallPurchaseComplete, migrateFromIAPToSuperwall, checkUserProStatus } from '../services/subscription/subscriptionService';
 
 const { useUser, useSuperwallEvents } = getSuperwallImplementation();
 
@@ -100,6 +100,11 @@ export const SuperwallContextProvider = ({ children }) => {
 
           // Check for IAP migration
           await migrateFromIAPToSuperwall();
+
+          // Self-heal an expired comp grant (referral code / free-month offer) as
+          // early as possible each session, rather than waiting for the first
+          // feature-gate check to trigger it.
+          await checkUserProStatus();
 
           // Get subscription status
           await refreshSubscriptionStatus();

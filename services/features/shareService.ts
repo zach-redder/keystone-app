@@ -1,4 +1,5 @@
-import { Share, Platform } from 'react-native';
+import { Share } from 'react-native';
+import { getAppStoreLink } from '../../constants/appStore';
 
 export interface ShareOptions {
   title?: string;
@@ -6,24 +7,12 @@ export interface ShareOptions {
   url?: string;
 }
 
-const DEFAULT_APP_STORE_URL = {
-  ios: 'https://apps.apple.com/app/keystone', // This would be your actual App Store URL
-  android: 'https://play.google.com/store/apps/details?id=keystone-ios', // This would be your actual Play Store URL
-};
-
 /**
  * Gets the appropriate store URL for the current platform
  * @returns App store URL for the current platform
  */
 export const getStoreUrl = (): string => {
-  if (Platform.OS === 'ios') {
-    return DEFAULT_APP_STORE_URL.ios;
-  } else if (Platform.OS === 'android') {
-    return DEFAULT_APP_STORE_URL.android;
-  }
-  
-  // Fallback to website or a universal link
-  return 'https://thekeystoneapp.com';
+  return getAppStoreLink();
 };
 
 /**

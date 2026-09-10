@@ -25,12 +25,14 @@ import {
 } from '../../services/features/alignmentService';
 import { getUserDayStreak, getUserLongestStreak, getUserActiveDays, getUserDailyActivityCounts } from '../../services/user/userPreferences';
 import { checkForStreakMilestone, markMilestoneAsShown } from '../../services/features/streakRewardsService';
+import { shouldShowFreeMonthOffer, markFreeMonthOfferShown } from '../../services/user/freeMonthOfferService';
 import { fetchTotalAIChatMessagePairCount, fetchCurrentWeekAIChatMessagePairCount } from '../../services/features/affirmationService';
 import * as Haptics from 'expo-haptics';
 import ActionLogResultModal from '../../components/modals/ActionLogResultModal';
 import AffirmIdentityModal from '../../components/modals/AffirmIdentityModal';
 import StreakRewardModal from '../../components/modals/StreakRewardModal';
 import StreakInfoModal from '../../components/modals/StreakInfoModal';
+import FreeMonthOfferModal from '../../components/modals/FreeMonthOfferModal';
 import StreakCounter from '../../components/cards/StreakCounter';
 
 export default function HomeScreen() {
@@ -58,6 +60,7 @@ export default function HomeScreen() {
   const [streakRewardModalVisible, setStreakRewardModalVisible] = useState(false);
   const [currentMilestone, setCurrentMilestone] = useState(null);
   const [streakInfoModalVisible, setStreakInfoModalVisible] = useState(false);
+  const [freeMonthOfferModalVisible, setFreeMonthOfferModalVisible] = useState(false);
 
   // New analytics state
   const [weeklyLogCount, setWeeklyLogCount] = useState(0);
@@ -98,6 +101,7 @@ export default function HomeScreen() {
   useFocusEffect(
     React.useCallback(() => {
       console.log('Home screen focused - reloading data');
+      checkFreeMonthOffer();
       loadDayStreak();
       loadLongestStreak();
       loadRecentActionLog();
@@ -182,6 +186,17 @@ export default function HomeScreen() {
       setRecentActionLogs(logs);
     } catch (error) {
       setRecentActionLogs([]);
+    }
+  };
+
+  const checkFreeMonthOffer = async () => {
+    try {
+      if (await shouldShowFreeMonthOffer()) {
+        setFreeMonthOfferModalVisible(true);
+        await markFreeMonthOfferShown();
+      }
+    } catch (error) {
+      console.error('Error checking free month offer:', error);
     }
   };
 
@@ -749,6 +764,10 @@ export default function HomeScreen() {
           currentStreak={dayStreak}
           longestStreak={longestStreak}
           onClose={() => setStreakInfoModalVisible(false)}
+        />
+        <FreeMonthOfferModal
+          visible={freeMonthOfferModalVisible}
+          onClose={() => setFreeMonthOfferModalVisible(false)}
         />
       </View>
     </SafeAreaView>

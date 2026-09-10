@@ -16,11 +16,29 @@ export const checkUserProStatus = async () => {
 
     const { data: userData } = await supabase
       .from('users')
-      .select('is_pro')
+      .select('is_pro, pro_expires_at, subscription_source')
       .eq('id', user.id)
       .single();
 
-    return userData?.is_pro || false;
+    if (!userData?.is_pro) {
+      return false;
+    }
+
+    // Real (Superwall/Apple/Google-billed) subscriptions are the source of truth for
+    // their own status via the webhook -- never compare pro_expires_at for these.
+    if (userData.subscription_source === 'superwall') {
+      return true;
+    }
+
+    // Anything else is a comp grant (referral code or free-month offer). Enforce
+    // expiry lazily here, since there's no cron/scheduling infra in this stack --
+    // this is the one place nearly every feature-gate already calls.
+    if (userData.pro_expires_at && new Date(userData.pro_expires_at) < new Date()) {
+      await supabase.from('users').update({ is_pro: false }).eq('id', user.id);
+      return false;
+    }
+
+    return true;
   } catch (error) {
     console.error('Error checking user pro status:', error);
     return false;
