@@ -48,11 +48,11 @@ const FAQModal = ({ visible, onClose }) => {
     },
     {
       question: "What features does Keystone include?",
-      answer: "Keystone includes unlimited keys, advanced AI personalities, detailed analytics, premium support, and all core alignment features to help you become your best self."
+      answer: "Keystone includes unlimited keys, personalized AI companions, detailed analytics, premium support, and all core alignment features to help you become your best self."
     },
     {
       question: "How does the AI personality work?",
-      answer: "AI personalities adapt affirmations to match your preferences - whether you prefer a motivational coach, wise mentor, or supportive friend."
+      answer: "AI personalities adapt affirmations to match your preferences - whether you prefer a motivational coach, disciplined mentor, or supportive friend."
     },
     {
       question: "Is my data private and secure?",

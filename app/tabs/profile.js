@@ -20,6 +20,7 @@ import ReminderTimeModal from '../../components/modals/ReminderTimeModal';
 import EditProfileModal from '../../components/modals/EditProfileModal';
 import DeleteAccountModal from '../../components/modals/DeleteAccountModal';
 import ReferralCodeModal from '../../components/modals/ReferralCodeModal';
+import StreakInfoModal from '../../components/modals/StreakInfoModal';
 // Removed ReferralModal and shareProfilePage - now using direct app sharing
 
 export default function ProfileScreen() {
@@ -36,6 +37,7 @@ export default function ProfileScreen() {
   const [editProfileModalVisible, setEditProfileModalVisible] = useState(false);
   const [deleteAccountModalVisible, setDeleteAccountModalVisible] = useState(false);
   const [referralCodeModalVisible, setReferralCodeModalVisible] = useState(false);
+  const [streakInfoModalVisible, setStreakInfoModalVisible] = useState(false);
   // Removed referralModalVisible - now using direct app sharing
   const [keyCount, setKeyCount] = useState(0);
   const [subscriptionDetails, setSubscriptionDetails] = useState({
@@ -269,13 +271,10 @@ export default function ProfileScreen() {
         // Request review using the native store review dialog
         await StoreReview.requestReview();
       } else {
-        // Fallback: open the app store page directly
-        const storeUrl = await StoreReview.storeUrl();
-        if (storeUrl) {
-          await Linking.openURL(storeUrl);
-        } else {
-          console.log('Store review not available and no store URL found');
-        }
+        // Fallback: open the app store page directly.
+        // expo-store-review's own storeUrl() reads Constants.expoConfig.ios.appStoreUrl,
+        // which isn't set, so use the app's real App Store link instead.
+        await Linking.openURL(getAppStoreLink());
       }
     } catch (error) {
       console.error('Error opening store review:', error);
@@ -329,10 +328,17 @@ export default function ProfileScreen() {
         <View style={profileStyles.headerRow}>
           <Text style={profileStyles.header}>Profile</Text>
           <View style={profileStyles.headerButtons}>
-            <View style={profileStyles.streakBadgeWrap}>
+            <TouchableOpacity
+              style={profileStyles.streakBadgeWrap}
+              activeOpacity={0.8}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setStreakInfoModalVisible(true);
+              }}
+            >
               <Ionicons name="flame" size={16} color="#D4DE95" />
               <Text style={profileStyles.streakBadge}>{dayStreak}</Text>
-            </View>
+            </TouchableOpacity>
             <TouchableOpacity style={profileStyles.shareButton} onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               handleSharePress();
@@ -611,6 +617,12 @@ export default function ProfileScreen() {
         visible={referralCodeModalVisible}
         onClose={() => setReferralCodeModalVisible(false)}
         onRedeemed={loadSubscriptionDetails}
+      />
+      <StreakInfoModal
+        visible={streakInfoModalVisible}
+        currentStreak={dayStreak}
+        longestStreak={longestStreak}
+        onClose={() => setStreakInfoModalVisible(false)}
       />
       {/* Removed ReferralModal - now using direct app sharing */}
     </SafeAreaView>

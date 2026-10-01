@@ -20,8 +20,9 @@ import ShareProgressModal from '../../components/modals/ShareProgressModal';
 import { fetchIdentityKeys, deleteIdentityKey, updateIdentityKey, addIdentityKey } from '../../services/user/userKeys';
 import { checkUserProStatus } from '../../services/subscription/subscriptionService';
 import { getAppStoreLink, APP_NAME } from '../../constants/appStore';
-import { getUserDayStreak } from '../../services/user/userPreferences';
+import { getUserDayStreak, getUserLongestStreak } from '../../services/user/userPreferences';
 import ProUpgradeModal from '../../components/modals/ProUpgradeModal';
+import StreakInfoModal from '../../components/modals/StreakInfoModal';
 
 function AppButton({ title, onPress, style, icon, iconRight, plusMarginRight }) {
   const handlePress = () => {
@@ -135,6 +136,8 @@ export default function Keys() {
   const [keyToDelete, setKeyToDelete] = useState(null);
   const [keyToEdit, setKeyToEdit] = useState(null);
   const [dayStreak, setDayStreak] = useState(0);
+  const [longestStreak, setLongestStreak] = useState(0);
+  const [streakInfoModalVisible, setStreakInfoModalVisible] = useState(false);
   const menuBtnRef = useRef(null);
   const [alignModalVisible, setAlignModalVisible] = useState(false);
   const [affirmIdentityModalVisible, setAffirmIdentityModalVisible] = useState(false);
@@ -155,6 +158,7 @@ export default function Keys() {
   useFocusEffect(
     React.useCallback(() => {
       loadDayStreak();
+      loadLongestStreak();
     }, [])
   );
 
@@ -165,6 +169,16 @@ export default function Keys() {
     } catch (error) {
       console.error('Error loading day streak:', error);
       setDayStreak(0);
+    }
+  };
+
+  const loadLongestStreak = async () => {
+    try {
+      const longest = await getUserLongestStreak();
+      setLongestStreak(longest);
+    } catch (error) {
+      console.error('Error loading longest streak:', error);
+      setLongestStreak(0);
     }
   };
 
@@ -372,10 +386,17 @@ export default function Keys() {
         <View style={keysStyles.headerRow}>
           <Text style={keysStyles.header}>Your Keys</Text>
           <View style={keysStyles.headerButtons}>
-            <View style={keysStyles.streakBadgeWrap}>
+            <TouchableOpacity
+              style={keysStyles.streakBadgeWrap}
+              activeOpacity={0.8}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setStreakInfoModalVisible(true);
+              }}
+            >
               <Ionicons name="flame" size={16} color="#D4DE95" />
               <Text style={keysStyles.streakBadge}>{dayStreak}</Text>
-            </View>
+            </TouchableOpacity>
             <TouchableOpacity style={keysStyles.shareButton} onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               handleSharePress();
@@ -521,6 +542,12 @@ export default function Keys() {
         <ProUpgradeModal
           visible={proUpgradeModalVisible}
           onClose={() => setProUpgradeModalVisible(false)}
+        />
+        <StreakInfoModal
+          visible={streakInfoModalVisible}
+          currentStreak={dayStreak}
+          longestStreak={longestStreak}
+          onClose={() => setStreakInfoModalVisible(false)}
         />
     </SafeAreaView>
   );

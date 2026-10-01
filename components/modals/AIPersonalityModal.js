@@ -4,19 +4,15 @@ import { useState, useEffect } from 'react';
 import * as Haptics from 'expo-haptics';
 import { getPreferredAiPersona, setPreferredAiPersona } from '../../services/user/userPreferences';
 import { fetchCustomPersonalities, createCustomPersonality, deleteCustomPersonality } from '../../services/features/customPersonalitiesService';
-import { checkUserProStatus } from '../../services/subscription/subscriptionService';
 import keysStyles from '../../styles/keys';
-import ProUpgradeModal from './ProUpgradeModal';
 
 const AIPersonalityModal = ({ visible, onClose, onUpgradePress }) => {
   const [selectedPersonality, setSelectedPersonality] = useState('Default');
-  const [isPro, setIsPro] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showCustomForm, setShowCustomForm] = useState(false);
   const [customName, setCustomName] = useState('');
   const [customDescription, setCustomDescription] = useState('');
   const [customPersonalities, setCustomPersonalities] = useState([]);
-  const [showProUpgradeModal, setShowProUpgradeModal] = useState(false);
 
           // Basic personalities available to all users
   const basicPersonalities = [
@@ -47,62 +43,12 @@ const AIPersonalityModal = ({ visible, onClose, onUpgradePress }) => {
     },
   ];
 
-  // Advanced personalities for premium experience
-  const advancedPersonalities = [
-    {
-      name: 'David Goggins',
-      description: 'Mental toughness and extreme no nonsense discipline. Stay hard and push through any obstacle.',
-      icon: 'barbell-outline',
-    },
-    // {
-    //   name: 'Andrew Tate',
-    //   description: 'Arrogant confidence and achieving success no matter what. Strict rules and no excuses.',
-    //   icon: 'diamond-outline',
-    // },
-    {
-      name: 'Socrates',
-      description: 'Questioning wisdom and self-discovery. "The only true wisdom is knowing you know nothing."',
-      icon: 'help-circle-outline',
-    },
-    {
-      name: 'Marcus Aurelius',
-      description: 'Stoic emperor and philosopher. "You have power over your mind - not outside events. Realize this, and you will find strength."',
-      icon: 'library-outline',
-    },
-    {
-      name: 'Yoda',
-      description: 'Wise, patient mentor. "Do or do not, there is no try." Ancient wisdom for modern challenges.',
-      icon: 'flash-outline',
-    },
-    {
-      name: 'Gandalf',
-      description: 'Wise wizard with ancient knowledge. "All we have to decide is what to do with the time that is given us."',
-      icon: 'sparkles-outline',
-    },
-    {
-      name: 'Master Oogway',
-      description: 'Ancient tortoise wisdom and inner peace. "Yesterday is history, tomorrow is a mystery, but today is a gift."',
-      icon: 'flower-outline',
-    },
-  ];
-
   useEffect(() => {
     if (visible) {
       loadCurrentPersonality();
-      checkProStatus();
       loadCustomPersonalities();
     }
   }, [visible]);
-
-  const checkProStatus = async () => {
-    try {
-      const proStatus = await checkUserProStatus();
-      setIsPro(proStatus);
-    } catch (error) {
-      console.error('Error checking pro status:', error);
-      setIsPro(false);
-    }
-  };
 
   const loadCurrentPersonality = async () => {
     try {
@@ -116,8 +62,6 @@ const AIPersonalityModal = ({ visible, onClose, onUpgradePress }) => {
       console.error('Error loading personality:', error);
     }
   };
-
-  // Removed checkProStatus function - app is now fully paid-only
 
   const loadCustomPersonalities = async () => {
     try {
@@ -135,20 +79,11 @@ const AIPersonalityModal = ({ visible, onClose, onUpgradePress }) => {
     if (isCustom) {
       selected = customPersonalities.find(p => p.name === personalityName);
     } else {
-      const allPersonalities = [...basicPersonalities, ...advancedPersonalities];
-      selected = allPersonalities.find(p => p.name === personalityName);
+      selected = basicPersonalities.find(p => p.name === personalityName);
     }
 
     if (!selected) {
       console.warn("Selected personality not found.");
-      return;
-    }
-
-    // Check if it's an advanced personality and user is not pro
-    const isAdvancedPersonality = advancedPersonalities.some(p => p.name === personalityName);
-    if (isAdvancedPersonality && !isPro) {
-      // Show ProUpgradeModal (AIPersonalityModal will be hidden automatically)
-      setShowProUpgradeModal(true);
       return;
     }
 
@@ -362,7 +297,7 @@ const AIPersonalityModal = ({ visible, onClose, onUpgradePress }) => {
   return (
     <>
       <Modal
-        visible={visible && !showProUpgradeModal}
+        visible={visible}
         animationType="slide"
         presentationStyle="pageSheet"
         onRequestClose={handleClose}
@@ -468,28 +403,15 @@ const AIPersonalityModal = ({ visible, onClose, onUpgradePress }) => {
               </View>
             )}
             
-            <Text style={[styles.sectionTitle]}>Basic Personalities</Text>
+            <Text style={[styles.sectionTitle]}>Personalities</Text>
             {basicPersonalities.map(personality => renderPersonalityCard(personality, false))}
-            
-            <Text style={styles.sectionTitle}>Advanced Personalities</Text>
-            {advancedPersonalities.map(personality => renderPersonalityCard(personality, false))}
-          
+
           </View>
           
           <View style={styles.bottomSpacing} />
         </ScrollView>
       </View>
       </Modal>
-      <ProUpgradeModal
-        visible={showProUpgradeModal}
-        onClose={() => {
-          setShowProUpgradeModal(false);
-          // Reopen the personality modal after ProUpgradeModal closes
-          if (visible) {
-            // Modal will reopen automatically since visible is still true
-          }
-        }}
-      />
     </>
   );
 };
@@ -559,6 +481,7 @@ const styles = {
   selectedCard: {
     backgroundColor: 'rgba(80, 80, 80, 0.65)',
     borderColor: '#B9C096',
+    borderTopColor: '#B9C096',
     borderWidth: 2,
   },
   cardHeader: {
