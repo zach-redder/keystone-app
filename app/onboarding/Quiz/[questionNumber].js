@@ -138,32 +138,7 @@ export default function QuizQuestion() {
             if (nextQuestionNum <= 6) {
                 router.push(`/onboarding/Quiz/${nextQuestionNum}`);
             } else {
-                // Quiz completed, calculate alignment scores and go to Progress screen
-                try {
-                    const savedAnswers = await AsyncStorage.getItem('quiz_answers');
-                    if (savedAnswers) {
-                        const answers = JSON.parse(savedAnswers);
-                        const quizScores = {};
-
-                        // Extract numeric scores from quiz answers
-                        for (let i = 1; i <= 6; i++) {
-                            const scoreKey = `question_${i}_score`;
-                            if (answers[scoreKey] !== undefined) {
-                                quizScores[scoreKey] = answers[scoreKey];
-                            }
-                        }
-
-                        // Calculate alignment scores and save to AsyncStorage
-                        if (Object.keys(quizScores).length > 0) {
-                            const { calculateAlignmentScoresFromQuizAnswers } = await import('../../../services/features/alignmentService');
-                            const alignmentScores = calculateAlignmentScoresFromQuizAnswers(quizScores);
-                            await AsyncStorage.setItem('pending_alignment_scores', JSON.stringify(alignmentScores));
-                            console.log('Alignment scores calculated:', alignmentScores);
-                        }
-                    }
-                } catch (error) {
-                    console.error('Error processing quiz answers:', error);
-                }
+                // Quiz completed
                 router.push('/onboarding/FutureSelfVision');
             }
         }, 400);

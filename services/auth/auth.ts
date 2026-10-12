@@ -439,42 +439,6 @@ export const insertUserProfileAfterConfirmation = async (
     // Don't throw - non-critical error
   }
 
-  // Handle pending alignment scores from quiz
-  try {
-    console.log('Checking for pending alignment scores from quiz...');
-    const pendingAlignmentScores = await AsyncStorage.getItem('pending_alignment_scores');
-    
-    if (pendingAlignmentScores) {
-      const alignmentScores = JSON.parse(pendingAlignmentScores);
-      console.log('Found pending alignment scores:', alignmentScores);
-      
-      // Update user with alignment scores
-      const { error: alignmentError } = await supabase
-        .from('users')
-        .update({
-          core_values: alignmentScores.core_values,
-          identity_traits: alignmentScores.identity_traits,
-          future_self_vision: alignmentScores.future_self_vision,
-          avoidances: alignmentScores.avoidances,
-          motivations: alignmentScores.motivations,
-          life_goals: alignmentScores.life_goals
-        })
-        .eq('id', userId);
-      
-      if (alignmentError) {
-        console.error('Error updating user with alignment scores:', alignmentError);
-      } else {
-        console.log('Successfully transferred alignment scores to database');
-      }
-      
-      // Clear the pending alignment scores
-      await AsyncStorage.removeItem('pending_alignment_scores');
-    }
-  } catch (alignmentError) {
-    console.error('Error handling pending alignment scores:', alignmentError);
-    // Don't throw - non-critical error
-  }
-
   // IAP-to-Superwall migration is handled once per session by
   // services/subscription/subscriptionService.ts's migrateFromIAPToSuperwall(),
   // called from SuperwallContext's user-init effect -- this used to be duplicated here.

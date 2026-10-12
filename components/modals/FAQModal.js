@@ -48,7 +48,7 @@ const FAQModal = ({ visible, onClose }) => {
     },
     {
       question: "What features does Keystone include?",
-      answer: "Keystone includes unlimited keys, personalized AI companions, detailed analytics, premium support, and all core alignment features to help you become your best self."
+      answer: "Keystone includes unlimited keys, personalized AI companions, detailed analytics, premium support, and both AI modes, Affirm and Question, to help you know who you are and who you are becoming."
     },
     {
       question: "How does the AI personality work?",

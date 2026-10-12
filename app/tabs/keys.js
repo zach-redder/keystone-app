@@ -4,18 +4,13 @@ import { useFocusEffect } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import React, { useState, useRef, useEffect } from 'react';
 import keysStyles from '../../styles/keys';
-import AlignModal from '../../components/modals/AlignModal';
-import ActionLogResultModal from '../../components/modals/ActionLogResultModal';
-import AlignButton from '../../components/buttons/AlignButton';
+import { KEY_CATEGORIES, PRO_ONLY_CATEGORIES } from '../../constants/keyCategories';
 import Menu from '../../components/forms/Menu';
 import InfoModal from '../../components/modals/InfoModal';
 import DeleteConfirmationModal from '../../components/modals/DeleteConfirmationModal';
 import EditKeyModal from '../../components/modals/EditKeyModal';
 import CreateKeyModal from '../../components/modals/CreateKeyModal';
 // Removed ProUpgradeModal import - no longer needed in paid-only app
-import CommunityModal from '../../components/modals/CommunityModal';
-import AffirmIdentityModal from '../../components/modals/AffirmIdentityModal';
-import ShareProgressModal from '../../components/modals/ShareProgressModal';
 // Removed ReferralModal - now using direct app sharing
 import { fetchIdentityKeys, deleteIdentityKey, updateIdentityKey, addIdentityKey } from '../../services/user/userKeys';
 import { checkUserProStatus } from '../../services/subscription/subscriptionService';
@@ -81,44 +76,7 @@ function KeyRow({ keyData, onEdit, onDelete }) {
   );
 }
 
-const menuItems = [
-  { 
-    label: 'Core Values', 
-    iconName: 'diamond',
-    category: 'core_values',
-    display: 'core value'
-  },
-  { 
-    label: 'Life Goals', 
-    iconName: 'flag',
-    category: 'life_goals',
-    display: 'life goal'
-  },
-  { 
-    label: 'Future Identity', 
-    iconName: 'eye',
-    category: 'future_self_vision',
-    display: 'future identity'
-  },
-  { 
-    label: 'Identity Traits', 
-    iconName: 'person',
-    category: 'identity_traits',
-    display: 'identity trait'
-  },
-  { 
-    label: 'Motivations', 
-    iconName: 'flash',
-    category: 'motivations',
-    display: 'motivation'
-  },
-  { 
-    label: 'Avoidances', 
-    iconName: 'warning',
-    category: 'avoidances',
-    display: 'avoidance'
-  },
-];
+const menuItems = KEY_CATEGORIES;
 
 export default function Keys() {
   const [menuVisible, setMenuVisible] = useState(false);
@@ -132,19 +90,13 @@ export default function Keys() {
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [createModalVisible, setCreateModalVisible] = useState(false);
   // Removed proModalVisible state - no longer needed in paid-only app
-  const [communityModalVisible, setCommunityModalVisible] = useState(false);
   const [keyToDelete, setKeyToDelete] = useState(null);
   const [keyToEdit, setKeyToEdit] = useState(null);
   const [dayStreak, setDayStreak] = useState(0);
   const [longestStreak, setLongestStreak] = useState(0);
   const [streakInfoModalVisible, setStreakInfoModalVisible] = useState(false);
   const menuBtnRef = useRef(null);
-  const [alignModalVisible, setAlignModalVisible] = useState(false);
-  const [affirmIdentityModalVisible, setAffirmIdentityModalVisible] = useState(false);
-  const [shareProgressModalVisible, setShareProgressModalVisible] = useState(false);
   // Removed referralModalVisible - now using direct app sharing
-  const [resultModalVisible, setResultModalVisible] = useState(false);
-  const [resultLog, setResultLog] = useState(null);
   const [proUpgradeModalVisible, setProUpgradeModalVisible] = useState(false);
 
   const scrollViewRef = useRef(null);
@@ -200,10 +152,6 @@ export default function Keys() {
     return userKeys.filter(key => key.category === selectedItem.category);
   };
 
-  const handleAlignButtonPress = () => {
-    setAlignModalVisible(true);
-  };
-
   // Render keys for current category
   const renderCategoryKeys = () => {
     if (loading) {
@@ -250,8 +198,7 @@ export default function Keys() {
 
   const handleMenuItemSelect = async (item) => {
     // Check if this is a pro-only category
-    const proOnlyCategories = ['identity_traits', 'motivations', 'avoidances'];
-    const isProOnlyCategory = proOnlyCategories.includes(item.category);
+    const isProOnlyCategory = PRO_ONLY_CATEGORIES.includes(item.category);
     
     if (isProOnlyCategory) {
       // Check if user is pro
@@ -374,12 +321,6 @@ export default function Keys() {
 
   // Removed handleRequestProUpgrade - no longer needed in paid-only app
 
-  // Handler for Affirm Identity from AlignModal
-  const handleAffirmIdentity = () => {
-    setAlignModalVisible(false);
-    setAffirmIdentityModalVisible(true);
-  };
-
   return (
     <SafeAreaView style={keysStyles.pageBg}>
       <View style={keysStyles.pageBg}>
@@ -479,8 +420,6 @@ export default function Keys() {
             plusMarginRight={0}
           />
         </ScrollView>
-
-        <AlignButton onPress={handleAlignButtonPress} />
       </View>
 
       <InfoModal visible={infoVisible} onClose={() => setInfoVisible(false)} />
@@ -509,36 +448,6 @@ export default function Keys() {
         keyType={selectedItem.label.slice(0, -1)}
       />
       {/* Removed ProUpgradeModal - no longer needed in paid-only app */}
-      <CommunityModal
-        visible={communityModalVisible}
-        onClose={() => setCommunityModalVisible(false)}
-      />
-      <AlignModal
-        visible={alignModalVisible}
-        onClose={() => setAlignModalVisible(false)}
-        onUpgradePress={() => {
-          // No longer needed - all users have full access
-        }}
-        onAffirmIdentity={handleAffirmIdentity}
-        onLogActionResult={(log) => {
-          // Automatically show result modal after successful log action
-          setResultLog(log);
-          setResultModalVisible(true);
-        }}
-      />
-      <AffirmIdentityModal
-        visible={affirmIdentityModalVisible}
-        onClose={() => setAffirmIdentityModalVisible(false)}
-      />
-      <ActionLogResultModal
-        visible={resultModalVisible}
-        onClose={() => setResultModalVisible(false)}
-        log={resultLog}
-      />
-        <ShareProgressModal
-          visible={shareProgressModalVisible}
-          onClose={() => setShareProgressModalVisible(false)}
-        />
         <ProUpgradeModal
           visible={proUpgradeModalVisible}
           onClose={() => setProUpgradeModalVisible(false)}

@@ -8,10 +8,10 @@ const WELCOME_REMINDER = "Welcome to Keystone! You just chose to overcome intern
 
 // Hardcoded reminders for inactive users
 const DEFAULT_REMINDERS = [
-  "Missing you! Time to realign your actions with your values.",
-  "Your journey towards authenticity continues. Come back and track your progress!",
+  "Missing you! Take a minute to check in with who you are.",
+  "Your journey towards authenticity continues. Come back and keep reflecting!",
   "Haven't seen you in a while. Your goals are waiting for you!",
-  "Ready to get back on track? Your alignment journey misses you.",
+  "Ready to get back on track? Your reflection journey misses you.",
   "Take a moment today to reflect on your path. We're here to help!",
 ];
 

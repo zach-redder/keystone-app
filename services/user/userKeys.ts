@@ -81,6 +81,7 @@ export const fetchIdentityKeys = async () => {
   const {
     data: { user },
   } = await supabase.auth.getUser()
+  if (!user) throw new Error('User not authenticated')
   const { data, error } = await supabase
     .from('user_keys')
     .select('*')

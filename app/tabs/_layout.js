@@ -66,6 +66,25 @@ export default function TabLayout() {
         },
       })}
       />
+      <Tabs.Screen name="stats" options={{
+        title: 'Stats',
+        tabBarIcon: ({ color, focused }) => (
+          <Ionicons
+            name={focused ? "stats-chart" : "stats-chart-outline"}
+            size={focused ? 28 : 24}
+            color={color}
+            style={{
+              opacity: focused ? 1 : 0.7,
+            }}
+          />
+        ),
+      }}
+      listeners={() => ({
+        tabPress: () => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        },
+      })}
+      />
       <Tabs.Screen name="profile" options={{
         title: 'Profile',
         tabBarIcon: ({ color, focused }) => (
