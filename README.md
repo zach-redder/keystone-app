@@ -1,12 +1,12 @@
 # Keystone App
 
-The Keystone mobile app — an Expo/React Native identity-alignment and self-improvement app.
+The Keystone mobile app — an Expo/React Native self-reflection companion.
 
 ## Overview
 
-Keystone helps users define who they want to be across six "identity key" categories — **Core Values, Identity Traits, Future Self Vision, Life Goals, Avoidances, Motivations** — and tracks an alignment score (0.0–1.0) for each, where the extremes are deficiency/excess and the midpoint is the ideal balance (e.g. Core Values: Conformity ↔ Integrity ↔ Dogmatism).
+Keystone helps users define who they want to be across six "identity key" categories — **Core Values, Identity Traits, Future Self Vision, Life Goals, Avoidances, Motivations** —. The saved keys act as the AI's memory. The idea underneath is the golden mean: not blind certainty, not constant doubt, but the center between them.
 
-Users chat with an AI persona and log real-world actions; the AI (via the sibling [`keystone-ai-service`](../keystone-ai-service) backend) evaluates alignment with their identity keys and updates their scores accordingly. The app also handles onboarding, auth, daily reminders, referrals, a lightweight community/sharing layer, and a freemium subscription model via Superwall.
+The home screen is a central, audio-reactive AI orb. Tapping it starts a **voice conversation** (Pro) like ChatGPT voice, with the user's keys, persona and mode as context; chat is one tap away. There are two modes: **Affirm** (counters self-doubt) and **Question** (Socratic, challenges beliefs and decisions). Personas change tone only. The AI (via the sibling [`keystone-ai-service`](../keystone-ai-service) backend) reflects the user's own words back, and after a chat the user can tap **Review keys** to see proposed adds, updates and removals to their keys. Nothing changes unless they accept it. The app also handles onboarding, auth, daily reminders, referrals, a lightweight community/sharing layer, and a freemium subscription model via Superwall.
 
 ## Tech Stack
 
@@ -58,7 +58,7 @@ There is no `test`, `lint`, or `build` npm script — EAS builds are triggered d
 app/                        # Expo Router file-based routes
 ├── (auth)/                  # Sign in, register, reset password, email confirmation
 ├── onboarding/               # Multi-step onboarding: identity keys, quiz, benefits, subscription paywall
-├── tabs/                     # Authenticated app: home, keys, profile (bottom tab nav)
+├── tabs/                     # Authenticated app: keys, home (AI bubble), stats, profile (bottom tab nav)
 ├── _layout.js                # Root providers, deep linking, reminder scheduling
 └── index.js                  # Entry router — redirects based on auth/onboarding state
 components/                  # Shared UI components
@@ -67,7 +67,7 @@ contexts/                    # SuperwallContext (subscription state)
 lib/                         # apiConfig.ts (AI service base URL), supabase.ts (client)
 services/
 ├── auth/                     # Sign up/in, onboarding-status routing, account deletion
-├── features/                  # Action logs, alignment, affirmations, reminders, community, sharing
+├── features/                  # Chat, key proposals, reminders, sharing, streaks
 ├── integrations/               # Deep links, Resend email list
 ├── subscription/               # subscriptionService.ts — sole owner of pro/free status logic
 └── user/                       # Referrals, user keys, preferences
@@ -82,7 +82,7 @@ utils/superwallCompat.js     # Swaps mock/real Superwall SDK based on Expo Go vs
 
 - **Onboarding** — Welcome → identity key selection → scored quiz → user info → benefits/doubt deep dives → notification permission → app rating → referral code → subscription paywall.
 - **Auth** — Supabase email/password (with email confirmation), Google Sign-In, Sign in with Apple, password reset — all deep-link aware (see [Deep Linking](#deep-linking)).
-- **AI chat & action logging** — `services/features/affirmationService.ts` and `actionLogs.ts` call the `keystone-ai-service` backend, which returns an AI response plus updated alignment scores.
+- **AI chat & key proposals** — `services/features/affirmationService.ts` (chat, one thread per mode) and `keyProposalService.ts` call the `keystone-ai-service` backend with the user's Supabase access token. Accepted proposals are applied by the app through `services/user/userKeys.ts`, never by the backend.
 - **Reminders** — Daily push notifications, rescheduled on app foreground and at local midnight.
 - **Referrals & community** — Referral code redemption grants pro time; lightweight community/sharing features with share-image generation.
 
@@ -131,4 +131,5 @@ Builds are managed via **EAS Build** (`eas.json`): `development` (simulator, dev
 - **Universal links are only half-configured** — `app.json`'s `associatedDomains`/App Links config is in place, but `keystone-landingpage/public/.well-known/apple-app-site-association` and `assetlinks.json` still have placeholder values (real Apple Team ID and Android signing-cert fingerprint needed).
 - **`handle-subscription` needs a webhook secret** — `SUPERWALL_WEBHOOK_SECRET` must be set on the Supabase project (from Superwall's webhook config) before real subscription webhooks will be accepted.
 - **Deep-link and referral flows need an on-device test pass** — the session-establishment and referral-tracking logic was rewritten based on Supabase's/Superwall's documented behavior, but hasn't been exercised against a real device yet.
-- Several read functions fall back from a new normalized table to a legacy one (e.g. alignment snapshots) — an in-progress data-model migration.
+- Old alignment/action-log tables and `users` score columns still exist in Supabase but the app no longer reads or writes them. Dropping them is a separate follow-up.
+- `supabase/migrations/` holds hand-written SQL that must be applied to the Supabase project manually; there is no migration runner.

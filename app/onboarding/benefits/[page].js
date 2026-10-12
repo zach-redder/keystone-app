@@ -24,17 +24,17 @@ const KEYSTONE_BENEFITS = [
     },
     {
         id: 3,
-        icon: 'chart-line',
+        icon: 'help-circle',
         iconAnimation: 'grow',
-        title: 'Action Logging',
-        subtitle: 'Track progress and patterns in real time to see how you\'re becoming your best self.',
+        title: 'Question Yourself',
+        subtitle: 'A Socratic AI asks the hard questions, so you can test who you are becoming instead of settling.',
     },
     {
         id: 4,
         icon: 'bullseye',
         iconAnimation: 'pulse',
-        title: 'Vision Affirmation',
-        subtitle: 'Keep your goals constantly in mind to keep yourself on track and motivated.',
+        title: 'Affirm Who You Are',
+        subtitle: 'Talk through self-doubt with an AI that reflects your own words and values back to you.',
     },
     {
         id: 5,

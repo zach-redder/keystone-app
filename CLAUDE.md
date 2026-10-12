@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Keystone is an Expo/React Native app implementing a psychological self-improvement / identity-alignment product. Users define "identity keys" across six categories (Core Values, Identity Traits, Future Self Vision, Life Goals, Avoidances, Motivations) and track alignment scores for each via AI chat and logged actions. The app uses **Superwall** (`expo-superwall@0.3.2`) for paywall/subscription management and **Supabase** for auth, data, and two Edge Functions checked into this repo. AI features call the sibling `keystone-ai-service` backend.
+Keystone is an Expo/React Native self-reflection companion. Users define "identity keys" across six categories (Core Values, Identity Traits, Future Self Vision, Life Goals, Avoidances, Motivations) and talk to an AI in one of two modes: **Affirm** (counters self-doubt) or **Question** (Socratic). The keys are the AI's memory; after a chat, "Review keys" proposes add/update/delete changes that apply only when the user accepts. Tapping the home orb starts a **voice conversation** (Pro only) over OpenAI Realtime/WebRTC; chat is one tap away. There are no scores and no action logs. The app uses **Superwall** (`expo-superwall@0.3.2`) for paywall/subscription management and **Supabase** for auth, data, and two Edge Functions checked into this repo. AI features call the sibling `keystone-ai-service` backend.
 
 ## Tech Stack
 
@@ -20,6 +20,7 @@ Keystone is an Expo/React Native app implementing a psychological self-improveme
 - `npm run android` — Run on Android device/emulator
 - `npm run ios` — Run on iOS device/simulator
 - `npm run web` — Run on web browser
+- `npm test` — unit tests for the voice logic (`services/voice/*.test.ts`, run with `tsx`)
 
 After changing native dependencies:
 ```bash
@@ -27,7 +28,7 @@ npx expo prebuild --clean
 cd ios && pod install && cd ..
 ```
 
-There is no `test` or `lint` script — no automated test suite exists in this repo.
+There is no `lint` script. **Voice mode cannot run in Expo Go**: it uses `react-native-webrtc` and `@shopify/react-native-skia`, so use a dev build (`npx expo run:ios` / `eas build --profile development`) on a real device; simulator microphones and audio routing are unreliable.
 
 ## Architecture
 
@@ -38,7 +39,7 @@ There is no `test` or `lint` script — no automated test suite exists in this r
 
 ### Key Directories
 - `/app` — screens and routing
-  - `/app/tabs` — bottom tab navigation (`home.js`, `keys.js`, `profile.js`)
+  - `/app/tabs` — bottom tab navigation (`keys.js`, `home.js` = AI orb, `stats.js`, `profile.js`) and two full-screen routes outside the tabs: `/app/voice/[mode].js` (voice, the default) and `/app/chat/[mode].js` (text). `/hooks` holds `useVoiceSession` and `useKeyReview` (shared by both screens); `/components/voice` holds the orb
   - `/app/onboarding` — identity key selection, quiz, benefits deep-dives, subscription paywall
   - `/app/(auth)` — sign in, register, reset password, email confirmation
 - `/contexts` — React Context providers for global state (`SuperwallContext.js`)
@@ -85,13 +86,15 @@ There is no raw-IAP fallback anymore. The old `supabase/functions/iap-verify-app
 - Supabase is the source of truth for authenticated/server state — no React Query/SWR cache layer.
 
 ### Key Services
+- **`services/voice/`** — `realtimeSession.ts` is the only file that talks WebRTC: it asks `keystone-ai-service` for a short-lived key (`POST /voice/session`), connects straight to OpenAI, and primes the conversation with recent history. `voiceEvents.ts` (event stream to UI state, caption and paired turns) and `voiceStats.ts` (loudness from WebRTC stats) are pure and unit-tested. Finished turns are saved with `insertAIChatMessagePair`, so voice and text share one thread per mode and Review keys works on spoken conversations.
+- **`components/voice/AIOrb.js`** — Skia shader orb (`orbShader.js`); mic and AI levels are Reanimated shared values, so it animates on the UI thread. If the shader fails to compile it falls back to a plain circle. The shader can be checked off-device with `canvaskit-wasm`'s `RuntimeEffect.Make`.
 - **`services/auth/auth.ts`** — sign up/in (email, Google, Apple), `checkUserStatus()` routing, account deletion (cascades across ~13 Supabase tables).
 - **`services/features/reminderService`** — push notification scheduling (rescheduled on foreground + local midnight).
-- **`services/user/userKeys.ts`** — identity key / alignment data.
+- **`services/user/userKeys.ts`** — identity key CRUD. Category list, labels and pro-only flags live in `constants/keyCategories.js`; don't duplicate them.
 - **`services/subscription/subscriptionService.ts`** — sole owner of pro/free status logic: `checkUserProStatus`, `upgradeUserToPro`, `downgradeUserToFree`, `getUserSubscriptionDetails`, `handleSuperwallPurchaseComplete`, `migrateFromIAPToSuperwall`. This used to be split three ways across `auth.ts`, `referralService.ts`, and a now-deleted `superwallService.ts` — consolidate any new pro-status logic here too rather than adding a fourth location.
 - **`services/integrations/deepLinkService.ts`** — `handleReferralDeepLink`, called from `_layout.js`'s central listener for `?ref=CODE` links.
 - **`utils/superwallCompat.js`** — mock Superwall hooks for Expo Go; switches to the real SDK automatically in dev/production builds. The same "environment-aware compatibility shim" pattern is used in `services/auth/auth.ts` for lazily loading `@react-native-google-signin` in a try/catch, so it doesn't crash in environments without the native module.
-- **`services/features/affirmationService.ts` / `actionLogs.ts`** — call `keystone-ai-service`'s `/generate-ai-message` and `/action-log-response` via `lib/apiConfig.ts`'s `BASE_URL`.
+- **`services/features/affirmationService.ts` / `keyProposalService.ts`** — call `keystone-ai-service`'s `/generate-ai-message` and `/propose-key-changes` via `lib/apiConfig.ts`'s `BASE_URL`, sending `Authorization: Bearer <access token>`. Chat rows in `ai_chat_logs` carry a `mode` and a `reviewed_at` (set after a key review). The backend only proposes; the app applies accepted changes.
 
 ## Environment Variables
 
@@ -107,19 +110,23 @@ There is no raw-IAP fallback anymore. The old `supabase/functions/iap-verify-app
 
 ## Related Repos
 
-- **`../keystone-ai-service`** — Python/FastAPI backend called via `EXPO_PUBLIC_API_URL` for AI chat and action-log evaluation. Shares the same Supabase project/`users` table. This repo's `supabase/functions/generate-daily-message/` Edge Function calls that service's `/generate-daily-message` on a schedule.
+- **`../keystone-ai-service`** — Python/FastAPI backend called via `EXPO_PUBLIC_API_URL` for AI chat and key-change proposals. Shares the same Supabase project/`users` table. This repo's `supabase/functions/generate-daily-message/` Edge Function calls that service's `/generate-daily-message` on a schedule.
 - **`../keystone-landingpage`** — marketing/waitlist site. Shares the same Supabase auth project; the `keystone://` deep-link scheme is how the landing page's `/verify` route hands email-confirmation, email-change, and password-reset callbacks back to this app (`keystone://emailconfirmation`, `keystone://signin`, `keystone://resetpassword`, each carrying the actual Supabase session payload as a query string or hash fragment — see Deep Linking above).
 
 ## Gotchas / Known Gaps
 
-- **No automated tests, no active CI.** iOS deploys are automated at the infrastructure level instead: an EAS "build trigger" (Expo dashboard → Project Settings → GitHub) watches pushes to `main` and runs `eas build --profile production` then `eas submit` automatically, using the App Store Connect API key stored in EAS's credential service — no GitHub Actions workflow, no repo secrets. `eas.json`'s `submit.production` block is intentionally empty to make it resolve credentials that way.
+- **Tests cover only the pure voice logic; no CI.** Orb visuals, audio levels and the live WebRTC session can only be verified on a device. iOS deploys are automated at the infrastructure level instead: an EAS "build trigger" (Expo dashboard → Project Settings → GitHub) watches pushes to `main` and runs `eas build --profile production` then `eas submit` automatically, using the App Store Connect API key stored in EAS's credential service — no GitHub Actions workflow, no repo secrets. `eas.json`'s `submit.production` block is intentionally empty to make it resolve credentials that way.
 - **`app.config.js` has a stale `// Superwall removed` comment** even though Superwall is still fully wired into the app — don't trust that comment as documentation.
-- **Legacy/new table fallback pattern** — some read functions (e.g. `fetchAlignmentValue`, `fetchLatestWeeklySnapshot`) try a new normalized table first, then fall back to a legacy table/column. This means a normalized data-model migration is in progress; don't remove the legacy fallback without confirming the migration is finished.
+- **Dead tables remain.** `action_logs`, `user_alignment_scores`, `weekly_alignment_snapshots`, `alignment_score_changes` and the `users` score columns are no longer used by the app. Account deletion still clears them. Dropping them is a deliberate, separate step.
+- **Schema changes are hand-applied.** `supabase/migrations/*.sql` is not run by any tool; apply it to the right Supabase project before shipping the matching app build. The `ai_chat_logs` `mode`/`reviewed_at` migration must be live before this build, or chat reads fail.
+- **Voice is Pro-only and capped server-side** (30 min/day, 10 min/session; the service reads `users.is_pro` itself and tracks `voice_sessions`). The model id, transcription model and the `realtime/calls` URL come from OpenAI docs that disagree with each other; run `keystone-ai-service/scripts/check_realtime.py` with a real key before shipping.
+- **Version lives only in `app.json`** (`expo.version`, now 2.0.0; keep `package.json` in sync). Build numbers come from EAS (`appVersionSource: remote`); don't set `buildNumber`/`versionCode`. Every push to `main` builds and submits to the stores, so work on a branch.
+- **Older app builds break against the new AI service** (no bearer token → 401). Ship the app build before enforcing, or accept 401s for old builds.
 - **Universal links are only half-configured** — `app.json` has `associatedDomains`/App Links config pointed at `thekeystoneapp.com`, but the landing page's `.well-known/apple-app-site-association` and `assetlinks.json` still have placeholder values for the Apple Team ID and Android signing-cert fingerprint. Custom-scheme (`keystone://`) links work regardless; HTTPS universal links don't yet.
 - **`handle-subscription` rejects everything until `SUPERWALL_WEBHOOK_SECRET` is set** as a Supabase secret (get it from Superwall's webhook config when setting up the webhook URL there).
 - The app uses TypeScript for `services/` but mostly plain JavaScript for screens/components — match whichever convention the file you're editing already uses.
 - Non-blocking side effects are a deliberate pattern (e.g. Resend email-list sync is wrapped in `setTimeout` + try/catch so failures don't block account creation) — preserve this pattern for similar "best-effort" integrations.
-- **"Fully paid-only" comments in `home.js`/`profile.js` are stale and wrong** — the app is freemium. Each feature modal (`AlignModal`, `AffirmIdentityModal`, `AIPersonalityModal`, `LogActionModal`) self-contains its own `checkUserProStatus()` check, daily free-tier limit, and `ProUpgradeModal` — that gating is real and current, the removed top-level `home.js`/`profile.js` upgrade-prompt wiring was just redundant with it, not a functional gap.
+- **"Fully paid-only" comments in `home.js`/`profile.js` are stale and wrong** — the app is freemium. Each feature (`app/chat/[mode].js`, `AIPersonalityModal`) self-contains its own `checkUserProStatus()` check, daily free-tier limit (10 chat pairs/day shared across both modes), and `ProUpgradeModal` — that gating is real and current, the removed top-level `home.js`/`profile.js` upgrade-prompt wiring was just redundant with it, not a functional gap.
 
 ## Testing Considerations
 

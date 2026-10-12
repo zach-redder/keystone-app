@@ -156,21 +156,13 @@ export const updatePreferredReminderTime = async (time: string): Promise<boolean
 };
 
 /**
- * Updates the user's day streak in the users table by checking the action_logs table for consecutive days with logs (ending yesterday).
+ * Updates the user's day streak in the users table from consecutive days with at least one AI chat.
  * @returns {Promise<number>} The updated day streak.
  */
 export const updateUserDayStreak = async (): Promise<number> => {
   try {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) return 0;
-
-    // Get all action logs for the user, ordered by created_at descending
-    const { data: logs, error: logsError } = await supabase
-      .from('action_logs')
-      .select('created_at')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
-    if (logsError) return 0;
 
     // Get all ai_chat_logs for the user
     const { data: aiLogs, error: aiLogsError } = await supabase
@@ -179,11 +171,8 @@ export const updateUserDayStreak = async (): Promise<number> => {
       .eq('user_id', user.id);
     if (aiLogsError) return 0;
 
-    // Build a set of unique days (YYYY-MM-DD) with at least one log from either table
+    // Build a set of unique days (YYYY-MM-DD) with at least one chat
     const daysWithLogs = new Set();
-    if (Array.isArray(logs)) {
-      logs.forEach(log => daysWithLogs.add(log.created_at.slice(0, 10)));
-    }
     if (Array.isArray(aiLogs)) {
       aiLogs.forEach(log => daysWithLogs.add(log.created_at.slice(0, 10)));
     }
@@ -367,8 +356,6 @@ export const clearAllAsyncStorageData = async (): Promise<boolean> => {
       '@user_preferences',
       '@user_keys',
       '@user_reminders',
-      '@user_alignment_scores',
-      '@user_action_logs',
       '@user_weekly_snapshots',
       '@user_alignment_changes',
       'pending_referral_code'
@@ -395,17 +382,6 @@ export const getUserActiveDays = async (): Promise<string[]> => {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) return [];
 
-    // Get all action logs for the user
-    const { data: actionLogs, error: actionLogsError } = await supabase
-      .from('action_logs')
-      .select('created_at')
-      .eq('user_id', user.id);
-    
-    if (actionLogsError) {
-      console.error('Error fetching action logs:', actionLogsError);
-      return [];
-    }
-
     // Get all ai_chat_logs for the user
     const { data: aiChatLogs, error: aiChatLogsError } = await supabase
       .from('ai_chat_logs')
@@ -417,16 +393,9 @@ export const getUserActiveDays = async (): Promise<string[]> => {
       return [];
     }
 
-    // Build a set of unique days (YYYY-MM-DD) with at least one log from either table
+    // Build a set of unique days (YYYY-MM-DD) with at least one chat
     const activeDays = new Set<string>();
-    
-    if (Array.isArray(actionLogs)) {
-      actionLogs.forEach(log => {
-        const dayStr = log.created_at.slice(0, 10);
-        activeDays.add(dayStr);
-      });
-    }
-    
+
     if (Array.isArray(aiChatLogs)) {
       aiChatLogs.forEach(log => {
         const dayStr = log.created_at.slice(0, 10);
@@ -447,17 +416,6 @@ export const getUserDailyActivityCounts = async (): Promise<Record<string, numbe
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) return {};
 
-    // Get all action logs for the user
-    const { data: actionLogs, error: actionLogsError } = await supabase
-      .from('action_logs')
-      .select('created_at')
-      .eq('user_id', user.id);
-    
-    if (actionLogsError) {
-      console.error('Error fetching action logs:', actionLogsError);
-      return {};
-    }
-
     // Get all ai_chat_logs for the user
     const { data: aiChatLogs, error: aiChatLogsError } = await supabase
       .from('ai_chat_logs')
@@ -471,14 +429,6 @@ export const getUserDailyActivityCounts = async (): Promise<Record<string, numbe
 
     // Build a map of daily activity counts
     const dailyCounts: Record<string, number> = {};
-    
-    // Count action logs per day
-    if (Array.isArray(actionLogs)) {
-      actionLogs.forEach(log => {
-        const dayStr = log.created_at.slice(0, 10);
-        dailyCounts[dayStr] = (dailyCounts[dayStr] || 0) + 1;
-      });
-    }
     
     // Count AI chat logs per day
     if (Array.isArray(aiChatLogs)) {

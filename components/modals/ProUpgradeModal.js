@@ -236,14 +236,15 @@ const ProUpgradeModal = ({ visible, onClose, currentPage, onSubscriptionChange }
                     lineHeight: 22,
                   }}
                 >
-                  Get unlimited access to all features and take your alignment to the next level
+                  Get unlimited access to all features and go deeper on who you are
                 </Text>
               </View>
 
               {/* Features list */}
               <View style={{ marginBottom: 30 }}>
                 {[
-                  { icon: 'infinite', text: 'Unlimited daily alignments' },
+                  { icon: 'mic', text: 'Voice conversations with your AI' },
+                  { icon: 'infinite', text: 'Unlimited daily conversations' },
                   { icon: 'sparkles', text: 'Advanced AI feedback' },
                   { icon: 'key', text: 'Unlimited identity keys' },
                   { icon: 'people', text: 'Community access' },
