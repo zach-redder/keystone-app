@@ -47,16 +47,14 @@ export default function ProfileScreen() {
   const [aiPersona, setAiPersona] = useState('Default');
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [reminderTime, setReminderTime] = useState('9:00 AM');
-  const [dayStreak, setDayStreak] = useState(0);
-  const [longestStreak, setLongestStreak] = useState(0);
+  const { stats, refetch: refetchStats } = useUserStats();
+  const { dayStreak, longestStreak } = stats;
   const [userEmail, setUserEmail] = useState('');
 
   useEffect(() => {
     loadSubscriptionDetails();
     loadAiPersona();
     loadReminderTime();
-    loadDayStreak();
-    loadLongestStreak();
     checkNotificationPermissions();
     loadUserEmail();
   }, []);
@@ -80,11 +78,10 @@ export default function ProfileScreen() {
     useCallback(() => {
       loadAiPersona();
       loadReminderTime();
-      loadDayStreak();
-      loadLongestStreak();
+      refetchStats();
       loadSubscriptionDetails();
       checkAndUpdateNotificationPermissions();
-    }, [])
+    }, [refetchStats])
   );
 
   const loadAiPersona = async () => {

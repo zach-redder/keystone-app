@@ -92,8 +92,8 @@ export default function Keys() {
   // Removed proModalVisible state - no longer needed in paid-only app
   const [keyToDelete, setKeyToDelete] = useState(null);
   const [keyToEdit, setKeyToEdit] = useState(null);
-  const [dayStreak, setDayStreak] = useState(0);
-  const [longestStreak, setLongestStreak] = useState(0);
+  const { stats } = useUserStats();
+  const { dayStreak, longestStreak } = stats;
   const [streakInfoModalVisible, setStreakInfoModalVisible] = useState(false);
   const menuBtnRef = useRef(null);
   // Removed referralModalVisible - now using direct app sharing
