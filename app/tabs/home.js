@@ -29,8 +29,8 @@ export default function HomeScreen() {
   const { width } = useWindowDimensions();
   const orbSize = Math.min(MAX_ORB_SIZE, width * ORB_WIDTH_RATIO);
   const [mode, setMode] = useState(DEFAULT_CHAT_MODE);
-  const [dayStreak, setDayStreak] = useState(0);
-  const [longestStreak, setLongestStreak] = useState(0);
+  const { stats, loaded: statsLoaded, refetch: refetchStats } = useUserStats();
+  const { dayStreak, longestStreak } = stats;
   const [streakRewardModalVisible, setStreakRewardModalVisible] = useState(false);
   const [currentMilestone, setCurrentMilestone] = useState(null);
   const [streakInfoModalVisible, setStreakInfoModalVisible] = useState(false);
@@ -51,8 +51,8 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       checkFreeMonthOffer();
-      loadStreaks();
-    }, [])
+      refetchStats();
+    }, [refetchStats])
   );
 
   const checkFreeMonthOffer = async () => {
