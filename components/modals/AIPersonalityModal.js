@@ -4,7 +4,10 @@ import { useState, useEffect } from 'react';
 import * as Haptics from 'expo-haptics';
 import { getPreferredAiPersona, setPreferredAiPersona } from '../../services/user/userPreferences';
 import { fetchCustomPersonalities, createCustomPersonality, deleteCustomPersonality } from '../../services/features/customPersonalitiesService';
+import { VOICES, DEFAULT_VOICE, DEFAULT_PERSONA_VOICES } from '../../services/voice/personaVoice';
 import keysStyles from '../../styles/keys';
+
+const voiceLabel = (voiceId) => VOICES.find(voice => voice.id === voiceId)?.label ?? null;
 
 const AIPersonalityModal = ({ visible, onClose, onUpgradePress }) => {
   const [selectedPersonality, setSelectedPersonality] = useState('Default');
@@ -12,6 +15,7 @@ const AIPersonalityModal = ({ visible, onClose, onUpgradePress }) => {
   const [showCustomForm, setShowCustomForm] = useState(false);
   const [customName, setCustomName] = useState('');
   const [customDescription, setCustomDescription] = useState('');
+  const [customVoice, setCustomVoice] = useState(DEFAULT_VOICE);
   const [customPersonalities, setCustomPersonalities] = useState([]);
 
           // Basic personalities available to all users
@@ -121,6 +125,7 @@ const AIPersonalityModal = ({ visible, onClose, onUpgradePress }) => {
         name: newPersonality.name,
         description: newPersonality.description,
         icon: newPersonality.icon,
+        voice: customVoice,
       });
       
       if (createdPersonality) {
@@ -135,6 +140,7 @@ const AIPersonalityModal = ({ visible, onClose, onUpgradePress }) => {
         // Reset form
         setCustomName('');
         setCustomDescription('');
+        setCustomVoice(DEFAULT_VOICE);
         setShowCustomForm(false);
         
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -228,6 +234,11 @@ const AIPersonalityModal = ({ visible, onClose, onUpgradePress }) => {
           ]}>
             {personality.description}
           </Text>
+          {voiceLabel(personality.isCustom ? personality.voice : DEFAULT_PERSONA_VOICES[personality.name]) ? (
+            <Text style={styles.voiceTag}>
+              Voice: {voiceLabel(personality.isCustom ? personality.voice : DEFAULT_PERSONA_VOICES[personality.name])}
+            </Text>
+          ) : null}
         </View>
       </View>
       {selectedPersonality === personality.name && (
@@ -284,6 +295,11 @@ const AIPersonalityModal = ({ visible, onClose, onUpgradePress }) => {
           ]}>
             {personality.description}
           </Text>
+          {voiceLabel(personality.isCustom ? personality.voice : DEFAULT_PERSONA_VOICES[personality.name]) ? (
+            <Text style={styles.voiceTag}>
+              Voice: {voiceLabel(personality.isCustom ? personality.voice : DEFAULT_PERSONA_VOICES[personality.name])}
+            </Text>
+          ) : null}
         </View>
       </View>
       {selectedPersonality === personality.name && (
@@ -371,6 +387,29 @@ const AIPersonalityModal = ({ visible, onClose, onUpgradePress }) => {
                   numberOfLines={4}
                   maxLength={200}
                 />
+
+                <Text style={styles.inputLabel}>Voice</Text>
+                <View style={styles.voiceChips}>
+                  {VOICES.map(voice => (
+                    <TouchableOpacity
+                      key={voice.id}
+                      style={[styles.voiceChip, customVoice === voice.id && styles.voiceChipSelected]}
+                      onPress={() => {
+                        setCustomVoice(voice.id);
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      }}
+                      activeOpacity={0.7}
+                      accessibilityLabel={`${voice.label} voice, ${voice.blurb}`}
+                    >
+                      <Text style={[styles.voiceChipText, customVoice === voice.id && styles.voiceChipTextSelected]}>
+                        {voice.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                <Text style={styles.voiceHint}>
+                  {VOICES.find(voice => voice.id === customVoice)?.blurb}. Used in voice chat.
+                </Text>
                 
                 <View style={styles.formButtons}>
                   <TouchableOpacity
@@ -379,6 +418,7 @@ const AIPersonalityModal = ({ visible, onClose, onUpgradePress }) => {
                       setShowCustomForm(false);
                       setCustomName('');
                       setCustomDescription('');
+                      setCustomVoice(DEFAULT_VOICE);
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     }}
                     activeOpacity={0.7}
@@ -668,6 +708,41 @@ const styles = {
     color: '#2B2B2B',
     fontSize: 16,
     fontWeight: '600',
+  },
+  voiceChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  voiceChip: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 18,
+    backgroundColor: 'rgba(60, 60, 60, 0.5)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.10)',
+  },
+  voiceChipSelected: {
+    backgroundColor: '#B9C096',
+    borderColor: '#B9C096',
+  },
+  voiceChipText: {
+    color: '#ddd',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  voiceChipTextSelected: {
+    color: '#2B2B2B',
+  },
+  voiceHint: {
+    color: '#999',
+    fontSize: 12,
+    marginTop: 8,
+  },
+  voiceTag: {
+    color: '#B9C096',
+    fontSize: 12,
+    marginTop: 6,
   },
   disabledButton: {
     backgroundColor: '#555',

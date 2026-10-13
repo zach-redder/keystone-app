@@ -1,3 +1,5 @@
+import { localDayKey } from '../../utils/dateKeys';
+import { getSessionUser } from '../auth/currentUser';
 import { supabase } from '../../lib/supabase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -10,7 +12,7 @@ export interface UserPreferences {
 
 export const fetchUserPreferences = async (): Promise<UserPreferences | null> => {
   try {
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const { data: { user }, error: userError } = await getSessionUser();
     
     if (userError || !user) {
       console.log('User not authenticated, returning null for preferences');
@@ -42,7 +44,7 @@ export const fetchUserPreferences = async (): Promise<UserPreferences | null> =>
 
 export const updateUserPreferences = async (preferences: Partial<UserPreferences>): Promise<boolean> => {
   try {
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const { data: { user }, error: userError } = await getSessionUser();
     
     if (userError || !user) {
       console.log('User not authenticated, cannot update preferences');
@@ -122,7 +124,7 @@ export const updateNotificationOptIn = async (optIn: boolean): Promise<boolean> 
 
 export const getUserEmail = async (): Promise<string> => {
   try {
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const { data: { user }, error: userError } = await getSessionUser();
     
     if (userError || !user) {
       console.error('Error getting user for email:', userError);
@@ -161,7 +163,7 @@ export const updatePreferredReminderTime = async (time: string): Promise<boolean
  */
 export const updateUserDayStreak = async (): Promise<number> => {
   try {
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const { data: { user }, error: userError } = await getSessionUser();
     if (userError || !user) return 0;
 
     // Get all ai_chat_logs for the user
@@ -174,7 +176,7 @@ export const updateUserDayStreak = async (): Promise<number> => {
     // Build a set of unique days (YYYY-MM-DD) with at least one chat
     const daysWithLogs = new Set();
     if (Array.isArray(aiLogs)) {
-      aiLogs.forEach(log => daysWithLogs.add(log.created_at.slice(0, 10)));
+      aiLogs.forEach(log => daysWithLogs.add(localDayKey(new Date(log.created_at))));
     }
 
     // Start from today
@@ -183,7 +185,7 @@ export const updateUserDayStreak = async (): Promise<number> => {
     current.setHours(0, 0, 0, 0);
     let missedDays = 0;
     while (true) {
-      const dayStr = current.toISOString().slice(0, 10);
+      const dayStr = localDayKey(current);
       if (daysWithLogs.has(dayStr)) {
         streak++;
         missedDays = 0;
@@ -229,7 +231,7 @@ export const updateUserDayStreak = async (): Promise<number> => {
 
 export const getUserDayStreak = async (): Promise<number> => {
   try {
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const { data: { user }, error: userError } = await getSessionUser();
     
     if (userError || !user) {
       console.log('User not authenticated, returning 0 for day streak');
@@ -250,7 +252,7 @@ export const getUserDayStreak = async (): Promise<number> => {
  */
 export const getUserLongestStreak = async (): Promise<number> => {
   try {
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const { data: { user }, error: userError } = await getSessionUser();
     
     if (userError || !user) {
       console.log('User not authenticated, returning 0 for longest streak');
@@ -278,7 +280,7 @@ export const getUserLongestStreak = async (): Promise<number> => {
 // ✅ Update User Name in public.users table
 export const updateUserName = async (name: string): Promise<boolean> => {
   try {
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const { data: { user }, error: userError } = await getSessionUser();
     if (userError || !user) return false;
 
     const { error } = await supabase
@@ -296,7 +298,7 @@ export const updateUserName = async (name: string): Promise<boolean> => {
 // ✅ Get User Name from public.users table
 export const getUserName = async (): Promise<string> => {
   try {
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const { data: { user }, error: userError } = await getSessionUser();
     if (userError || !user) return '';
 
     const { data, error } = await supabase
@@ -316,7 +318,7 @@ export const getUserName = async (): Promise<string> => {
 // // ✅ Update Phone in Supabase Auth (not public.users)
 // export const updateUserPhone = async (phone: string): Promise<boolean> => {
 //   try {
-//     const { data: { user }, error: userError } = await supabase.auth.getUser();
+//     const { data: { user }, error: userError } = await getSessionUser();
 //     if (userError || !user) return false;
 
 //     const { error } = await supabase.auth.updateUser({
@@ -333,7 +335,7 @@ export const getUserName = async (): Promise<string> => {
 // // ✅ Get Phone from Supabase Auth
 // export const getUserPhone = async (): Promise<string> => {
 //   try {
-//     const { data: { user }, error: userError } = await supabase.auth.getUser();
+//     const { data: { user }, error: userError } = await getSessionUser();
 //     if (userError || !user) {
 //       console.error('Error getting user for phone:', userError);
 //       return '';
@@ -379,7 +381,7 @@ export const clearAllAsyncStorageData = async (): Promise<boolean> => {
 
 export const getUserActiveDays = async (): Promise<string[]> => {
   try {
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const { data: { user }, error: userError } = await getSessionUser();
     if (userError || !user) return [];
 
     // Get all ai_chat_logs for the user
@@ -398,7 +400,7 @@ export const getUserActiveDays = async (): Promise<string[]> => {
 
     if (Array.isArray(aiChatLogs)) {
       aiChatLogs.forEach(log => {
-        const dayStr = log.created_at.slice(0, 10);
+        const dayStr = localDayKey(new Date(log.created_at));
         activeDays.add(dayStr);
       });
     }
@@ -413,7 +415,7 @@ export const getUserActiveDays = async (): Promise<string[]> => {
 
 export const getUserDailyActivityCounts = async (): Promise<Record<string, number>> => {
   try {
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const { data: { user }, error: userError } = await getSessionUser();
     if (userError || !user) return {};
 
     // Get all ai_chat_logs for the user
@@ -433,7 +435,7 @@ export const getUserDailyActivityCounts = async (): Promise<Record<string, numbe
     // Count AI chat logs per day
     if (Array.isArray(aiChatLogs)) {
       aiChatLogs.forEach(log => {
-        const dayStr = log.created_at.slice(0, 10);
+        const dayStr = localDayKey(new Date(log.created_at));
         dailyCounts[dayStr] = (dailyCounts[dayStr] || 0) + 1;
       });
     }

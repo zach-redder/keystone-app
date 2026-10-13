@@ -1,4 +1,5 @@
 import React from 'react';
+import { localDayKey } from '../../utils/dateKeys';
 import { View, Text, StyleSheet } from 'react-native';
 
 const StreakCounter = ({ activeDays = [], dailyActivityCounts = {} }) => {
@@ -11,7 +12,7 @@ const StreakCounter = ({ activeDays = [], dailyActivityCounts = {} }) => {
      for (let i = 181; i >= 0; i--) {
        const date = new Date(today);
        date.setDate(date.getDate() - i);
-       const dayStr = date.toISOString().slice(0, 10);
+       const dayStr = localDayKey(date);
        const activityCount = dailyActivityCounts[dayStr] || 0;
        days.push({
          date: dayStr,
@@ -42,7 +43,7 @@ const StreakCounter = ({ activeDays = [], dailyActivityCounts = {} }) => {
      
      // Find the first occurrence of each month
      days.forEach((day, index) => {
-       const date = new Date(day.date);
+       const date = new Date(`${day.date}T12:00:00`);
        const month = date.toLocaleDateString('en-US', { month: 'short' });
        
        if (month !== currentMonth) {

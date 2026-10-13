@@ -1,3 +1,5 @@
+import { queryClient, queryKeys } from '../../lib/queryClient';
+import { getSessionUser } from '../auth/currentUser';
 import { supabase } from '../../lib/supabase';
 import { handleNewUserEmailList } from '../integrations/emailListService';
 
@@ -8,7 +10,7 @@ import { handleNewUserEmailList } from '../integrations/emailListService';
 
 export const shouldShowFreeMonthOffer = async (): Promise<boolean> => {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await getSessionUser();
     if (!user) return false;
 
     const { data } = await supabase
@@ -26,7 +28,7 @@ export const shouldShowFreeMonthOffer = async (): Promise<boolean> => {
 
 export const markFreeMonthOfferShown = async (): Promise<void> => {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await getSessionUser();
     if (!user) return;
 
     await supabase
@@ -43,7 +45,7 @@ export const grantFreeMonthOffer = async (
   email: string
 ): Promise<{ success: boolean; alreadyGranted?: boolean; message: string }> => {
   try {
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const { data: { user }, error: userError } = await getSessionUser();
     if (userError || !user) {
       return { success: false, message: 'You need to be signed in to claim this offer.' };
     }
@@ -81,6 +83,8 @@ export const grantFreeMonthOffer = async (
       console.error('Error granting free month offer:', updateError);
       return { success: false, message: 'Something went wrong. Please try again.' };
     }
+
+    await queryClient.invalidateQueries({ queryKey: queryKeys.proStatus });
 
     // Best-effort, non-blocking -- matches the pattern used elsewhere for Resend
     // email-list sync (e.g. services/auth/auth.ts). The typed email is only used

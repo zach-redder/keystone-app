@@ -15,7 +15,7 @@ import CreateKeyModal from '../../components/modals/CreateKeyModal';
 import { fetchIdentityKeys, deleteIdentityKey, updateIdentityKey, addIdentityKey } from '../../services/user/userKeys';
 import { checkUserProStatus } from '../../services/subscription/subscriptionService';
 import { getAppStoreLink, APP_NAME } from '../../constants/appStore';
-import { getUserDayStreak, getUserLongestStreak } from '../../services/user/userPreferences';
+import useUserStats from '../../hooks/useUserStats';
 import ProUpgradeModal from '../../components/modals/ProUpgradeModal';
 import StreakInfoModal from '../../components/modals/StreakInfoModal';
 
@@ -105,34 +105,6 @@ export default function Keys() {
   useEffect(() => {
     loadUserKeys();
   }, [selectedItem]);
-
-  // Load streak whenever the screen comes into focus
-  useFocusEffect(
-    React.useCallback(() => {
-      loadDayStreak();
-      loadLongestStreak();
-    }, [])
-  );
-
-  const loadDayStreak = async () => {
-    try {
-      const streak = await getUserDayStreak();
-      setDayStreak(streak);
-    } catch (error) {
-      console.error('Error loading day streak:', error);
-      setDayStreak(0);
-    }
-  };
-
-  const loadLongestStreak = async () => {
-    try {
-      const longest = await getUserLongestStreak();
-      setLongestStreak(longest);
-    } catch (error) {
-      console.error('Error loading longest streak:', error);
-      setLongestStreak(0);
-    }
-  };
 
   const loadUserKeys = async () => {
     try {

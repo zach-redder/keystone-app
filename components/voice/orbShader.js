@@ -6,8 +6,13 @@
 //   level     smoothed loudness 0..1 (the caller picks mic or AI voice depending on who is talking)
 //   w         blend weights: x = listening/idle, y = user speaking, z = thinking, w = AI speaking
 //   modeMix   0 = Affirm palette, 1 = Question palette
+//   orbSize   the orb's nominal diameter in pixels; the canvas is GLOW_CANVAS_SCALE times larger
+//             so the glow has room to fade out instead of being cut at the canvas edge
+export const GLOW_CANVAS_SCALE = 1.7;
+
 export const ORB_SHADER = `
 uniform float2 size;
+uniform float orbSize;
 uniform float time;
 uniform float level;
 uniform float4 w;
@@ -16,7 +21,7 @@ uniform float modeMix;
 const float TAU = 6.2831853;
 
 half4 main(float2 fragCoord) {
-  float2 q = (fragCoord - size * 0.5) / (min(size.x, size.y) * 0.5);
+  float2 q = (fragCoord - size * 0.5) / (orbSize * 0.5);
   float r = length(q);
   float a = atan(q.y, q.x);
 
@@ -28,7 +33,7 @@ half4 main(float2 fragCoord) {
                + sin(a * 2.0 + time * 0.9) * 0.4;
   float amp = 0.02 + 0.015 * w.x + 0.03 * w.z + 0.13 * level * talking;
   float breathe = 0.018 * sin(time * 1.2);
-  float radius = 0.56 + breathe + 0.09 * level * talking + amp * wobble;
+  float radius = 0.62 + breathe + 0.09 * level * talking + amp * wobble;
 
   float d = r - radius;
   float body = 1.0 - smoothstep(-0.012, 0.012, d);
@@ -59,8 +64,13 @@ half4 main(float2 fragCoord) {
   float ringMask = (1.0 - body) * exp(-max(d, 0.0) * 4.0) * w.w * (0.15 + level);
   float rings = ring * ringMask * 0.45;
 
+  // Fade everything to nothing before the canvas edge so no square boundary is ever visible
+  float edgeFade = 1.0 - smoothstep(1.25, 1.65, r);
+  outside *= edgeFade;
+  rings *= edgeFade;
+
   float alpha = clamp(body + outside + rings, 0.0, 1.0);
-  float3 color = (col * body + innerA * (outside + rings)) ;
+  float3 color = (col * body + innerA * (outside + rings));
   return half4(half3(color), half(alpha));
 }
 `;
