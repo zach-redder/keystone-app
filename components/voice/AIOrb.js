@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { View, Pressable } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
 import { Canvas, Fill, Shader, Skia } from '@shopify/react-native-skia';
@@ -11,7 +11,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { ORB_SHADER } from './orbShader';
+import { ORB_SHADER, GLOW_CANVAS_SCALE } from './orbShader';
 
 // Compiled once. If a device's GPU backend rejects it, the orb falls back to a plain circle instead of crashing.
 const orbEffect = Skia.RuntimeEffect.Make(ORB_SHADER);
@@ -38,6 +38,8 @@ const LEVEL_RELEASE = 6;
 const WEIGHT_RATE = 7;
 const MODE_RATE = 5;
 const REDUCED_MOTION_LEVEL_SCALE = 0.2;
+const MAX_FRAME_SECONDS = 0.05;
+const DEFAULT_FRAME_MS = 16;
 
 const FallbackOrb = ({ size, mode }) => (
   <View
@@ -54,6 +56,9 @@ const FallbackOrb = ({ size, mode }) => (
 /**
  * The AI orb. Home shows it idle and tappable; the voice screen feeds it live levels.
  * `micLevel` / `aiLevel` are Reanimated shared values, so it redraws every frame without React renders.
+ *
+ * `size` is the layout box. The Canvas is larger than the box so the glow can fade out
+ * instead of being cut off at a square edge.
  */
 const AIOrb = ({ mode = 'affirm', state = 'idle', micLevel, aiLevel, size = 260, onPress, label }) => {
   const reduceMotion = useReducedMotion();
@@ -65,7 +70,11 @@ const AIOrb = ({ mode = 'affirm', state = 'idle', micLevel, aiLevel, size = 260,
 
   const time = useSharedValue(0);
   const level = useSharedValue(0);
-  const weights = useSharedValue(STATE_WEIGHTS.idle);
+  const reduced = useSharedValue(reduceMotion ? 1 : 0);
+  const wIdle = useSharedValue(1);
+  const wUser = useSharedValue(0);
+  const wThink = useSharedValue(0);
+  const wAi = useSharedValue(0);
   const weightTarget = useSharedValue(STATE_WEIGHTS.idle);
   const source = useSharedValue(0);
   const modeMix = useSharedValue(mode === 'question' ? 1 : 0);
@@ -81,10 +90,17 @@ const AIOrb = ({ mode = 'affirm', state = 'idle', micLevel, aiLevel, size = 260,
     modeTarget.value = mode === 'question' ? 1 : 0;
   }, [mode, modeTarget]);
 
-  const frame = useFrameCallback((info) => {
+  useEffect(() => {
+    reduced.value = reduceMotion ? 1 : 0;
+  }, [reduceMotion, reduced]);
+
+  // The callback must keep the same identity across renders. Reanimated re-registers a frame
+  // callback whenever it changes, which restarts its clock; the voice screen re-renders constantly
+  // (captions, timer), so an inline callback made the orb's animation phase snap back to zero.
+  const onFrame = useCallback((info) => {
     'worklet';
-    const dt = Math.min((info.timeSincePreviousFrame ?? 16) / 1000, 0.05);
-    if (!reduceMotion) time.value = info.timeSinceFirstFrame / 1000;
+    const dt = Math.min((info.timeSincePreviousFrame ?? DEFAULT_FRAME_MS) / 1000, MAX_FRAME_SECONDS);
+    if (reduced.value === 0) time.value += dt;
 
     const raw = source.value === 1 ? mic.value : source.value === 2 ? ai.value : 0;
     const shaped = Math.min(1, Math.sqrt(Math.max(raw, 0)) * LEVEL_GAIN);
@@ -92,37 +108,51 @@ const AIOrb = ({ mode = 'affirm', state = 'idle', micLevel, aiLevel, size = 260,
     level.value += (shaped - level.value) * Math.min(1, dt * rate);
 
     const k = Math.min(1, dt * WEIGHT_RATE);
-    const current = weights.value;
     const target = weightTarget.value;
-    weights.value = [
-      current[0] + (target[0] - current[0]) * k,
-      current[1] + (target[1] - current[1]) * k,
-      current[2] + (target[2] - current[2]) * k,
-      current[3] + (target[3] - current[3]) * k,
-    ];
+    wIdle.value += (target[0] - wIdle.value) * k;
+    wUser.value += (target[1] - wUser.value) * k;
+    wThink.value += (target[2] - wThink.value) * k;
+    wAi.value += (target[3] - wAi.value) * k;
 
     modeMix.value += (modeTarget.value - modeMix.value) * Math.min(1, dt * MODE_RATE);
-  });
+  }, [mic, ai, time, level, reduced, source, weightTarget, wIdle, wUser, wThink, wAi, modeMix, modeTarget]);
+
+  const frame = useFrameCallback(onFrame);
 
   // Tabs stay mounted in the background; don't burn the GPU when this screen isn't showing
   useEffect(() => {
     frame.setActive(isFocused);
   }, [isFocused, frame]);
 
+  const canvasSize = size * GLOW_CANVAS_SCALE;
+
   const uniforms = useDerivedValue(() => ({
-    size: [size, size],
+    size: [canvasSize, canvasSize],
+    orbSize: size,
     time: time.value,
-    level: reduceMotion ? level.value * REDUCED_MOTION_LEVEL_SCALE : level.value,
-    w: weights.value,
+    level: reduced.value === 1 ? level.value * REDUCED_MOTION_LEVEL_SCALE : level.value,
+    w: [wIdle.value, wUser.value, wThink.value, wAi.value],
     modeMix: modeMix.value,
   }));
 
   const pressStyle = useAnimatedStyle(() => ({ transform: [{ scale: press.value }] }));
 
   const orb = (
-    <Animated.View style={[{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }, pressStyle]}>
+    <Animated.View
+      pointerEvents="none"
+      style={[{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }, pressStyle]}
+    >
       {orbEffect ? (
-        <Canvas style={{ width: size, height: size }}>
+        <Canvas
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            width: canvasSize,
+            height: canvasSize,
+            left: (size - canvasSize) / 2,
+            top: (size - canvasSize) / 2,
+          }}
+        >
           <Fill>
             <Shader source={orbEffect} uniforms={uniforms} />
           </Fill>
@@ -145,10 +175,11 @@ const AIOrb = ({ mode = 'affirm', state = 'idle', micLevel, aiLevel, size = 260,
       onPressOut={() => { press.value = withSpring(1, { damping: 8 }); }}
       accessibilityRole="button"
       accessibilityLabel={label ?? 'Start talking'}
+      hitSlop={24}
     >
       {orb}
     </Pressable>
   );
 };
 
-export default AIOrb;
+export default React.memo(AIOrb);

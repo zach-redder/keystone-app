@@ -10,7 +10,7 @@ import Markdown from '@ronradtke/react-native-markdown-display';
 import { getPreferredAiPersona } from '../../services/user/userPreferences';
 import {
   generateAIMessage, fetchAIChatMessages,
-  insertAIChatMessagePair, deleteAllAIChatMessages, fetchTodaysAIChatMessagePairCount,
+  insertAIChatMessagePair, clearAIChatConversation, fetchTodaysAIChatMessagePairCount,
 } from '../../services/features/affirmationService';
 import { checkUserProStatus } from '../../services/subscription/subscriptionService';
 import { CHAT_MODES, DEFAULT_CHAT_MODE, isChatMode } from '../../constants/chatModes';
@@ -104,13 +104,16 @@ export default function ChatScreen() {
   const handleResetChat = () => {
     Alert.alert(
       'Reset Chat',
-      `Are you sure you want to delete your ${config.title} chat history?`,
+      `Start a fresh ${config.title} conversation? Your streaks and stats are kept.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Reset', style: 'destructive', onPress: async () => {
-            await deleteAllAIChatMessages(mode);
-            setMessages([]);
+            if (await clearAIChatConversation(mode)) {
+              setMessages([]);
+            } else {
+              Alert.alert('Something went wrong', 'Could not reset the conversation. Please try again.');
+            }
           },
         },
       ]
@@ -120,7 +123,7 @@ export default function ChatScreen() {
   const handleVoice = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (await checkUserProStatus()) {
-      router.replace(`/voice/${mode}`);
+      router.push(`/voice/${mode}`);
     } else {
       setShowProUpgradeModal(true);
     }
@@ -139,19 +142,25 @@ export default function ChatScreen() {
       >
         <View style={styles.container}>
           <View style={styles.headerRow}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn} hitSlop={8}>
-              <Ionicons name="chevron-back" size={28} color="#fff" />
-            </TouchableOpacity>
+            <View style={[styles.headerSlot, { alignItems: 'flex-start' }]}>
+              <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn} hitSlop={8}>
+                <Ionicons name="chevron-back" size={28} color="#fff" />
+              </TouchableOpacity>
+            </View>
             <View style={styles.headerTitleWrap}>
               <Text style={styles.title}>{config.title}</Text>
               <Text style={styles.tagline}>{config.tagline}</Text>
             </View>
-            <TouchableOpacity onPress={handleVoice} style={styles.iconBtn} hitSlop={8} accessibilityLabel="Switch to voice">
-              <Ionicons name="mic-outline" size={26} color="#D4DE95" />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={handleResetChat} style={styles.iconBtn} hitSlop={8}>
-              <MaterialCommunityIcons name="restore" size={26} color="#B9C096" />
-            </TouchableOpacity>
+            <View style={[styles.headerSlot, { alignItems: 'flex-end' }]}>
+              <TouchableOpacity
+                onPress={handleResetChat}
+                style={styles.iconBtn}
+                hitSlop={8}
+                accessibilityLabel="Reset conversation"
+              >
+                <MaterialCommunityIcons name="restore" size={26} color="#B9C096" />
+              </TouchableOpacity>
+            </View>
           </View>
 
           <TouchableOpacity
@@ -224,9 +233,19 @@ export default function ChatScreen() {
               blurOnSubmit={false}
               multiline
             />
-            <TouchableOpacity style={chatStyles.sendBtn} onPress={handleSend} disabled={loadingAI}>
-              <MaterialCommunityIcons name="send" size={26} style={{ left: 2 }} color="#232323" />
-            </TouchableOpacity>
+            {input.trim().length === 0 ? (
+              <TouchableOpacity
+                style={chatStyles.micBtn}
+                onPress={handleVoice}
+                accessibilityLabel="Switch to voice"
+              >
+                <Ionicons name="mic-outline" size={24} color="#D4DE95" />
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity style={chatStyles.sendBtn} onPress={handleSend} disabled={loadingAI}>
+                <MaterialCommunityIcons name="send" size={26} style={{ left: 2 }} color="#232323" />
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </KeyboardAvoidingView>
@@ -250,6 +269,7 @@ const styles = {
   container: { flex: 1, paddingHorizontal: 20, paddingTop: 8 },
   headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   iconBtn: { padding: 6 },
+  headerSlot: { width: 44, justifyContent: 'center' },
   headerTitleWrap: { flex: 1, alignItems: 'center' },
   title: { color: '#fff', fontSize: 24, fontWeight: '700' },
   tagline: { color: '#a1a1aa', fontSize: 12, marginTop: 2 },

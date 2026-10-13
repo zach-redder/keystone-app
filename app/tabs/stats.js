@@ -1,23 +1,13 @@
-import React, { useState, useCallback } from 'react';
+import React from 'react';
 import { View, Text, SafeAreaView, ScrollView } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import globalStyles from '../../styles/global';
 import homeStyles from '../../styles/home';
 import StreakCounter from '../../components/cards/StreakCounter';
+import HeaderStreakShare from '../../components/common/HeaderStreakShare';
 import { KEY_CATEGORIES } from '../../constants/keyCategories';
-import {
-  fetchChatPairCountsByMode,
-  fetchTotalAIChatMessagePairCount,
-  fetchCurrentWeekAIChatMessagePairCount,
-} from '../../services/features/affirmationService';
-import { fetchIdentityKeys } from '../../services/user/userKeys';
-import {
-  getUserDayStreak,
-  getUserLongestStreak,
-  getUserActiveDays,
-  getUserDailyActivityCounts,
-} from '../../services/user/userPreferences';
+import useUserStats from '../../hooks/useUserStats';
+import useIdentityKeys from '../../hooks/useIdentityKeys';
 
 const WEEKS_SHOWN = 8;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -36,44 +26,11 @@ const buildKeysAddedByWeek = (keys) => {
 };
 
 export default function StatsScreen() {
-  const [loaded, setLoaded] = useState(false);
-  const [dayStreak, setDayStreak] = useState(0);
-  const [longestStreak, setLongestStreak] = useState(0);
-  const [activeDays, setActiveDays] = useState([]);
-  const [dailyActivityCounts, setDailyActivityCounts] = useState({});
-  const [weekChats, setWeekChats] = useState(0);
-  const [totalChats, setTotalChats] = useState(0);
-  const [modeCounts, setModeCounts] = useState({ affirm: 0, question: 0 });
-  const [keys, setKeys] = useState([]);
+  const { stats, loaded: statsLoaded } = useUserStats();
+  const { keys, loaded: keysLoaded } = useIdentityKeys();
+  const loaded = statsLoaded && keysLoaded;
 
-  useFocusEffect(
-    useCallback(() => {
-      let active = true;
-      (async () => {
-        const [streak, longest, days, daily, week, total, modes, userKeys] = await Promise.all([
-          getUserDayStreak().catch(() => 0),
-          getUserLongestStreak().catch(() => 0),
-          getUserActiveDays().catch(() => []),
-          getUserDailyActivityCounts().catch(() => ({})),
-          fetchCurrentWeekAIChatMessagePairCount(),
-          fetchTotalAIChatMessagePairCount(),
-          fetchChatPairCountsByMode(),
-          fetchIdentityKeys().catch(() => []),
-        ]);
-        if (!active) return;
-        setDayStreak(streak);
-        setLongestStreak(longest);
-        setActiveDays(days);
-        setDailyActivityCounts(daily);
-        setWeekChats(week);
-        setTotalChats(total);
-        setModeCounts(modes);
-        setKeys(userKeys || []);
-        setLoaded(true);
-      })();
-      return () => { active = false; };
-    }, [])
-  );
+  const { dayStreak, longestStreak, activeDays, dailyCounts: dailyActivityCounts, total: totalChats, week: weekChats, modeCounts } = stats;
 
   const keysPerCategory = KEY_CATEGORIES.map(item => ({
     label: item.label,
@@ -92,19 +49,41 @@ export default function StatsScreen() {
       <View style={globalStyles.pageBg}>
         <View style={globalStyles.headerRow}>
           <Text style={globalStyles.header}>Stats</Text>
+          <HeaderStreakShare dayStreak={dayStreak} longestStreak={longestStreak} />
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
+          <View style={homeStyles.statsCard}>
+            <Text style={homeStyles.statsCardTitle}>Between certainty and doubt</Text>
+            <Text style={homeStyles.statsCardSubtitle}>
+              How you split your reflection: affirming who you are vs. questioning who you are becoming.
+            </Text>
+            {modeTotal === 0 ? (
+              <Text style={homeStyles.emptyText}>Have a conversation to see your balance.</Text>
+            ) : (
+              <>
+                <View style={homeStyles.balanceTrack}>
+                  <View style={[homeStyles.balanceAffirm, { width: `${affirmShare}%` }]} />
+                  <View style={[homeStyles.balanceQuestion, { width: `${100 - affirmShare}%` }]} />
+                </View>
+                <View style={homeStyles.balanceLegend}>
+                  <Text style={homeStyles.balanceLegendText}>Affirm {modeCounts.affirm}</Text>
+                  <Text style={homeStyles.balanceLegendText}>Question {modeCounts.question}</Text>
+                </View>
+              </>
+            )}
+          </View>
+
           <StreakCounter activeDays={activeDays} dailyActivityCounts={dailyActivityCounts} />
 
           <View style={homeStyles.analyticsRow}>
             <View style={homeStyles.analyticsCard}>
               <View style={homeStyles.analyticsHeader}>
                 <Ionicons name="flame" size={20} color="#D4DE95" />
-                <Text style={homeStyles.analyticsCardTitle}>Streak</Text>
+                <Text style={homeStyles.analyticsCardTitle}>Longest streak</Text>
               </View>
-              <Text style={homeStyles.analyticsNumber}>{dayStreak}</Text>
-              <Text style={homeStyles.analyticsLabel}>best {longestStreak}</Text>
+              <Text style={homeStyles.analyticsNumber}>{longestStreak}</Text>
+              <Text style={homeStyles.analyticsLabel}>days</Text>
             </View>
             <View style={homeStyles.analyticsCard}>
               <View style={homeStyles.analyticsHeader}>
@@ -133,27 +112,6 @@ export default function StatsScreen() {
               <Text style={homeStyles.analyticsNumber}>{keys.length}</Text>
               <Text style={homeStyles.analyticsLabel}>{totalChats} chats total</Text>
             </View>
-          </View>
-
-          <View style={homeStyles.statsCard}>
-            <Text style={homeStyles.statsCardTitle}>Between certainty and doubt</Text>
-            <Text style={homeStyles.statsCardSubtitle}>
-              How you split your reflection: affirming who you are vs. questioning who you are becoming.
-            </Text>
-            {modeTotal === 0 ? (
-              <Text style={homeStyles.emptyText}>Have a conversation to see your balance.</Text>
-            ) : (
-              <>
-                <View style={homeStyles.balanceTrack}>
-                  <View style={[homeStyles.balanceAffirm, { width: `${affirmShare}%` }]} />
-                  <View style={[homeStyles.balanceQuestion, { width: `${100 - affirmShare}%` }]} />
-                </View>
-                <View style={homeStyles.balanceLegend}>
-                  <Text style={homeStyles.balanceLegendText}>Affirm {modeCounts.affirm}</Text>
-                  <Text style={homeStyles.balanceLegendText}>Question {modeCounts.question}</Text>
-                </View>
-              </>
-            )}
           </View>
 
           <View style={homeStyles.statsCard}>

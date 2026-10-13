@@ -1,3 +1,4 @@
+import { getSessionUser } from '../services/auth/currentUser';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { getSuperwallImplementation } from '../utils/superwallCompat';
 import { supabase } from '../lib/supabase';
@@ -90,21 +91,17 @@ export const SuperwallContextProvider = ({ children }) => {
   useEffect(() => {
     const initializeSuperwallUser = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user } } = await getSessionUser();
         
         if (user) {
-          // Identify user with Superwall
-          await identifyUser(user.id, {
-            email: user.email,
-          });
-
-          // Check for IAP migration
-          await migrateFromIAPToSuperwall();
-
-          // Self-heal an expired comp grant (referral code / free-month offer) as
-          // early as possible each session, rather than waiting for the first
-          // feature-gate check to trigger it.
-          await checkUserProStatus();
+          // These are independent, so run them together instead of one after another.
+          // checkUserProStatus self-heals an expired comp grant (referral code / free-month
+          // offer) early each session, and warms the cache every feature gate reads.
+          await Promise.all([
+            identifyUser(user.id, { email: user.email }),
+            migrateFromIAPToSuperwall(),
+            checkUserProStatus(),
+          ]);
 
           // Get subscription status
           await refreshSubscriptionStatus();

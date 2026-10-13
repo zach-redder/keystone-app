@@ -1,3 +1,4 @@
+import { getSessionUser } from '../auth/currentUser';
 import { supabase } from '../../lib/supabase'
 
 export interface Message {
@@ -13,7 +14,7 @@ export const submitMessage = async (type: 'contact' | 'report', subject: string,
   const {
     data: { user },
     error: authError,
-  } = await supabase.auth.getUser()
+  } = await getSessionUser()
   if (authError || !user) throw new Error('User not authenticated')
 
   const { data, error } = await supabase.from('messages').insert([
@@ -32,7 +33,7 @@ export const getUserMessages = async () => {
   const {
     data: { user },
     error: authError,
-  } = await supabase.auth.getUser()
+  } = await getSessionUser()
   if (authError || !user) throw new Error('User not authenticated')
 
   const { data, error } = await supabase

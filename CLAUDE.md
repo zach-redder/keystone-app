@@ -10,7 +10,7 @@ Keystone is an Expo/React Native self-reflection companion. Users define "identi
 
 - Expo ~54, Expo Router ~6 (file-based routing), React Native 0.81, React 19
 - TypeScript for `services/`, JavaScript for most `app/`/`components/` screens
-- Supabase (`@supabase/supabase-js`) — auth, Postgres, `handle-subscription` + `generate-daily-message` Edge Functions
+- Supabase (`@supabase/supabase-js`) — auth, Postgres, `handle-subscription` Edge Function
 - Superwall (`expo-superwall`) — subscriptions
 - EAS Build for native builds
 
@@ -45,7 +45,7 @@ There is no `lint` script. **Voice mode cannot run in Expo Go**: it uses `react-
 - `/contexts` — React Context providers for global state (`SuperwallContext.js`)
 - `/services` — business logic, split into `auth/`, `features/`, `integrations/`, `subscription/`, `user/`
 - `/lib` — `apiConfig.ts` (keystone-ai-service base URL) and `supabase.ts` (client config)
-- `/supabase/functions` — `handle-subscription` (Superwall webhook receiver) and `generate-daily-message` (cron that calls keystone-ai-service) Edge Functions, deployed to the shared Supabase project (see Subscriptions below)
+- `/supabase/functions` — `handle-subscription` (Superwall webhook receiver) Edge Function, deployed to the shared Supabase project (see Subscriptions below)
 
 ### Navigation Flow
 `app/index.js` computes a status via `checkUserStatus()` (`services/auth/auth.ts`) — one of `no_session`, `needs_email_confirmation`, `needs_onboarding`, `needs_quiz`, `needs_user_info`, `needs_referral_code`, `complete`, `error` — by inspecting the Supabase session, `users` table, and AsyncStorage onboarding markers, then redirects accordingly. This status machine is the core navigation pattern; when adding a new onboarding step, it usually needs a new status here plus a corresponding redirect target.
@@ -83,18 +83,18 @@ There is no raw-IAP fallback anymore. The old `supabase/functions/iap-verify-app
 ### State Management
 - React Context (`SuperwallContext`) for subscription state; otherwise local `useState`/`useEffect` per screen.
 - AsyncStorage for onboarding progress, cached user info, offline subscription persistence.
-- Supabase is the source of truth for authenticated/server state — no React Query/SWR cache layer.
+- Supabase is the source of truth for authenticated/server state. TanStack Query (`lib/queryClient.ts`, provider in `components/common/QueryProvider.js`) caches it and persists the cache to AsyncStorage, so launches paint cached data and revalidate in the background. Shared queries: `userStats` (`hooks/useUserStats`), `identityKeys`, `proStatus`. Anything that writes the underlying data must invalidate the matching key. The cache is cleared when the signed-in user changes.
 
 ### Key Services
 - **`services/voice/`** — `realtimeSession.ts` is the only file that talks WebRTC: it asks `keystone-ai-service` for a short-lived key (`POST /voice/session`), connects straight to OpenAI, and primes the conversation with recent history. `voiceEvents.ts` (event stream to UI state, caption and paired turns) and `voiceStats.ts` (loudness from WebRTC stats) are pure and unit-tested. Finished turns are saved with `insertAIChatMessagePair`, so voice and text share one thread per mode and Review keys works on spoken conversations.
 - **`components/voice/AIOrb.js`** — Skia shader orb (`orbShader.js`); mic and AI levels are Reanimated shared values, so it animates on the UI thread. If the shader fails to compile it falls back to a plain circle. The shader can be checked off-device with `canvaskit-wasm`'s `RuntimeEffect.Make`.
 - **`services/auth/auth.ts`** — sign up/in (email, Google, Apple), `checkUserStatus()` routing, account deletion (cascades across ~13 Supabase tables).
-- **`services/features/reminderService`** — push notification scheduling (rescheduled on foreground + local midnight).
+- **`services/features/reminderService`** — schedules the next 7 days of local daily-message notifications from the fixed list in `constants/dailyMessages.ts`, chosen by recent Affirm/Question usage (rescheduled on foreground + local midnight).
 - **`services/user/userKeys.ts`** — identity key CRUD. Category list, labels and pro-only flags live in `constants/keyCategories.js`; don't duplicate them.
 - **`services/subscription/subscriptionService.ts`** — sole owner of pro/free status logic: `checkUserProStatus`, `upgradeUserToPro`, `downgradeUserToFree`, `getUserSubscriptionDetails`, `handleSuperwallPurchaseComplete`, `migrateFromIAPToSuperwall`. This used to be split three ways across `auth.ts`, `referralService.ts`, and a now-deleted `superwallService.ts` — consolidate any new pro-status logic here too rather than adding a fourth location.
 - **`services/integrations/deepLinkService.ts`** — `handleReferralDeepLink`, called from `_layout.js`'s central listener for `?ref=CODE` links.
 - **`utils/superwallCompat.js`** — mock Superwall hooks for Expo Go; switches to the real SDK automatically in dev/production builds. The same "environment-aware compatibility shim" pattern is used in `services/auth/auth.ts` for lazily loading `@react-native-google-signin` in a try/catch, so it doesn't crash in environments without the native module.
-- **`services/features/affirmationService.ts` / `keyProposalService.ts`** — call `keystone-ai-service`'s `/generate-ai-message` and `/propose-key-changes` via `lib/apiConfig.ts`'s `BASE_URL`, sending `Authorization: Bearer <access token>`. Chat rows in `ai_chat_logs` carry a `mode` and a `reviewed_at` (set after a key review). The backend only proposes; the app applies accepted changes.
+- **`services/features/affirmationService.ts` / `keyProposalService.ts`** — call `keystone-ai-service`'s `/generate-ai-message` and `/propose-key-changes` via `lib/apiConfig.ts`'s `BASE_URL`, sending `Authorization: Bearer <access token>`. Chat rows in `ai_chat_logs` carry a `mode`, a `reviewed_at` (set after a key review) and a `cleared_at`: "Reset chat" only sets `cleared_at`, because streaks, the calendar and stats are all derived from these rows. Reads of the conversation filter `cleared_at IS NULL`; stats never do. Stats come from the `get_user_stats` RPC (falls back to per-query reads if it is missing). Use `getSessionUser()` (`services/auth/currentUser.ts`), not `supabase.auth.getUser()`, which is a network call. The backend only proposes; the app applies accepted changes.
 
 ## Environment Variables
 
@@ -110,7 +110,7 @@ There is no raw-IAP fallback anymore. The old `supabase/functions/iap-verify-app
 
 ## Related Repos
 
-- **`../keystone-ai-service`** — Python/FastAPI backend called via `EXPO_PUBLIC_API_URL` for AI chat and key-change proposals. Shares the same Supabase project/`users` table. This repo's `supabase/functions/generate-daily-message/` Edge Function calls that service's `/generate-daily-message` on a schedule.
+- **`../keystone-ai-service`** — Python/FastAPI backend called via `EXPO_PUBLIC_API_URL` for AI chat and key-change proposals. Shares the same Supabase project/`users` table.
 - **`../keystone-landingpage`** — marketing/waitlist site. Shares the same Supabase auth project; the `keystone://` deep-link scheme is how the landing page's `/verify` route hands email-confirmation, email-change, and password-reset callbacks back to this app (`keystone://emailconfirmation`, `keystone://signin`, `keystone://resetpassword`, each carrying the actual Supabase session payload as a query string or hash fragment — see Deep Linking above).
 
 ## Gotchas / Known Gaps
@@ -118,8 +118,8 @@ There is no raw-IAP fallback anymore. The old `supabase/functions/iap-verify-app
 - **Tests cover only the pure voice logic; no CI.** Orb visuals, audio levels and the live WebRTC session can only be verified on a device. iOS deploys are automated at the infrastructure level instead: an EAS "build trigger" (Expo dashboard → Project Settings → GitHub) watches pushes to `main` and runs `eas build --profile production` then `eas submit` automatically, using the App Store Connect API key stored in EAS's credential service — no GitHub Actions workflow, no repo secrets. `eas.json`'s `submit.production` block is intentionally empty to make it resolve credentials that way.
 - **`app.config.js` has a stale `// Superwall removed` comment** even though Superwall is still fully wired into the app — don't trust that comment as documentation.
 - **Dead tables remain.** `action_logs`, `user_alignment_scores`, `weekly_alignment_snapshots`, `alignment_score_changes` and the `users` score columns are no longer used by the app. Account deletion still clears them. Dropping them is a deliberate, separate step.
-- **Schema changes are hand-applied.** `supabase/migrations/*.sql` is not run by any tool; apply it to the right Supabase project before shipping the matching app build. The `ai_chat_logs` `mode`/`reviewed_at` migration must be live before this build, or chat reads fail.
-- **Voice is Pro-only and capped server-side** (30 min/day, 10 min/session; the service reads `users.is_pro` itself and tracks `voice_sessions`). The model id, transcription model and the `realtime/calls` URL come from OpenAI docs that disagree with each other; run `keystone-ai-service/scripts/check_realtime.py` with a real key before shipping.
+- **Schema changes are hand-applied.** `supabase/migrations/*.sql` is not run by any tool; apply it to the right Supabase project before shipping the matching app build. The `ai_chat_logs` `mode`/`reviewed_at` and `cleared_at` migrations must be live before this build, or chat reads fail. `get_user_stats` (20261014000100) is optional but makes stats much faster.
+- **Voice is Pro-only and capped server-side by messages** (50 user messages/day, with a 30 min per-session safety net; the app reports each finished turn to `POST /voice/session/message`, and the service reads `users.is_pro` itself and tracks `voice_sessions.message_count`). Each persona has its own OpenAI voice: defaults are mapped in `services/voice/personaVoice.ts`, custom personas store a `voice` column. OpenAI has no endpoint listing voices, so that list is pinned in both repos and must be kept in sync. The `20261015*` migrations must be applied before this build. The model id, transcription model and the `realtime/calls` URL come from OpenAI docs that disagree with each other; run `keystone-ai-service/scripts/check_realtime.py` with a real key before shipping.
 - **Version lives only in `app.json`** (`expo.version`, now 2.0.0; keep `package.json` in sync). Build numbers come from EAS (`appVersionSource: remote`); don't set `buildNumber`/`versionCode`. Every push to `main` builds and submits to the stores, so work on a branch.
 - **Older app builds break against the new AI service** (no bearer token → 401). Ship the app build before enforcing, or accept 401s for old builds.
 - **Universal links are only half-configured** — `app.json` has `associatedDomains`/App Links config pointed at `thekeystoneapp.com`, but the landing page's `.well-known/apple-app-site-association` and `assetlinks.json` still have placeholder values for the Apple Team ID and Android signing-cert fingerprint. Custom-scheme (`keystone://`) links work regardless; HTTPS universal links don't yet.

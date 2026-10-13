@@ -1,7 +1,9 @@
+import { getSessionUser } from '../auth/currentUser';
 import { supabase } from '../../lib/supabase';
 import { BASE_URL } from '../../lib/apiConfig';
 import { fetchIdentityKeys } from '../user/userKeys';
 import { getPreferredAiPersona } from '../user/userPreferences';
+import { queryClient, queryKeys } from '../../lib/queryClient';
 import { checkUserProStatus } from '../subscription/subscriptionService';
 
 export type ChatMode = 'affirm' | 'question';
@@ -81,13 +83,14 @@ export const generateAIMessage = async (mode: ChatMode, message: string, message
 
 // Each mode keeps its own thread: rows are tagged with `mode`, and flattened here into a message array.
 export const fetchAIChatMessages = async (mode: ChatMode): Promise<ChatMessageWithRows[]> => {
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  const { data: { user }, error: userError } = await getSessionUser();
   if (userError || !user) return [];
   const { data, error } = await supabase
     .from('ai_chat_logs')
     .select('id, user_message, assistant_message, order')
     .eq('user_id', user.id)
     .eq('mode', mode)
+    .is('cleared_at', null)
     .order('order', { ascending: true });
   if (error || !data) return [];
 
@@ -105,7 +108,7 @@ export const fetchAIChatMessages = async (mode: ChatMode): Promise<ChatMessageWi
 
 // Rows the user hasn't run through "Review keys" yet, oldest first
 export const fetchUnreviewedMessages = async (mode: ChatMode): Promise<ChatMessageWithRows[]> => {
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  const { data: { user }, error: userError } = await getSessionUser();
   if (userError || !user) return [];
   const { data, error } = await supabase
     .from('ai_chat_logs')
@@ -113,6 +116,7 @@ export const fetchUnreviewedMessages = async (mode: ChatMode): Promise<ChatMessa
     .eq('user_id', user.id)
     .eq('mode', mode)
     .is('reviewed_at', null)
+    .is('cleared_at', null)
     .order('order', { ascending: true });
   if (error || !data) return [];
 
@@ -142,12 +146,13 @@ export const markChatRowsReviewed = async (rowIds: string[]): Promise<boolean> =
 
 // Insert a new user/assistant message pair as a new row
 export const insertAIChatMessagePair = async (mode: ChatMode, userMsg: ChatMessage, aiMsg: ChatMessage) => {
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  const { data: { user }, error: userError } = await getSessionUser();
   if (userError || !user) return false;
   const { data: orderData } = await supabase
     .from('ai_chat_logs')
     .select('order')
     .eq('user_id', user.id)
+    .eq('mode', mode)
     .order('order', { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -163,13 +168,14 @@ export const insertAIChatMessagePair = async (mode: ChatMode, userMsg: ChatMessa
         mode,
       },
     ]);
+  if (!insertError) queryClient.invalidateQueries({ queryKey: queryKeys.userStats });
   return !insertError;
 };
 
 // Returns the number of AI chat message pairs the current user has created today (local time)
 export const fetchTodaysAIChatMessagePairCount = async (): Promise<number> => {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await getSessionUser();
     if (!user) return 0;
 
     // Get today's date in local time
@@ -202,7 +208,7 @@ export const fetchTodaysAIChatMessagePairCount = async (): Promise<number> => {
 // Returns the total number of AI chat message pairs for the current user
 export const fetchTotalAIChatMessagePairCount = async (): Promise<number> => {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await getSessionUser();
     if (!user) return 0;
 
     const { count, error } = await supabase
@@ -222,21 +228,26 @@ export const fetchTotalAIChatMessagePairCount = async (): Promise<number> => {
   }
 };
 
-// Delete all AI chat logs for the current user in one mode
-export const deleteAllAIChatMessages = async (mode: ChatMode) => {
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
+// "Clear" hides a mode's conversation instead of deleting it: streaks, the activity calendar and
+// stats are derived from these rows, so they have to survive a reset.
+export const clearAIChatConversation = async (mode: ChatMode) => {
+  const { data: { user }, error: userError } = await getSessionUser();
   if (userError || !user) return false;
   const { error } = await supabase
     .from('ai_chat_logs')
-    .delete()
+    .update({ cleared_at: new Date().toISOString() })
     .eq('user_id', user.id)
-    .eq('mode', mode);
+    .eq('mode', mode)
+    .is('cleared_at', null);
+  if (error) {
+    console.error('Error clearing chat conversation:', error);
+  }
   return !error;
 };
 
 export const fetchCurrentWeekAIChatMessagePairCount = async (): Promise<number> => {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await getSessionUser();
     if (!user) return 0;
 
     // Get the start of the current week (Sunday)
@@ -274,7 +285,7 @@ export const fetchCurrentWeekAIChatMessagePairCount = async (): Promise<number> 
 export const fetchChatPairCountsByMode = async (): Promise<Record<ChatMode, number>> => {
   const counts: Record<ChatMode, number> = { affirm: 0, question: 0 };
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await getSessionUser();
     if (!user) return counts;
 
     await Promise.all((Object.keys(counts) as ChatMode[]).map(async (mode) => {

@@ -1,4 +1,6 @@
+import { getSessionUser } from '../auth/currentUser';
 import { supabase } from '../../lib/supabase';
+import { queryClient, queryKeys } from '../../lib/queryClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Single owner of pro/free subscription status. Previously this logic was split
@@ -6,19 +8,23 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // services/integrations/superwallService.ts, each independently reading/writing
 // users.is_pro / subscription_source.
 
-export const checkUserProStatus = async () => {
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
+const PRO_STATUS_STALE_MS = 2 * 60 * 1000;
+
+// Throws on lookup failures so a network blip is never cached as "not Pro"
+const loadProStatus = async (): Promise<boolean> => {
+    const { data: { user } } = await getSessionUser();
 
     if (!user) {
       return false;
     }
 
-    const { data: userData } = await supabase
+    const { data: userData, error } = await supabase
       .from('users')
       .select('is_pro, pro_expires_at, subscription_source')
       .eq('id', user.id)
       .single();
+
+    if (error) throw error;
 
     if (!userData?.is_pro) {
       return false;
@@ -39,18 +45,29 @@ export const checkUserProStatus = async () => {
     }
 
     return true;
+};
+
+export const checkUserProStatus = async (): Promise<boolean> => {
+  try {
+    return await queryClient.fetchQuery({
+      queryKey: queryKeys.proStatus,
+      queryFn: loadProStatus,
+      staleTime: PRO_STATUS_STALE_MS,
+    });
   } catch (error) {
     console.error('Error checking user pro status:', error);
     return false;
   }
 };
 
+const invalidateProStatus = () => queryClient.invalidateQueries({ queryKey: queryKeys.proStatus });
+
 export const upgradeUserToPro = async (userId?: string) => {
   try {
     const {
       data: { user },
       error: authError,
-    } = await supabase.auth.getUser();
+    } = await getSessionUser();
 
     if (authError || !user) {
       throw new Error('User not authenticated');
@@ -67,6 +84,7 @@ export const upgradeUserToPro = async (userId?: string) => {
       throw updateError;
     }
 
+    await invalidateProStatus();
     console.log('Successfully upgraded user to pro:', targetUserId);
     return true;
   } catch (error) {
@@ -80,7 +98,7 @@ export const downgradeUserToFree = async (userId?: string) => {
     const {
       data: { user },
       error: authError,
-    } = await supabase.auth.getUser();
+    } = await getSessionUser();
 
     if (authError || !user) {
       throw new Error('User not authenticated');
@@ -97,6 +115,7 @@ export const downgradeUserToFree = async (userId?: string) => {
       throw updateError;
     }
 
+    await invalidateProStatus();
     console.log('Successfully downgraded user to free:', targetUserId);
     return true;
   } catch (error) {
@@ -108,7 +127,7 @@ export const downgradeUserToFree = async (userId?: string) => {
 // Handle purchase completion and update user's pro status
 export const handleSuperwallPurchaseComplete = async (transactionData: any) => {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await getSessionUser();
 
     if (!user) {
       console.error('No authenticated user for purchase completion');
@@ -153,6 +172,7 @@ export const handleSuperwallPurchaseComplete = async (transactionData: any) => {
     }
 
     await AsyncStorage.removeItem('pending_subscription');
+    await invalidateProStatus();
     console.log('Successfully processed Superwall purchase completion');
     return true;
   } catch (error) {
@@ -166,10 +186,16 @@ export const handleSuperwallPurchaseComplete = async (transactionData: any) => {
 // there used to be a second, duplicate inline copy in auth.ts's post-signup flow.
 export const migrateFromIAPToSuperwall = async () => {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await getSessionUser();
 
     if (!user) {
       return false;
+    }
+
+    // One-time per account on this device: it used to cost two network calls on every launch
+    const doneKey = `iap_migration_done_${user.id}`;
+    if (await AsyncStorage.getItem(doneKey)) {
+      return true;
     }
 
     const { data: userData } = await supabase
@@ -194,6 +220,7 @@ export const migrateFromIAPToSuperwall = async () => {
 
     // Clear any pending IAP subscription data
     await AsyncStorage.removeItem('pending_subscription');
+    await AsyncStorage.setItem(doneKey, '1');
 
     return true;
   } catch (error) {
@@ -213,7 +240,7 @@ export const getUserSubscriptionDetails = async (): Promise<{
   expiresAt?: string;
 }> => {
   try {
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const { data: { user }, error: userError } = await getSessionUser();
     if (userError || !user) {
       return {
         isPro: false,

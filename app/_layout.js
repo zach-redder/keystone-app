@@ -11,6 +11,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { SuperwallContextProvider } from '../contexts/SuperwallContext';
 import { getSuperwallImplementation } from '../utils/superwallCompat';
 import SplashScreen from './SplashScreen';
+import QueryProvider from '../components/common/QueryProvider';
 
 // Get Superwall components (mock in Expo Go, real in production)
 const { SuperwallProvider, SuperwallLoading, SuperwallLoaded } = getSuperwallImplementation();
@@ -177,9 +178,11 @@ export default function RootLayout() {
         <SplashScreen />
       </SuperwallLoading>
       <SuperwallLoaded>
-        <SuperwallContextProvider>
-          <RootShell />
-        </SuperwallContextProvider>
+        <QueryProvider>
+          <SuperwallContextProvider>
+            <RootShell />
+          </SuperwallContextProvider>
+        </QueryProvider>
       </SuperwallLoaded>
     </SuperwallProvider>
   );

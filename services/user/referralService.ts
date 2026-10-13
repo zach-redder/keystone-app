@@ -1,3 +1,4 @@
+import { queryClient, queryKeys } from '../../lib/queryClient';
 import { supabase } from '../../lib/supabase';
 import { upgradeUserToPro } from '../subscription/subscriptionService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -244,7 +245,8 @@ export const redeemReferralCode = async (code: string): Promise<{ success: boole
         .from('users')
         .update(updateData)
         .eq('id', user.id);
-      
+      await queryClient.invalidateQueries({ queryKey: queryKeys.proStatus });
+
       // 5. Store redemption info locally for quick access
       await AsyncStorage.setItem('referral_redemption', JSON.stringify({
         code: upperCode,

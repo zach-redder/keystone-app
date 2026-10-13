@@ -1,3 +1,4 @@
+import { getSessionUser } from '../auth/currentUser';
 import { supabase } from '../../lib/supabase';
 
 export interface CustomPersonality {
@@ -6,13 +7,14 @@ export interface CustomPersonality {
   name: string;
   description: string;
   icon: string;
+  voice?: string | null;
   created_at?: string;
   isCustom?: boolean;
 }
 
 export const fetchCustomPersonalities = async (): Promise<CustomPersonality[]> => {
   try {
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const { data: { user }, error: userError } = await getSessionUser();
     
     if (userError || !user) {
       console.log('User not authenticated, returning empty custom personalities');
@@ -45,9 +47,10 @@ export const createCustomPersonality = async (personality: {
   name: string;
   description: string;
   icon: string;
+  voice?: string;
 }): Promise<CustomPersonality | null> => {
   try {
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const { data: { user }, error: userError } = await getSessionUser();
     
     if (userError || !user) {
       console.log('User not authenticated, cannot create custom personality');
@@ -62,6 +65,7 @@ export const createCustomPersonality = async (personality: {
           name: personality.name,
           description: personality.description,
           icon: personality.icon,
+          voice: personality.voice ?? null,
         }
       ])
       .select()
@@ -84,7 +88,7 @@ export const createCustomPersonality = async (personality: {
 
 export const deleteCustomPersonality = async (personalityId: string): Promise<boolean> => {
   try {
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const { data: { user }, error: userError } = await getSessionUser();
     
     if (userError || !user) {
       console.log('User not authenticated, cannot delete custom personality');
@@ -111,10 +115,10 @@ export const deleteCustomPersonality = async (personalityId: string): Promise<bo
 
 export const updateCustomPersonality = async (
   personalityId: string,
-  updates: Partial<{ name: string; description: string; icon: string }>
+  updates: Partial<{ name: string; description: string; icon: string; voice: string | null }>
 ): Promise<boolean> => {
   try {
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const { data: { user }, error: userError } = await getSessionUser();
     
     if (userError || !user) {
       console.log('User not authenticated, cannot update custom personality');

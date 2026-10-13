@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, SafeAreaView, TouchableOpacity, Share } from 'react-native';
+import { View, Text, SafeAreaView, TouchableOpacity, Share, useWindowDimensions } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,21 +15,22 @@ import StreakInfoModal from '../../components/modals/StreakInfoModal';
 import FreeMonthOfferModal from '../../components/modals/FreeMonthOfferModal';
 import { CHAT_MODES, DEFAULT_CHAT_MODE, isChatMode } from '../../constants/chatModes';
 import { getAppStoreLink, APP_NAME } from '../../constants/appStore';
-import { fetchTodayReminder, setupReminderNotifications } from '../../services/features/reminderService';
-import { getUserDayStreak, getUserLongestStreak } from '../../services/user/userPreferences';
+import useUserStats from '../../hooks/useUserStats';
 import { checkForStreakMilestone, markMilestoneAsShown } from '../../services/features/streakRewardsService';
 import { shouldShowFreeMonthOffer, markFreeMonthOfferShown } from '../../services/user/freeMonthOfferService';
 import { checkUserProStatus } from '../../services/subscription/subscriptionService';
 
 const SELECTED_MODE_STORAGE_KEY = 'home_selected_chat_mode';
-const ORB_SIZE = 280;
+const MAX_ORB_SIZE = 330;
+const ORB_WIDTH_RATIO = 0.85;
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  const orbSize = Math.min(MAX_ORB_SIZE, width * ORB_WIDTH_RATIO);
   const [mode, setMode] = useState(DEFAULT_CHAT_MODE);
   const [dayStreak, setDayStreak] = useState(0);
   const [longestStreak, setLongestStreak] = useState(0);
-  const [dailyReminder, setDailyReminder] = useState('');
   const [streakRewardModalVisible, setStreakRewardModalVisible] = useState(false);
   const [currentMilestone, setCurrentMilestone] = useState(null);
   const [streakInfoModalVisible, setStreakInfoModalVisible] = useState(false);
@@ -51,8 +52,6 @@ export default function HomeScreen() {
     useCallback(() => {
       checkFreeMonthOffer();
       loadStreaks();
-      loadDailyReminder();
-      setupReminderNotifications().catch(console.error);
     }, [])
   );
 
@@ -67,40 +66,22 @@ export default function HomeScreen() {
     }
   };
 
-  const loadStreaks = async () => {
-    try {
-      const streak = await getUserDayStreak();
-      setDayStreak(streak);
-
-      if (streak > 0) {
-        const milestone = await checkForStreakMilestone(streak);
+  // Celebrate a streak milestone the first time the cached or fresh streak reaches it
+  useEffect(() => {
+    if (!statsLoaded || dayStreak <= 0) return;
+    (async () => {
+      try {
+        const milestone = await checkForStreakMilestone(dayStreak);
         if (milestone) {
           setCurrentMilestone(milestone);
           setStreakRewardModalVisible(true);
           await markMilestoneAsShown(milestone.days);
         }
+      } catch (error) {
+        console.error('Error checking streak milestone:', error);
       }
-    } catch (error) {
-      console.error('Error loading day streak:', error);
-      setDayStreak(0);
-    }
-
-    try {
-      setLongestStreak(await getUserLongestStreak());
-    } catch (error) {
-      console.error('Error loading longest streak:', error);
-      setLongestStreak(0);
-    }
-  };
-
-  const loadDailyReminder = async () => {
-    try {
-      setDailyReminder(await fetchTodayReminder());
-    } catch (error) {
-      console.error('Error loading daily reminder:', error);
-      setDailyReminder('');
-    }
-  };
+    })();
+  }, [dayStreak, statsLoaded]);
 
   const handleSelectMode = async (nextMode) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -166,10 +147,6 @@ export default function HomeScreen() {
         </View>
 
         <View style={homeStyles.bubbleScreen}>
-          {dailyReminder ? (
-            <Text style={homeStyles.bubbleReminder} numberOfLines={3}>{dailyReminder}</Text>
-          ) : null}
-
           <View style={homeStyles.modeSwitch}>
             {Object.values(CHAT_MODES).map(item => {
               const active = item.id === mode;
@@ -191,7 +168,7 @@ export default function HomeScreen() {
           <AIOrb
             mode={mode}
             state="idle"
-            size={ORB_SIZE}
+            size={orbSize}
             label={`Start a ${config.title} voice conversation`}
             onPress={handleStartVoice}
           />

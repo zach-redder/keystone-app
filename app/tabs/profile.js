@@ -1,16 +1,15 @@
 import { View, Text, SafeAreaView, TouchableOpacity, ScrollView, Linking, AppState, Alert, Platform, Share } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import * as Notifications from 'expo-notifications';
 import * as StoreReview from 'expo-store-review';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { signOutUser } from '../../services/auth/auth';
-import { fetchIdentityKeys } from '../../services/user/userKeys';
-import { getPreferredAiPersona, updateNotificationOptIn, getUserEmail, getPreferredReminderTime, getUserDayStreak, getUserLongestStreak} from '../../services/user/userPreferences';
+import { getPreferredAiPersona, updateNotificationOptIn, getUserEmail, getPreferredReminderTime} from '../../services/user/userPreferences';
 import { getUserSubscriptionDetails } from '../../services/subscription/subscriptionService';
 import { getAppStoreLink, APP_NAME } from '../../constants/appStore';
+import useUserStats from '../../hooks/useUserStats';
 import profileStyles from '../../styles/profile';
 import CommunityModal from '../../components/modals/CommunityModal';
 import ContactReportModal from '../../components/modals/ContactReportModal';
@@ -39,7 +38,6 @@ export default function ProfileScreen() {
   const [referralCodeModalVisible, setReferralCodeModalVisible] = useState(false);
   const [streakInfoModalVisible, setStreakInfoModalVisible] = useState(false);
   // Removed referralModalVisible - now using direct app sharing
-  const [keyCount, setKeyCount] = useState(0);
   const [subscriptionDetails, setSubscriptionDetails] = useState({
     isPro: false,
     subscriptionType: 'free',
@@ -55,7 +53,6 @@ export default function ProfileScreen() {
 
   useEffect(() => {
     loadSubscriptionDetails();
-    loadKeyCount();
     loadAiPersona();
     loadReminderTime();
     loadDayStreak();
@@ -90,15 +87,6 @@ export default function ProfileScreen() {
     }, [])
   );
 
-  const loadKeyCount = async () => {
-    try {
-      const keys = await fetchIdentityKeys();
-      setKeyCount(keys?.length || 0);
-    } catch (error) {
-      console.error('Error loading keys:', error);
-    }
-  };
-
   const loadAiPersona = async () => {
     try {
       let persona = await getPreferredAiPersona();
@@ -119,26 +107,6 @@ export default function ProfileScreen() {
     } catch (error) {
       console.error('Error loading reminder time:', error);
       setReminderTime('9:00 AM');
-    }
-  };
-
-  const loadDayStreak = async () => {
-    try {
-      const streak = await getUserDayStreak();
-      setDayStreak(streak);
-    } catch (error) {
-      console.error('Error loading day streak:', error);
-      setDayStreak(0);
-    }
-  };
-
-  const loadLongestStreak = async () => {
-    try {
-      const longest = await getUserLongestStreak();
-      setLongestStreak(longest);
-    } catch (error) {
-      console.error('Error loading longest streak:', error);
-      setLongestStreak(0);
     }
   };
 
@@ -349,30 +317,6 @@ export default function ProfileScreen() {
         </View>
 
         <ScrollView style={profileStyles.contentContainer} showsVerticalScrollIndicator={false}>
-          {/* Stats Section */}
-          <View style={profileStyles.statsContainer}>
-            <View style={profileStyles.statItem}>
-              <LinearGradient
-                colors={['#D4DE95', '#B9C096']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={profileStyles.statItemGlow}
-              />
-              <Text style={profileStyles.statNumber}>{keyCount}</Text>
-              <Text style={profileStyles.statLabel}>Total Keys</Text>
-            </View>
-            <View style={profileStyles.statItem}>
-              <LinearGradient
-                colors={['#D4DE95', '#B9C096']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={profileStyles.statItemGlow}
-              />
-              <Text style={profileStyles.statNumber}>{longestStreak}</Text>
-              <Text style={profileStyles.statLabel}>Best Streak</Text>
-            </View>
-          </View>
-
           {/* Account Section */}
           <View style={profileStyles.profileSection}>
             <Text style={profileStyles.sectionTitle}>Account</Text>

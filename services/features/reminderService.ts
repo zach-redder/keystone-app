@@ -1,180 +1,127 @@
 import { supabase } from '../../lib/supabase';
 import * as Notifications from 'expo-notifications';
-import { Platform } from 'react-native';
 import { SchedulableTriggerInputTypes } from 'expo-notifications';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { DailyMessageContext, pickDailyMessage } from '../../constants/dailyMessages';
 
-// Welcome reminder for new users
-const WELCOME_REMINDER = "Welcome to Keystone! You just chose to overcome internal tension and achieve your dreams.";
+const DEFAULT_REMINDER_TIME = '09:00';
+const DAYS_SCHEDULED_AHEAD = 7;
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+const RECENT_CHATS_WINDOW_DAYS = 7;
+const RECENT_CHATS_LIMIT = 500;
+const SCHEDULED_IDS_KEY = 'daily_reminder_notification_ids';
 
-// Hardcoded reminders for inactive users
-const DEFAULT_REMINDERS = [
-  "Missing you! Take a minute to check in with who you are.",
-  "Your journey towards authenticity continues. Come back and keep reflecting!",
-  "Haven't seen you in a while. Your goals are waiting for you!",
-  "Ready to get back on track? Your reflection journey misses you.",
-  "Take a moment today to reflect on your path. We're here to help!",
-];
+// The daily message is picked on the device from a fixed list, so the notification schedule
+// needs nothing from a server. Scheduling several days ahead keeps reminders arriving even if
+// the app isn't opened for a week.
 
-export const createFirstReminder = async () => {
-  try {
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) throw userError;
+const fetchMessageContext = async (userId: string): Promise<DailyMessageContext> => {
+  const since = new Date(Date.now() - RECENT_CHATS_WINDOW_DAYS * MS_PER_DAY).toISOString();
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+  const [recent, latest] = await Promise.all([
+    supabase
+      .from('ai_chat_logs')
+      .select('mode')
+      .eq('user_id', userId)
+      .gte('created_at', since)
+      .limit(RECENT_CHATS_LIMIT),
+    supabase
+      .from('ai_chat_logs')
+      .select('created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
 
-    // Create the welcome reminder
-    const { error } = await supabase
-      .from('user_daily_reminders')
-      .insert([{
-        user_id: user.id,
-        message: WELCOME_REMINDER,
-        created_at: today.toISOString()
-      }]);
+  if (recent.error) throw recent.error;
+  if (latest.error) throw latest.error;
 
-    if (error) throw error;
-    return WELCOME_REMINDER;
-  } catch (error) {
-    console.error('Error creating first reminder:', error);
-    return WELCOME_REMINDER; // Still return the welcome message even if DB insert fails
-  }
+  const rows = recent.data ?? [];
+  const affirmCount7d = rows.filter(row => row.mode === 'affirm').length;
+  const questionCount7d = rows.filter(row => row.mode === 'question').length;
+  const daysSinceLastChat = latest.data
+    ? Math.floor((Date.now() - new Date(latest.data.created_at).getTime()) / MS_PER_DAY)
+    : null;
+
+  return { affirmCount7d, questionCount7d, daysSinceLastChat };
 };
 
-export const fetchTodayReminder = async () => {
-  try {
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      console.log('User not authenticated, returning default reminder');
-      return DEFAULT_REMINDERS[0];
-    }
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const { data, error } = await supabase
-      .from('user_daily_reminders')
-      .select('message, created_at')
-      .eq('user_id', user.id)
-      .gte('created_at', today.toISOString())
-      .order('created_at', { ascending: false })
-      .limit(1);
-
-    if (error) throw error;
-
-    if (data && data.length > 0) {
-      return data[0].message;
-    } else {
-      // Return a random default reminder if no reminder exists for today
-      return DEFAULT_REMINDERS[Math.floor(Math.random() * DEFAULT_REMINDERS.length)];
-    }
-  } catch (error) {
-    console.error('Error fetching daily reminder:', error);
-    return DEFAULT_REMINDERS[0]; // Fallback to first default reminder
+const cancelPreviouslyScheduled = async () => {
+  const stored = await AsyncStorage.getItem(SCHEDULED_IDS_KEY);
+  if (stored === null) {
+    // First run of this scheduler: clear whatever the old single-notification scheduler left behind
+    await Notifications.cancelAllScheduledNotificationsAsync();
+    return;
   }
-};
-
-/**
- * Fetch the reminder for a specific local date. Uses an inclusive lower bound
- * and exclusive upper bound to avoid cross-day bleed due to timezones.
- */
-export const fetchReminderForDate = async (date: Date) => {
-  try {
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      console.log('User not authenticated, returning default reminder');
-      return DEFAULT_REMINDERS[0];
-    }
-
-    const start = new Date(date);
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(start);
-    end.setDate(end.getDate() + 1);
-
-    const { data, error } = await supabase
-      .from('user_daily_reminders')
-      .select('message, created_at')
-      .eq('user_id', user.id)
-      .gte('created_at', start.toISOString())
-      .lt('created_at', end.toISOString())
-      .order('created_at', { ascending: false })
-      .limit(1);
-
-    if (error) throw error;
-
-    if (data && data.length > 0) {
-      return data[0].message as string;
-    } else {
-      // Fallback to a deterministic default for that day
-      return DEFAULT_REMINDERS[Math.floor(Math.random() * DEFAULT_REMINDERS.length)];
-    }
-  } catch (error) {
-    console.error('Error fetching reminder for date:', error);
-    return DEFAULT_REMINDERS[0];
-  }
+  const ids: string[] = JSON.parse(stored);
+  await Promise.all(ids.map(id => Notifications.cancelScheduledNotificationAsync(id)));
 };
 
 export const setupReminderNotifications = async () => {
   try {
-    // Check if user is authenticated first
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+    if (!userId) {
       console.log('User not authenticated, skipping notification setup');
       return;
     }
 
-    // Request notification permissions
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    let finalStatus = existingStatus;
-
-    if (existingStatus !== 'granted') {
-      const { status } = await Notifications.requestPermissionsAsync();
-      finalStatus = status;
-    }
-
-    if (finalStatus !== 'granted') {
+    // Permission is requested during onboarding and from Profile; never prompt from here
+    const { status } = await Notifications.getPermissionsAsync();
+    if (status !== 'granted') {
       console.log('Notification permissions not granted - notifications will not be scheduled');
       return;
     }
 
-    // Get user's preferred reminder time
     const { data: preferences, error: preferencesError } = await supabase
       .from('user_preferences')
       .select('preferred_reminder_time')
+      .eq('user_id', userId)
       .maybeSingle();
-
     if (preferencesError) throw preferencesError;
 
-    // If no preferred time is set, default to 9:00 AM
-    const preferredTime = preferences?.preferred_reminder_time || '09:00';
+    const preferredTime = preferences?.preferred_reminder_time || DEFAULT_REMINDER_TIME;
     const [hours, minutes] = preferredTime.split(':').map(Number);
 
-    // Calculate next notification time
-    const now = new Date();
-    const nextNotification = new Date(now);
-    nextNotification.setHours(hours, minutes, 0, 0);
-
-    // If the time has already passed today, schedule for tomorrow
-    if (nextNotification <= now) {
-      nextNotification.setDate(nextNotification.getDate() + 1);
+    let context: DailyMessageContext;
+    try {
+      context = await fetchMessageContext(userId);
+    } catch (error) {
+      // Still send a reminder if usage can't be read; fall back to the general pool
+      console.error('Error loading recent chat activity for daily message:', error);
+      context = { affirmCount7d: 0, questionCount7d: 0, daysSinceLastChat: 0 };
     }
 
-    // Cancel any existing scheduled notifications
-    await Notifications.cancelAllScheduledNotificationsAsync();
+    await cancelPreviouslyScheduled();
 
-    // Fetch the reminder for the day we're scheduling the notification for
-    const message = await fetchReminderForDate(nextNotification);
+    const now = new Date();
+    const ids: string[] = [];
+    for (let dayOffset = 0; dayOffset < DAYS_SCHEDULED_AHEAD; dayOffset++) {
+      const fireAt = new Date(now);
+      fireAt.setDate(now.getDate() + dayOffset);
+      fireAt.setHours(hours, minutes, 0, 0);
+      if (fireAt <= now) continue;
 
-    // Schedule a one-time notification for the next occurrence
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: "Keystone",
-        body: message,
-        sound: true,
-        priority: Notifications.AndroidNotificationPriority.HIGH,
-      },
-      trigger: { type: SchedulableTriggerInputTypes.DATE, date: nextNotification },
-    });
+      // Each later day assumes one more day without chatting; the schedule is refreshed on every app open
+      const dayContext: DailyMessageContext = {
+        ...context,
+        daysSinceLastChat: context.daysSinceLastChat === null ? null : context.daysSinceLastChat + dayOffset,
+      };
 
+      const id = await Notifications.scheduleNotificationAsync({
+        content: {
+          title: 'Keystone',
+          body: pickDailyMessage(dayContext, userId, fireAt),
+          sound: true,
+          priority: Notifications.AndroidNotificationPriority.HIGH,
+        },
+        trigger: { type: SchedulableTriggerInputTypes.DATE, date: fireAt },
+      });
+      ids.push(id);
+    }
+
+    await AsyncStorage.setItem(SCHEDULED_IDS_KEY, JSON.stringify(ids));
   } catch (error) {
     console.error('Error setting up notifications:', error);
   }
@@ -189,4 +136,4 @@ Notifications.setNotificationHandler({
     shouldShowBanner: true,
     shouldShowList: true,
   }),
-}); 
+});

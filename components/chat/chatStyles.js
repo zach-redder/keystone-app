@@ -84,8 +84,15 @@ export const chatStyles = {
     fontSize: 16,
     paddingVertical: 8,
     paddingHorizontal: 10,
+    maxHeight: 120,
     backgroundColor: 'transparent',
     borderWidth: 0,
+  },
+  micBtn: {
+    marginLeft: 6,
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
   },
   sendBtn: {
     marginLeft: 6,

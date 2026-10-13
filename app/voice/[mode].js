@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, SafeAreaView, TouchableOpacity, Linking } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View, Text, SafeAreaView, TouchableOpacity, Linking, Alert, useWindowDimensions } from 'react-native';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import AIOrb from '../../components/voice/AIOrb';
@@ -9,9 +9,11 @@ import KeyChangeReviewModal from '../../components/modals/KeyChangeReviewModal';
 import useVoiceSession from '../../hooks/useVoiceSession';
 import useKeyReview from '../../hooks/useKeyReview';
 import { CHAT_MODES, DEFAULT_CHAT_MODE, isChatMode } from '../../constants/chatModes';
+import { clearAIChatConversation } from '../../services/features/affirmationService';
 
-const ORB_SIZE = 300;
-const WARNING_SECONDS = 60;
+const MAX_ORB_SIZE = 350;
+const ORB_WIDTH_RATIO = 0.92;
+const WARNING_MESSAGES = 5;
 
 const STATE_LABELS = {
   connecting: 'Connecting...',
@@ -21,7 +23,7 @@ const STATE_LABELS = {
   speaking: 'Speaking',
 };
 
-const formatSeconds = (total) => `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+const formatMessagesLeft = (count) => `${count} voice message${count === 1 ? '' : 's'} left today`;
 
 // What to tell the user, and what they can do next, when a session isn't running
 const describeStop = (error, endReason) => {
@@ -29,7 +31,7 @@ const describeStop = (error, endReason) => {
     return { title: 'Microphone is off', body: 'Allow microphone access in Settings to talk with your AI.', primary: 'settings' };
   }
   if (error?.code === 'voice_limit_reached') {
-    return { title: 'That is all the voice time for today', body: 'Chat is still open, and voice resets tomorrow.', primary: null };
+    return { title: 'That is all your voice messages for today', body: 'Chat is still open, and voice resets tomorrow.', primary: null };
   }
   if (error?.code === 'pro_required') {
     return { title: 'Voice is a Pro feature', body: 'Upgrade to talk with your AI out loud.', primary: null };
@@ -37,8 +39,11 @@ const describeStop = (error, endReason) => {
   if (error) {
     return { title: 'Voice stopped', body: error.message, primary: 'retry' };
   }
+  if (endReason === 'limit') {
+    return { title: 'That is all your voice messages for today', body: 'Chat is still open, and voice resets tomorrow.', primary: null };
+  }
   if (endReason === 'max_duration') {
-    return { title: 'Session limit reached', body: 'Conversations pause after 10 minutes. Start another any time.', primary: 'retry' };
+    return { title: 'Conversation paused', body: 'Long conversations pause after a while. Start another any time.', primary: 'retry' };
   }
   if (endReason === 'background') {
     return { title: 'Paused', body: 'Voice stops when the app leaves the screen.', primary: 'retry' };
@@ -51,6 +56,8 @@ export default function VoiceScreen() {
   const router = useRouter();
   const mode = isChatMode(params.mode) ? params.mode : DEFAULT_CHAT_MODE;
   const config = CHAT_MODES[mode];
+  const { width } = useWindowDimensions();
+  const orbSize = Math.min(MAX_ORB_SIZE, width * ORB_WIDTH_RATIO);
 
   const voice = useVoiceSession(mode);
   const review = useKeyReview(mode);
@@ -71,6 +78,26 @@ export default function VoiceScreen() {
     router.replace(`/chat/${mode}`);
   };
 
+  // Same reset as the chat screen: hides the thread (stats and streaks stay) and reconnects with a clean history
+  const handleReset = () => {
+    Alert.alert(
+      'Reset Conversation',
+      `Start a fresh ${config.title} conversation? Your streaks and stats are kept.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset', style: 'destructive', onPress: async () => {
+            if (await clearAIChatConversation(mode)) {
+              voice.restart();
+            } else {
+              Alert.alert('Something went wrong', 'Could not reset the conversation. Please try again.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const reviewKeys = async () => {
     await voice.end();
     review.open();
@@ -78,7 +105,7 @@ export default function VoiceScreen() {
 
   const stopped = voice.ended;
   const stopInfo = stopped ? describeStop(voice.error, voice.endReason) : null;
-  const showTimer = !stopped && voice.secondsLeft !== null && voice.secondsLeft <= WARNING_SECONDS;
+  const showMessagesLeft = !stopped && voice.remainingMessages !== null && voice.remainingMessages <= WARNING_MESSAGES;
 
   return (
     <SafeAreaView style={styles.page}>
@@ -90,7 +117,14 @@ export default function VoiceScreen() {
           <Text style={styles.title}>{config.title}</Text>
           <Text style={styles.tagline}>{config.tagline}</Text>
         </View>
-        <View style={styles.headerBtn} />
+        <TouchableOpacity
+          onPress={handleReset}
+          style={styles.headerBtn}
+          hitSlop={8}
+          accessibilityLabel="Reset conversation"
+        >
+          <MaterialCommunityIcons name="restore" size={26} color="#B9C096" />
+        </TouchableOpacity>
       </View>
 
       <View style={styles.stage}>
@@ -99,7 +133,7 @@ export default function VoiceScreen() {
           state={stopped ? 'idle' : voice.state}
           micLevel={voice.micLevel}
           aiLevel={voice.aiLevel}
-          size={ORB_SIZE}
+          size={orbSize}
         />
 
         {stopped ? (
@@ -131,7 +165,7 @@ export default function VoiceScreen() {
           <View style={styles.messageWrap}>
             <Text style={styles.stateLabel}>{STATE_LABELS[voice.state] ?? ''}</Text>
             <Text style={styles.caption} numberOfLines={5}>{voice.caption ?? ''}</Text>
-            {showTimer ? <Text style={styles.timer}>{formatSeconds(voice.secondsLeft)} left</Text> : null}
+            {showMessagesLeft ? <Text style={styles.timer}>{formatMessagesLeft(voice.remainingMessages)}</Text> : null}
           </View>
         )}
       </View>

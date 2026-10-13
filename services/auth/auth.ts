@@ -2,7 +2,6 @@ import { supabase } from '../../lib/supabase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { addIdentityKeysBatch, IdentityKey } from '../user/userKeys';
 import { handleNewUserEmailList } from '../integrations/emailListService';
-import { createFirstReminder } from '../features/reminderService';
 import { redeemReferralCode } from '../user/referralService';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { Platform } from 'react-native';
@@ -411,15 +410,6 @@ export const insertUserProfileAfterConfirmation = async (
     throw prefInsertError;
   }
 
-  // Create first reminder
-  try {
-    console.log('Creating first reminder for user...');
-    await createFirstReminder();
-  } catch (reminderError) {
-    console.error('Error creating first reminder:', reminderError);
-    // Don't throw - non-critical error
-  }
-
   // Handle pending referral code if user staged one during onboarding. Redemption
   // (validation, usage-limit/expiry checks, users/referral_redemptions writes) is
   // owned entirely by referralService.redeemReferralCode() -- re-validating live
@@ -678,6 +668,9 @@ export const debugAuthState = async () => {
   }
 };
 
+// Holds the id of the user whose completed onboarding was last confirmed by the database
+const ONBOARDING_VERIFIED_KEY = 'onboarding_verified_user_id';
+
 export const checkUserStatus = async () => {
   // Check for active session
   const {
@@ -704,6 +697,27 @@ export const checkUserStatus = async () => {
     // Route to registration flow
     console.log('checkUserStatus - Email not confirmed, returning needs_email_confirmation');
     return { status: 'needs_email_confirmation' };
+  }
+
+  // Returning users who were already confirmed complete skip the network wait: the splash
+  // would otherwise sit on a database round trip on every launch. It is re-verified in the
+  // background, and a mismatch clears the shortcut for the next launch.
+  if ((await AsyncStorage.getItem(ONBOARDING_VERIFIED_KEY)) === user.id) {
+    (async () => {
+      try {
+        const { data: latest, error: latestError } = await supabase
+          .from('users')
+          .select('onboarding_complete')
+          .eq('id', user.id)
+          .maybeSingle();
+        if (!latestError && !latest?.onboarding_complete) {
+          await AsyncStorage.removeItem(ONBOARDING_VERIFIED_KEY);
+        }
+      } catch (e) {
+        console.error('Background onboarding re-check failed:', e);
+      }
+    })();
+    return { status: 'complete' };
   }
 
   // Check database for user profile and onboarding status
@@ -753,6 +767,7 @@ export const checkUserStatus = async () => {
 
   // If user has completed onboarding in database, they're done
   if (data.onboarding_complete) {
+    await AsyncStorage.setItem(ONBOARDING_VERIFIED_KEY, user.id);
     console.log('checkUserStatus - Onboarding complete in database, returning complete');
     return { status: 'complete' };
   }
