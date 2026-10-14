@@ -12,7 +12,7 @@ import { pickPersonaVoice } from './personaVoice';
 // Confirmed against the Realtime docs; if OpenAI moves it, this is the only place to change.
 const REALTIME_CALLS_URL = 'https://api.openai.com/v1/realtime/calls';
 
-const HISTORY_MESSAGES = 10;
+const HISTORY_MESSAGES = 6;
 const LEVEL_POLL_MS = 50;
 const THINKING_WATCHDOG_MS = 15000;
 const DISCONNECT_GRACE_MS = 6000;
@@ -154,7 +154,7 @@ export class RealtimeVoiceSession {
     InCallManager.setForceSpeakerphoneOn(true);
 
     // Loaded alongside the key request instead of after it, so the key isn't aging while we wait
-    const historyPromise = fetchAIChatMessages(this.mode)
+    const historyPromise = fetchAIChatMessages(this.mode, Math.ceil(HISTORY_MESSAGES / 2))
       .then(messages => messages.slice(-HISTORY_MESSAGES))
       .catch(() => []);
 
@@ -336,6 +336,11 @@ export class RealtimeVoiceSession {
       event = JSON.parse(raw);
     } catch (e) {
       return;
+    }
+
+    // Lets cost per call be measured in dev builds instead of guessed
+    if (__DEV__ && event?.type === 'response.done' && event.response?.usage) {
+      console.log('Voice response usage:', JSON.stringify(event.response.usage));
     }
 
     const out = this.tracker.handle(event);
