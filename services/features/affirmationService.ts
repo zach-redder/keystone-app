@@ -82,17 +82,22 @@ export const generateAIMessage = async (mode: ChatMode, message: string, message
 };
 
 // Each mode keeps its own thread: rows are tagged with `mode`, and flattened here into a message array.
-export const fetchAIChatMessages = async (mode: ChatMode): Promise<ChatMessageWithRows[]> => {
+// `latestRows` reads only the newest N rows (one row is a user/assistant pair) so callers that just
+// need recent context don't download the whole thread.
+export const fetchAIChatMessages = async (mode: ChatMode, latestRows?: number): Promise<ChatMessageWithRows[]> => {
   const { data: { user }, error: userError } = await getSessionUser();
   if (userError || !user) return [];
-  const { data, error } = await supabase
+  const query = supabase
     .from('ai_chat_logs')
     .select('id, user_message, assistant_message, order')
     .eq('user_id', user.id)
     .eq('mode', mode)
-    .is('cleared_at', null)
-    .order('order', { ascending: true });
-  if (error || !data) return [];
+    .is('cleared_at', null);
+  const { data: fetched, error } = latestRows
+    ? await query.order('order', { ascending: false }).limit(latestRows)
+    : await query.order('order', { ascending: true });
+  if (error || !fetched) return [];
+  const data = latestRows ? [...fetched].reverse() : fetched;
 
   const messages: ChatMessageWithRows[] = [];
   data.forEach(row => {

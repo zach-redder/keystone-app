@@ -7,7 +7,8 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "test": "tsx --test services/voice/*.test.ts"
+    "test": "tsx --test services/voice/*.test.ts",
+    "generate:voice-previews": "node scripts/generate-voice-previews.mjs"
   },
   "dependencies": {
     "@config-plugins/react-native-webrtc": "13.0.0",
@@ -27,6 +28,7 @@
     "@tanstack/react-query-persist-client": "^5.104.2",
     "expo": "~54.0.0",
     "expo-apple-authentication": "^8.0.7",
+    "expo-audio": "~1.1.1",
     "expo-blur": "~15.0.7",
     "expo-build-properties": "~1.0.9",
     "expo-constants": "^18.0.10",

@@ -5,6 +5,7 @@ import * as Haptics from 'expo-haptics';
 import { getPreferredAiPersona, setPreferredAiPersona } from '../../services/user/userPreferences';
 import { fetchCustomPersonalities, createCustomPersonality, deleteCustomPersonality } from '../../services/features/customPersonalitiesService';
 import { VOICES, DEFAULT_VOICE, DEFAULT_PERSONA_VOICES } from '../../services/voice/personaVoice';
+import { playPreview, stopPreview, releasePreview, PREVIEW_LINE } from '../../services/voice/voicePreview';
 import keysStyles from '../../styles/keys';
 
 const voiceLabel = (voiceId) => VOICES.find(voice => voice.id === voiceId)?.label ?? null;
@@ -16,6 +17,7 @@ const AIPersonalityModal = ({ visible, onClose, onUpgradePress }) => {
   const [customName, setCustomName] = useState('');
   const [customDescription, setCustomDescription] = useState('');
   const [customVoice, setCustomVoice] = useState(DEFAULT_VOICE);
+  const [previewingVoice, setPreviewingVoice] = useState(null);
   const [customPersonalities, setCustomPersonalities] = useState([]);
 
           // Basic personalities available to all users
@@ -51,8 +53,29 @@ const AIPersonalityModal = ({ visible, onClose, onUpgradePress }) => {
     if (visible) {
       loadCurrentPersonality();
       loadCustomPersonalities();
+    } else {
+      stopPreview();
+      setPreviewingVoice(null);
     }
   }, [visible]);
+
+  // Leaving the screen must not leave a sample playing
+  useEffect(() => releasePreview, []);
+
+  const togglePreview = async (voiceId) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (previewingVoice === voiceId) {
+      stopPreview();
+      return;
+    }
+    setPreviewingVoice(voiceId);
+    try {
+      await playPreview(voiceId, () => setPreviewingVoice(current => (current === voiceId ? null : current)));
+    } catch (error) {
+      console.error('Error playing voice preview:', error);
+      setPreviewingVoice(null);
+    }
+  };
 
   const loadCurrentPersonality = async () => {
     try {
@@ -138,6 +161,7 @@ const AIPersonalityModal = ({ visible, onClose, onUpgradePress }) => {
         setSelectedPersonality(createdPersonality.name);
         
         // Reset form
+        stopPreview();
         setCustomName('');
         setCustomDescription('');
         setCustomVoice(DEFAULT_VOICE);
@@ -390,31 +414,51 @@ const AIPersonalityModal = ({ visible, onClose, onUpgradePress }) => {
 
                 <Text style={styles.inputLabel}>Voice</Text>
                 <View style={styles.voiceChips}>
-                  {VOICES.map(voice => (
-                    <TouchableOpacity
-                      key={voice.id}
-                      style={[styles.voiceChip, customVoice === voice.id && styles.voiceChipSelected]}
-                      onPress={() => {
-                        setCustomVoice(voice.id);
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      }}
-                      activeOpacity={0.7}
-                      accessibilityLabel={`${voice.label} voice, ${voice.blurb}`}
-                    >
-                      <Text style={[styles.voiceChipText, customVoice === voice.id && styles.voiceChipTextSelected]}>
-                        {voice.label}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                  {VOICES.map(voice => {
+                    const selected = customVoice === voice.id;
+                    const playing = previewingVoice === voice.id;
+                    return (
+                      <View key={voice.id} style={[styles.voiceChip, selected && styles.voiceChipSelected]}>
+                        <TouchableOpacity
+                          style={styles.voiceChipLabel}
+                          onPress={() => {
+                            setCustomVoice(voice.id);
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          }}
+                          activeOpacity={0.7}
+                          accessibilityLabel={`${voice.label} voice, ${voice.blurb}`}
+                        >
+                          <Text style={[styles.voiceChipText, selected && styles.voiceChipTextSelected]}>
+                            {voice.label}
+                          </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={styles.voicePlayButton}
+                          onPress={() => togglePreview(voice.id)}
+                          activeOpacity={0.7}
+                          hitSlop={{ top: 8, bottom: 8, left: 4, right: 8 }}
+                          accessibilityLabel={playing ? `Stop ${voice.label} sample` : `Play ${voice.label} sample`}
+                        >
+                          <Ionicons
+                            name={playing ? 'stop-circle' : 'play-circle'}
+                            size={22}
+                            color={selected ? '#2B2B2B' : '#B9C096'}
+                          />
+                        </TouchableOpacity>
+                      </View>
+                    );
+                  })}
                 </View>
                 <Text style={styles.voiceHint}>
                   {VOICES.find(voice => voice.id === customVoice)?.blurb}. Used in voice chat.
                 </Text>
+                <Text style={styles.voiceHint}>Tap play to hear a sample: "{PREVIEW_LINE}"</Text>
                 
                 <View style={styles.formButtons}>
                   <TouchableOpacity
                     style={styles.cancelButton}
                     onPress={() => {
+                      stopPreview();
                       setShowCustomForm(false);
                       setCustomName('');
                       setCustomDescription('');
@@ -714,9 +758,18 @@ const styles = {
     flexWrap: 'wrap',
     gap: 8,
   },
-  voiceChip: {
+  voiceChipLabel: {
     paddingVertical: 8,
-    paddingHorizontal: 14,
+    paddingLeft: 14,
+    paddingRight: 6,
+  },
+  voicePlayButton: {
+    paddingRight: 10,
+    justifyContent: 'center',
+  },
+  voiceChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
     borderRadius: 18,
     backgroundColor: 'rgba(60, 60, 60, 0.5)',
     borderWidth: 1,
