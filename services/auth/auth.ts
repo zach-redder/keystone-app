@@ -35,7 +35,6 @@ interface Preferences {
 
 export const signUpUser = async (email: string, password: string) => {
   try {
-    console.log('Starting signup process for:', email);
     
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -115,7 +114,6 @@ export const signInUser = async (email: string, password: string) => {
       throw new Error('Sign-in succeeded but no user returned.');
     }
 
-    console.log('Sign-in successful for user:', user.id);
     return user;
   } catch (error) {
     const msg = (error as any)?.message?.toLowerCase() || '';
@@ -272,7 +270,6 @@ export const signInWithApple = async () => {
       const fullName = `${credential.fullName.givenName || ''} ${credential.fullName.familyName || ''}`.trim();
       if (fullName) {
         await AsyncStorage.setItem('@user_name', fullName);
-        console.log('Saved Apple user name:', fullName);
       }
     }
 
@@ -351,12 +348,10 @@ export const insertUserProfileAfterConfirmation = async (
   let userName = '';
   try {
     userName = await AsyncStorage.getItem('@user_name') || '';
-    console.log('Retrieved user name from AsyncStorage:', userName);
   } catch (error) {
     console.error('Error retrieving user name from AsyncStorage:', error);
   }
 
-  console.log('Inserting user profile:', { userId, email: user.email, name: userName });
 
   // Insert into users table
   console.log('insertUserProfileAfterConfirmation - Inserting user profile with onboarding_complete: true');
@@ -526,7 +521,6 @@ export const insertUserProfileAfterConfirmation = async (
     }
 
     if (identityKeys.length > 0) {
-      console.log('Inserting identity keys:', identityKeys);
       console.log('Number of keys to insert:', identityKeys.length);
       await addIdentityKeysBatch(identityKeys);
       console.log('Identity keys inserted successfully');
@@ -643,9 +637,7 @@ export const debugAuthState = async () => {
   try {
     const { data: { session }, error } = await supabase.auth.getSession();
     console.log('=== AUTH DEBUG ===');
-    console.log('Session:', session);
     console.log('Error:', error);
-    console.log('User:', session?.user);
     console.log('Access Token:', session?.access_token ? 'Present' : 'Missing');
     console.log('Refresh Token:', session?.refresh_token ? 'Present' : 'Missing');
     console.log('==================');
@@ -658,7 +650,6 @@ export const debugAuthState = async () => {
       key.includes('token') ||
       key.includes('session')
     );
-    console.log('Auth-related AsyncStorage keys:', authKeys);
     
     return { session, error };
   } catch (error) {
@@ -678,7 +669,6 @@ export const checkUserStatus = async () => {
 
   const user = session?.user;
 
-  console.log('checkUserStatus - Session user:', user ? { id: user.id, email: user.email, emailConfirmed: user.email_confirmed_at } : 'No user');
 
   if (!user) {
     // No active session, route to sign-in screen

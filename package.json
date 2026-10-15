@@ -7,7 +7,7 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "test": "tsx --test services/voice/*.test.ts",
+    "test": "tsx --test services/voice/*.test.ts lib/*.test.ts",
     "generate:voice-previews": "node scripts/generate-voice-previews.mjs"
   },
   "dependencies": {
@@ -42,6 +42,7 @@
     "expo-modules-autolinking": "~3.0.17",
     "expo-notifications": "~0.32.12",
     "expo-router": "~6.0.14",
+    "expo-secure-store": "~15.0.8",
     "expo-status-bar": "~3.0.8",
     "expo-store-review": "~9.0.8",
     "expo-superwall": "^0.3.2",

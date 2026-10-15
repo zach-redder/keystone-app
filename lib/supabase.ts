@@ -1,12 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
 import 'react-native-url-polyfill/auto';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { secureSessionStorage } from './secureSessionStorage';
 import { SupabaseClientOptions } from '@supabase/supabase-js';
 import Constants from 'expo-constants';
 
 const options: SupabaseClientOptions<'public'> = {
   auth: {
-    storage: AsyncStorage,
+    // Tokens live in the Keychain; existing sessions are migrated on first read (see chunkedStorage.ts)
+    storage: secureSessionStorage,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
