@@ -5,6 +5,7 @@ import { fetchUnreviewedMessages, markChatRowsReviewed } from '../services/featu
 import { proposeKeyChanges, applyKeyChange } from '../services/features/keyProposalService';
 import { fetchIdentityKeys } from '../services/user/userKeys';
 import { checkUserProStatus } from '../services/subscription/subscriptionService';
+import { maybeRequestReview } from '../services/features/reviewPromptService';
 import { PRO_ONLY_CATEGORIES } from '../constants/keyCategories';
 
 // Matches the service's review cap; older unreviewed rows are marked reviewed without being sent
@@ -73,6 +74,8 @@ export default function useKeyReview(mode) {
       Alert.alert('Some changes failed', `${failed} of ${selectedChanges.length} changes could not be applied.`);
     }
     await close();
+    // Having just watched their keys update is a good moment; a partly failed review is not
+    if (failed === 0 && selectedChanges.length > 0) maybeRequestReview();
   };
 
   return { visible, loading, error, changes, applying, open, close, apply };

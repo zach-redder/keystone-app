@@ -18,6 +18,8 @@ import { CHAT_MODES, DEFAULT_CHAT_MODE, isChatMode } from '../../constants/chatM
 import { getAppStoreLink, APP_NAME } from '../../constants/appStore';
 import useUserStats from '../../hooks/useUserStats';
 import { checkForStreakMilestone, markMilestoneAsShown } from '../../services/features/streakRewardsService';
+import { maybeRequestReview } from '../../services/features/reviewPromptService';
+import { isMilestoneWorthAsking } from '../../services/features/reviewPromptPolicy';
 import { shouldShowFreeMonthOffer, markFreeMonthOfferShown } from '../../services/user/freeMonthOfferService';
 import { checkUserProStatus } from '../../services/subscription/subscriptionService';
 
@@ -193,6 +195,7 @@ export default function HomeScreen() {
           milestone={currentMilestone}
           onClose={() => {
             setStreakRewardModalVisible(false);
+            if (currentMilestone && isMilestoneWorthAsking(currentMilestone.days)) maybeRequestReview();
             setCurrentMilestone(null);
           }}
         />
