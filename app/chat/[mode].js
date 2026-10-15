@@ -17,7 +17,10 @@ import { CHAT_MODES, DEFAULT_CHAT_MODE, isChatMode } from '../../constants/chatM
 import { markdownStyles, chatStyles } from '../../components/chat/chatStyles';
 import ProUpgradeModal from '../../components/modals/ProUpgradeModal';
 import KeyChangeReviewModal from '../../components/modals/KeyChangeReviewModal';
+import CrisisResourcesModal from '../../components/modals/CrisisResourcesModal';
 import useKeyReview from '../../hooks/useKeyReview';
+import useAiConsent from '../../hooks/useAiConsent';
+import { detectCrisis } from '../../services/safety/crisisDetection';
 
 const FREE_DAILY_PAIR_LIMIT = 10;
 
@@ -33,9 +36,13 @@ export default function ChatScreen() {
   const [loadingAI, setLoadingAI] = useState(false);
   const [thinkingDots, setThinkingDots] = useState('');
   const [showProUpgradeModal, setShowProUpgradeModal] = useState(false);
+  const [showCrisisResources, setShowCrisisResources] = useState(false);
   const scrollViewRef = useRef(null);
+  // A message that already got the resources sheet isn't blocked a second time if the user sends it anyway
+  const crisisShownForText = useRef(null);
 
   const review = useKeyReview(mode);
+  const consent = useAiConsent();
 
   useEffect(() => {
     let isMounted = true;
@@ -72,6 +79,25 @@ export default function ChatScreen() {
     const text = input.trim();
     if (!text || loadingAI) return;
 
+    if (!(await consent.ensureConsent())) return;
+
+    // Resources come before the reply; the message stays in the box and the user decides whether to send it
+    if (detectCrisis(text) && crisisShownForText.current !== text) {
+      crisisShownForText.current = text;
+      setShowCrisisResources(true);
+      return;
+    }
+
+    await sendMessage(text);
+  };
+
+  const handleCrisisContinue = () => {
+    setShowCrisisResources(false);
+    const text = input.trim();
+    if (text) sendMessage(text);
+  };
+
+  const sendMessage = async (text) => {
     const isPro = await checkUserProStatus();
     if (!isPro) {
       const todaysCount = await fetchTodaysAIChatMessagePairCount();
@@ -123,10 +149,14 @@ export default function ChatScreen() {
   const handleVoice = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (await checkUserProStatus()) {
-      router.push(`/voice/${mode}`);
+      if (await consent.ensureConsent()) router.push(`/voice/${mode}`);
     } else {
       setShowProUpgradeModal(true);
     }
+  };
+
+  const handleReviewKeys = async () => {
+    if (await consent.ensureConsent()) review.open();
   };
 
   const scrollToEnd = useCallback(() => scrollViewRef.current?.scrollToEnd({ animated: true }), []);
@@ -165,7 +195,7 @@ export default function ChatScreen() {
 
           <TouchableOpacity
             style={[styles.reviewBtn, !canReview && styles.reviewBtnDisabled]}
-            onPress={review.open}
+            onPress={handleReviewKeys}
             disabled={!canReview}
           >
             <Ionicons name="key-outline" size={16} color="#D4DE95" />
@@ -251,6 +281,12 @@ export default function ChatScreen() {
       </KeyboardAvoidingView>
 
       <ProUpgradeModal visible={showProUpgradeModal} onClose={() => setShowProUpgradeModal(false)} />
+      {consent.consentModal}
+      <CrisisResourcesModal
+        visible={showCrisisResources}
+        onContinue={handleCrisisContinue}
+        onClose={() => setShowCrisisResources(false)}
+      />
       <KeyChangeReviewModal
         visible={review.visible}
         onClose={review.close}

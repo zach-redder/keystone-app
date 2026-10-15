@@ -6,6 +6,7 @@ import * as Haptics from 'expo-haptics';
 import AIOrb from '../../components/voice/AIOrb';
 import ProUpgradeModal from '../../components/modals/ProUpgradeModal';
 import KeyChangeReviewModal from '../../components/modals/KeyChangeReviewModal';
+import CrisisResourcesModal from '../../components/modals/CrisisResourcesModal';
 import useVoiceSession from '../../hooks/useVoiceSession';
 import useKeyReview from '../../hooks/useKeyReview';
 import { CHAT_MODES, DEFAULT_CHAT_MODE, isChatMode } from '../../constants/chatModes';
@@ -187,6 +188,7 @@ export default function VoiceScreen() {
       </View>
 
       <ProUpgradeModal visible={showUpgrade} onClose={() => setShowUpgrade(false)} />
+      <CrisisResourcesModal visible={voice.crisisDetected} onContinue={voice.dismissCrisis} />
       <KeyChangeReviewModal
         visible={review.visible}
         onClose={review.close}

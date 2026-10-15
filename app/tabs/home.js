@@ -10,6 +10,7 @@ import keysStyles from '../../styles/keys';
 import homeStyles from '../../styles/home';
 import AIOrb from '../../components/voice/AIOrb';
 import ProUpgradeModal from '../../components/modals/ProUpgradeModal';
+import useAiConsent from '../../hooks/useAiConsent';
 import StreakRewardModal from '../../components/modals/StreakRewardModal';
 import StreakInfoModal from '../../components/modals/StreakInfoModal';
 import FreeMonthOfferModal from '../../components/modals/FreeMonthOfferModal';
@@ -36,6 +37,7 @@ export default function HomeScreen() {
   const [streakInfoModalVisible, setStreakInfoModalVisible] = useState(false);
   const [freeMonthOfferModalVisible, setFreeMonthOfferModalVisible] = useState(false);
   const [proUpgradeVisible, setProUpgradeVisible] = useState(false);
+  const consent = useAiConsent();
 
   useEffect(() => {
     (async () => {
@@ -97,7 +99,7 @@ export default function HomeScreen() {
   const handleStartVoice = async () => {
     try {
       if (await checkUserProStatus()) {
-        router.push(`/voice/${mode}`);
+        if (await consent.ensureConsent()) router.push(`/voice/${mode}`);
       } else {
         setProUpgradeVisible(true);
       }
@@ -201,6 +203,7 @@ export default function HomeScreen() {
           onClose={() => setStreakInfoModalVisible(false)}
         />
         <ProUpgradeModal visible={proUpgradeVisible} onClose={() => setProUpgradeVisible(false)} />
+        {consent.consentModal}
         <FreeMonthOfferModal
           visible={freeMonthOfferModalVisible}
           onClose={() => setFreeMonthOfferModalVisible(false)}

@@ -4,6 +4,7 @@ import { useSharedValue } from 'react-native-reanimated';
 import { useKeepAwake } from 'expo-keep-awake';
 import { RealtimeVoiceSession } from '../services/voice/realtimeSession';
 import { insertAIChatMessagePair } from '../services/features/affirmationService';
+import { detectCrisis } from '../services/safety/crisisDetection';
 
 /**
  * Runs one voice conversation for a mode. Levels go into shared values so the orb can animate
@@ -23,6 +24,8 @@ export default function useVoiceSession(mode) {
   const [endReason, setEndReason] = useState(null);
   const [secondsLeft, setSecondsLeft] = useState(null);
   const [remainingMessages, setRemainingMessages] = useState(null);
+  // Spoken input is only transcribed after the model has heard it, so the resources appear alongside its reply
+  const [crisisDetected, setCrisisDetected] = useState(false);
 
   const sessionRef = useRef(null);
   const mutedRef = useRef(false);
@@ -65,6 +68,7 @@ export default function useVoiceSession(mode) {
       onRemainingMessages: (next) => { if (current()) setRemainingMessages(next); },
       onTurn: (turn) => {
         if (!turn.user && !turn.assistant) return;
+        if (current() && detectCrisis(turn.user)) setCrisisDetected(true);
         persistChain.current = persistChain.current
           .then(() => insertAIChatMessagePair(
             mode,
@@ -127,6 +131,10 @@ export default function useVoiceSession(mode) {
   }, []);
 
   const end = useCallback(() => sessionRef.current?.end('user'), []);
+  const dismissCrisis = useCallback(() => setCrisisDetected(false), []);
 
-  return { state, caption, muted, error, ended, endReason, secondsLeft, remainingMessages, micLevel, aiLevel, toggleMute, end, restart: start };
+  return {
+    state, caption, muted, error, ended, endReason, secondsLeft, remainingMessages, micLevel, aiLevel,
+    crisisDetected, dismissCrisis, toggleMute, end, restart: start,
+  };
 }
