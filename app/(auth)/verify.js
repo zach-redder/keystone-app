@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { View, ActivityIndicator, Image } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { supabase } from '../../lib/supabase';
-import { isOtpTypeAllowedForPath } from '../../services/auth/deepLinkOtp';
+import { authLinkDestination, isOtpTypeAllowedForPath } from '../../services/auth/deepLinkOtp';
 import { styles } from '../../styles/authentication';
 
 // Reached when iOS/Android resolve https://thekeystoneapp.com/verify as a Universal/App
@@ -46,6 +46,7 @@ export default function VerifyUniversalLinkScreen() {
         return;
       }
 
+      let redirectType = null;
       try {
         if (tokenHash && type) {
           if (!isOtpTypeAllowedForPath(path, type)) {
@@ -55,14 +56,15 @@ export default function VerifyUniversalLinkScreen() {
             if (error) console.error('Failed to verify OTP from universal link:', error);
           }
         } else if (code) {
-          const { error } = await supabase.auth.exchangeCodeForSession(code);
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
           if (error) console.error('Failed to exchange code from universal link:', error);
+          redirectType = data?.redirectType ?? null;
         }
       } catch (error) {
         console.error('Error establishing session from universal link:', error);
       }
 
-      router.replace(`/${path}`);
+      router.replace(`/${authLinkDestination(path, redirectType)}`);
     };
 
     run();

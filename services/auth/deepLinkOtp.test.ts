@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { isOtpTypeAllowedForPath } from './deepLinkOtp';
+import { authLinkDestination, isOtpTypeAllowedForPath } from './deepLinkOtp';
 
 test('each path accepts only the types the landing page routes to it', () => {
   assert.equal(isOtpTypeAllowedForPath('emailconfirmation', 'signup'), true);
@@ -25,4 +25,16 @@ test('types that no link should carry are refused everywhere', () => {
 test('an unknown path accepts nothing', () => {
   assert.equal(isOtpTypeAllowedForPath('home', 'signup'), false);
   assert.equal(isOtpTypeAllowedForPath('__proto__', 'signup'), false);
+});
+
+test('a password-reset code is sent to the new-password screen, whatever path the link claimed', () => {
+  assert.equal(authLinkDestination('emailconfirmation', 'PASSWORD_RECOVERY'), 'resetpassword');
+  assert.equal(authLinkDestination('signin', 'PASSWORD_RECOVERY'), 'resetpassword');
+});
+
+test('other links keep the path they came in on', () => {
+  assert.equal(authLinkDestination('emailconfirmation', null), 'emailconfirmation');
+  assert.equal(authLinkDestination('emailconfirmation', undefined), 'emailconfirmation');
+  assert.equal(authLinkDestination('signin', 'pkce'), 'signin');
+  assert.equal(authLinkDestination('resetpassword', null), 'resetpassword');
 });

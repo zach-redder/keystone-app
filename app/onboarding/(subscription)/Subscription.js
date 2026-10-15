@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { getSuperwallImplementation } from '../../../utils/superwallCompat';
+import { getSuperwallImplementation, fetchSubscriptionStatus } from '../../../utils/superwallCompat';
 import { useSuperwallContext } from '../../../contexts/SuperwallContext';
 import { PRIMARY_SUBSCRIPTION, AUTO_RENEW_NOTICE, BILLING_DISCLOSURE } from '../../../constants/subscriptions';
 import { PRIVACY_POLICY_URL, TERMS_OF_USE_URL } from '../../../constants/legal';
@@ -85,15 +85,25 @@ export default function SubscriptionScreen() {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-      // Check subscription status to restore
-      const status = subscriptionStatus;
-      if (status?.status === 'ACTIVE') {
+      // Read the live status: the one from useUser() above is from the render that created this handler
+      const status = await fetchSubscriptionStatus();
+      if (!status) {
+        Alert.alert('Error', 'Failed to restore purchases. Please try again.');
+      } else if (status.status === 'ACTIVE') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         Alert.alert('Success', 'Your subscription has been restored!', [
           { text: 'Continue', onPress: () => router.replace('/register') }
         ]);
       } else {
-        Alert.alert('No Subscription Found', 'No active subscription found to restore.');
+        // The restore that talks to Apple lives in the paywall itself, so don't leave this a dead end
+        Alert.alert(
+          'No Subscription Found',
+          'No active subscription found for this Apple ID. You can open the plans and use the restore option there.',
+          [
+            { text: 'Not now', style: 'cancel' },
+            { text: 'View plans', onPress: presentHardPaywall },
+          ]
+        );
       }
     } catch (error) {
       console.warn('Restore error:', error);

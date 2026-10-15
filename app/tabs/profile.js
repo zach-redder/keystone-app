@@ -7,7 +7,8 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { signOutUser } from '../../services/auth/auth';
 import { getPreferredAiPersona, updateNotificationOptIn, getUserEmail, getPreferredReminderTime} from '../../services/user/userPreferences';
-import { getUserSubscriptionDetails } from '../../services/subscription/subscriptionService';
+import { getUserSubscriptionDetails, handleSuperwallPurchaseComplete } from '../../services/subscription/subscriptionService';
+import { fetchSubscriptionStatus } from '../../utils/superwallCompat';
 import { getAppStoreLink, APP_NAME } from '../../constants/appStore';
 import { PRIVACY_POLICY_URL, TERMS_OF_USE_URL } from '../../constants/legal';
 import useUserStats from '../../hooks/useUserStats';
@@ -20,6 +21,7 @@ import ReminderTimeModal from '../../components/modals/ReminderTimeModal';
 import EditProfileModal from '../../components/modals/EditProfileModal';
 import DeleteAccountModal from '../../components/modals/DeleteAccountModal';
 import ReferralCodeModal from '../../components/modals/ReferralCodeModal';
+import ProUpgradeModal from '../../components/modals/ProUpgradeModal';
 import StreakInfoModal from '../../components/modals/StreakInfoModal';
 // Removed ReferralModal and shareProfilePage - now using direct app sharing
 
@@ -39,6 +41,7 @@ export default function ProfileScreen() {
   const [referralCodeModalVisible, setReferralCodeModalVisible] = useState(false);
   const [streakInfoModalVisible, setStreakInfoModalVisible] = useState(false);
   // Removed referralModalVisible - now using direct app sharing
+  const [proUpgradeVisible, setProUpgradeVisible] = useState(false);
   const [subscriptionDetails, setSubscriptionDetails] = useState({
     isPro: false,
     subscriptionType: 'free',
@@ -206,8 +209,37 @@ export default function ProfileScreen() {
     }
   };
 
-  // Removed handleBadgePress - no longer needed with streak UI
+  // Reads what the subscription SDK knows right now. The restore that talks to Apple happens inside the
+  // paywall, so when nothing is found this offers the plans instead of ending in a dead end.
+  const handleRestorePurchases = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      const status = await fetchSubscriptionStatus();
+      if (!status) {
+        Alert.alert('Error', 'Failed to restore purchases. Please try again.');
+      } else if (status.status === 'ACTIVE') {
+        // Same sync the app runs when a purchase completes, so this account is marked Pro too
+        await handleSuperwallPurchaseComplete(status);
+        await loadSubscriptionDetails();
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        Alert.alert('Success', 'Your subscription has been restored!');
+      } else {
+        Alert.alert(
+          'No Subscription Found',
+          'No active subscription found for this Apple ID. You can open the plans and use the restore option there.',
+          [
+            { text: 'Not now', style: 'cancel' },
+            { text: 'View plans', onPress: () => setProUpgradeVisible(true) },
+          ]
+        );
+      }
+    } catch (error) {
+      console.error('Restore error:', error);
+      Alert.alert('Error', 'Failed to restore purchases. Please try again.');
+    }
+  };
 
+  // Removed handleBadgePress - no longer needed with streak UI
   function handleSignOut() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     signOutUser();
@@ -346,6 +378,14 @@ export default function ProfileScreen() {
               <Text style={profileStyles.profileItemText}>My Subscription</Text>
               <View style={profileStyles.profileItemRight}>
                 <Text style={profileStyles.profileItemValue}>{subscriptionDetails.displayName}</Text>
+                <Ionicons name="chevron-forward" size={16} color="#fff" />
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={profileStyles.profileItem} onPress={handleRestorePurchases}>
+              <Ionicons name="refresh-outline" size={20} color="#B9C096" style={profileStyles.profileItemIcon} />
+              <Text style={profileStyles.profileItemText}>Restore Purchases</Text>
+              <View style={profileStyles.profileItemRight}>
                 <Ionicons name="chevron-forward" size={16} color="#fff" />
               </View>
             </TouchableOpacity>
@@ -548,6 +588,7 @@ export default function ProfileScreen() {
         </ScrollView>
       </View>
 
+      <ProUpgradeModal visible={proUpgradeVisible} onClose={() => setProUpgradeVisible(false)} />
       <CommunityModal
         visible={communityModalVisible}
         onClose={() => setCommunityModalVisible(false)}

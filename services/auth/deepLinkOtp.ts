@@ -11,3 +11,10 @@ const OTP_TYPES_BY_PATH = new Map<string, string[]>([
 
 export const isOtpTypeAllowedForPath = (path: string, type: string): boolean =>
   OTP_TYPES_BY_PATH.get(path)?.includes(type) ?? false;
+
+// A PKCE password-reset link arrives as a bare `code`, indistinguishable from a sign-up confirmation, so
+// the landing page and the universal-link route both send it to `emailconfirmation`, which would sign the
+// user in without ever asking for a new password. supabase-js remembers which flow started the code and
+// reports it as `redirectType` when the code is exchanged, so a reset is sent on to the new-password screen.
+export const authLinkDestination = (path: string, redirectType: string | null | undefined): string =>
+  redirectType === 'PASSWORD_RECOVERY' ? 'resetpassword' : path;

@@ -6,7 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import * as Linking from 'expo-linking';
 import { supabase } from '../lib/supabase';
 import { handleReferralDeepLink } from '../services/integrations/deepLinkService';
-import { isOtpTypeAllowedForPath } from '../services/auth/deepLinkOtp';
+import { authLinkDestination, isOtpTypeAllowedForPath } from '../services/auth/deepLinkOtp';
 import { AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setupReminderNotifications } from '../services/features/reminderService';
@@ -137,7 +137,7 @@ function RootShell() {
           } else if (data?.session) {
             console.log('Session established from deep link');
           }
-          router.replace(`/${path}`);
+          router.replace(`/${authLinkDestination(path, data?.redirectType)}`);
           return;
         }
 
