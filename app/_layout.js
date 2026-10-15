@@ -6,6 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import * as Linking from 'expo-linking';
 import { supabase } from '../lib/supabase';
 import { handleReferralDeepLink } from '../services/integrations/deepLinkService';
+import { isOtpTypeAllowedForPath } from '../services/auth/deepLinkOtp';
 import { AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setupReminderNotifications } from '../services/features/reminderService';
@@ -88,13 +89,6 @@ function RootShell() {
     // access_token/refresh_token pair (implicit flow, in the hash), or a PKCE code
     // (exchangeCodeForSession -- only works if this client's storage holds the
     // matching verifier, i.e. this same app instance initiated the request).
-    // Which token_hash `type` each path may carry, matching how keystone-landingpage's /verify routes
-    // them. The type comes from a link anyone can craft, so it is never passed to verifyOtp unchecked.
-    const OTP_TYPES_BY_PATH = {
-      emailconfirmation: ['signup', 'email'],
-      signin: ['email_change', 'email'],
-      resetpassword: ['recovery'],
-    };
 
     const establishSessionFromDeepLink = async (path, queryParams, hashParams, url) => {
       const type = queryParams.get('type') || hashParams.get('type');
@@ -104,7 +98,7 @@ function RootShell() {
       const refreshToken = hashParams.get('refresh_token');
 
       if (tokenHash && type) {
-        if (!OTP_TYPES_BY_PATH[path]?.includes(type)) {
+        if (!isOtpTypeAllowedForPath(path, type)) {
           return { data: null, error: new Error('Deep link type is not valid for this path') };
         }
         return supabase.auth.verifyOtp({ type, token_hash: tokenHash });

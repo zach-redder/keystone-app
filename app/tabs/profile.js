@@ -9,6 +9,7 @@ import { signOutUser } from '../../services/auth/auth';
 import { getPreferredAiPersona, updateNotificationOptIn, getUserEmail, getPreferredReminderTime} from '../../services/user/userPreferences';
 import { getUserSubscriptionDetails } from '../../services/subscription/subscriptionService';
 import { getAppStoreLink, APP_NAME } from '../../constants/appStore';
+import { PRIVACY_POLICY_URL, TERMS_OF_USE_URL } from '../../constants/legal';
 import useUserStats from '../../hooks/useUserStats';
 import profileStyles from '../../styles/profile';
 import CommunityModal from '../../components/modals/CommunityModal';
@@ -461,6 +462,36 @@ export default function ProfileScreen() {
             }}>
               <Ionicons name="people-outline" size={20} color="#B9C096" style={profileStyles.profileItemIcon} />
               <Text style={profileStyles.profileItemText}>Join the Community</Text>
+              <View style={profileStyles.profileItemRight}>
+                <Ionicons name="chevron-forward" size={16} color="#fff" />
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={profileStyles.profileItem} onPress={async () => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              try {
+                await Linking.openURL(PRIVACY_POLICY_URL);
+              } catch (error) {
+                console.error('Error opening privacy policy:', error);
+              }
+            }}>
+              <Ionicons name="shield-checkmark-outline" size={20} color="#B9C096" style={profileStyles.profileItemIcon} />
+              <Text style={profileStyles.profileItemText}>Privacy Policy</Text>
+              <View style={profileStyles.profileItemRight}>
+                <Ionicons name="chevron-forward" size={16} color="#fff" />
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={profileStyles.profileItem} onPress={async () => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              try {
+                await Linking.openURL(TERMS_OF_USE_URL);
+              } catch (error) {
+                console.error('Error opening terms of use:', error);
+              }
+            }}>
+              <Ionicons name="document-text-outline" size={20} color="#B9C096" style={profileStyles.profileItemIcon} />
+              <Text style={profileStyles.profileItemText}>Terms of Use</Text>
               <View style={profileStyles.profileItemRight}>
                 <Ionicons name="chevron-forward" size={16} color="#fff" />
               </View>
