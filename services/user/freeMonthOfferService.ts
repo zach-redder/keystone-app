@@ -87,12 +87,12 @@ export const grantFreeMonthOffer = async (
     await queryClient.invalidateQueries({ queryKey: queryKeys.proStatus });
 
     // Best-effort, non-blocking -- matches the pattern used elsewhere for Resend
-    // email-list sync (e.g. services/auth/auth.ts). The typed email is only used
-    // here, for the mailing list -- the grant above always targets the
-    // authenticated session's user id, never a lookup by this email.
+    // email-list sync (e.g. services/auth/auth.ts). The backend subscribes the signed-in
+    // account's own address, so the typed email is not used; the grant above always targets
+    // the authenticated session's user id, never a lookup by this email.
     setTimeout(async () => {
       try {
-        await handleNewUserEmailList({ email, sendWelcome: false });
+        await handleNewUserEmailList({ sendWelcome: false });
       } catch (emailError) {
         console.error('Error syncing free-month email to mailing list:', emailError);
       }
