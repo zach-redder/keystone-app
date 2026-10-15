@@ -8,6 +8,8 @@
 --   * "Authenticated users can insert their user row" has the same hole at INSERT (a user can delete
 --     their own row, then re-insert it with is_pro = true).
 --   * "Authenticated can update referral code usage" (USING true) lets any user rewrite any referral code.
+--   * "Authenticated can read referral codes" (USING true) lets any signed-in user LIST every active code,
+--     including lifetime ones, and redeem them (once per account, so a new account repeats it).
 -- Pro unlocks voice mode, which costs real OpenAI money.
 --
 -- THE FIX
@@ -22,7 +24,9 @@
 --      event shows a 200 in the handle-subscription logs. Part B removes the client's own purchase sync,
 --      so without the webhook a paying customer would never be marked Pro.
 --   3. Ship an app build that (a) calls grant_free_month_offer() and redeem_referral_code() instead of
---      writing users/referral_codes, (b) stops sending is_pro in the users insert, (c) no longer writes
+--      reading or writing users/referral_codes (so validateReferralCode must go through the function and
+--      show its status instead of the specific "expired / used up" messages, which would otherwise let a
+--      caller probe which codes exist), (b) stops sending is_pro in the users insert, (c) no longer writes
 --      is_pro / pro_expires_at / subscription_source from subscriptionService, and (d) treats an expired
 --      pro_expires_at as "not Pro" when reading instead of writing is_pro = false.
 --   4. Once that build is what almost everyone runs, apply PART B. Older builds will then fail to
@@ -76,6 +80,19 @@ BEGIN
 END;
 $$;
 
+-- Failed redemption attempts, kept so guessing codes can be throttled. RLS on with no policies: only the
+-- functions below (and the service role) can touch it.
+CREATE TABLE IF NOT EXISTS public.referral_attempts (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL,
+  attempted_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_referral_attempts_user_time
+  ON public.referral_attempts (user_id, attempted_at);
+
+ALTER TABLE public.referral_attempts ENABLE ROW LEVEL SECURITY;
+
 -- Redeems a referral code for the caller. Mirrors redeemReferralCode(): same checks, same grant, but the
 -- usage count is bumped in the same statement that validates it, so a code can't be over-redeemed.
 CREATE OR REPLACE FUNCTION public.redeem_referral_code(p_code TEXT)
@@ -112,6 +129,12 @@ BEGIN
     RETURN jsonb_build_object('status', 'already_granted');
   END IF;
 
+  -- Codes are short and random, so without a limit they could be guessed at whatever rate the API allows
+  IF (SELECT COUNT(*) FROM public.referral_attempts
+      WHERE user_id = v_user_id AND attempted_at > NOW() - INTERVAL '1 hour') >= 5 THEN
+    RETURN jsonb_build_object('status', 'rate_limited');
+  END IF;
+
   -- usage_limit of NULL or 0 means unlimited, as the client treats it today
   UPDATE public.referral_codes
   SET used_count = used_count + 1
@@ -122,6 +145,7 @@ BEGIN
   RETURNING * INTO v_ref;
 
   IF NOT FOUND THEN
+    INSERT INTO public.referral_attempts (user_id) VALUES (v_user_id);
     -- Not distinguishing inactive / expired / used up / unknown keeps the function from being a code oracle
     RETURN jsonb_build_object('status', 'invalid_code');
   END IF;
@@ -172,5 +196,8 @@ GRANT INSERT (
   free_month_offer_shown_at
 ) ON public.users TO authenticated;
 
--- Usage is now counted inside redeem_referral_code(); no client should write referral codes at all
+-- Usage is now counted inside redeem_referral_code(); no client should read or write referral codes at all.
+-- With RLS on and no policy left, only the service role (the landing page's waitlist route) and the
+-- SECURITY DEFINER function above can reach the table.
 DROP POLICY IF EXISTS "Authenticated can update referral code usage" ON public.referral_codes;
+DROP POLICY IF EXISTS "Authenticated can read referral codes" ON public.referral_codes;
