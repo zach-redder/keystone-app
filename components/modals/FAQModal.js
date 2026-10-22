@@ -44,11 +44,11 @@ const FAQModal = ({ visible, onClose }) => {
     },
     {
       question: "How often should I review my Keys?",
-      answer: "We recommend daily review through the app's affirmation feature. You can update your keys anytime as you grow and evolve."
+      answer: "We recommend a quick daily check-in with Affirm or Question mode. You can update your keys anytime as you grow and evolve."
     },
     {
       question: "What features does Keystone include?",
-      answer: "Keystone includes unlimited keys, personalized AI companions, detailed analytics, premium support, and both AI modes, Affirm and Question, to help you know who you are and who you are becoming."
+      answer: "Keystone includes both AI modes, Affirm and Question, voice conversations with Pro, personalized AI personalities, and keys that act as the AI's memory, to help you know who you are and who you are becoming."
     },
     {
       question: "How does the AI personality work?",
@@ -56,7 +56,11 @@ const FAQModal = ({ visible, onClose }) => {
     },
     {
       question: "Is my data private and secure?",
-      answer: "Absolutely. Your data is encrypted and stored securely. We never share your information with third parties. You own your data completely."
+      answer: "Your messages and keys are sent to our AI provider so Keystone can reply, and your information is stored securely. We don't sell your data or use it for advertising, and you can delete everything any time from Profile > Delete account."
+    },
+    {
+      question: "Is Keystone really AI? Is it therapy?",
+      answer: "Yes, Keystone's replies come from an AI, not a person. It's a self-reflection tool, not a substitute for professional care. Plenty of people use it to think through hard things, and that's welcome. If you're in crisis, please reach out to someone who can help right now: in the US, call or text 988 or text HOME to 741741; elsewhere, findahelpline.com lists services by country."
     }
   ];
 

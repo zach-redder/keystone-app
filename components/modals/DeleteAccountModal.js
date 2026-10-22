@@ -176,7 +176,7 @@ const DeleteAccountModal = ({ visible, onClose }) => {
                 <Text style={styles.iconLabel}>Permanent action</Text>
               </View>
               <Text style={styles.bodyText}>
-                Deleting your account erases your identity keys, streaks, reminders, and all saved progress. This can’t be undone.
+                Deleting your account erases your identity keys, conversations, streaks, reminders, and all saved progress. This can’t be undone.
               </Text>
               <Text style={styles.subtleText}>
                 If something isn’t working, you can also reach out through Contact Us in your profile.

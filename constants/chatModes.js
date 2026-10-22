@@ -3,7 +3,7 @@ export const CHAT_MODES = {
     id: 'affirm',
     title: 'Affirm',
     tagline: 'Stand with who you are',
-    description: 'Counters self-doubt and imposter syndrome using your own words.',
+    description: 'Counters self-doubt using your own words, and tells you what the evidence supports.',
     iconName: 'shield-checkmark',
     welcome: '**Welcome.**\n\nTell me what is on your mind. I will help you see the strengths and evidence of who you already are.',
     placeholder: 'What is on your mind?',

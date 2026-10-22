@@ -77,7 +77,7 @@ const CommunityModal = ({ visible, onClose }) => {
 
   const handleJoinCommunity = async () => {
     try {
-      await Linking.openURL('https://discord.gg/qn7mVrX6cp');
+      await Linking.openURL('https://discord.gg/qgkuRUWaD9');
       closeModal();
     } catch (error) {
       console.error('Error opening Whop link:', error);

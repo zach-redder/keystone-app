@@ -215,7 +215,7 @@ export default function NotificationPermission() {
                             </Text>
                         </View>
                         <Text style={{ fontSize: 16, color: 'rgba(255, 255, 255, 0.8)', marginBottom: 20, lineHeight: 22 }}>
-                            Allow notifications to stay connected with your AI?
+                            Allow notifications to keep your reflection going?
                         </Text>
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12 }}>
                             <TouchableOpacity

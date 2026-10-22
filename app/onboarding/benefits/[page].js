@@ -13,7 +13,7 @@ const KEYSTONE_BENEFITS = [
         icon: 'crown',
         iconAnimation: 'glow',
         title: 'Introducing Keystone',
-        subtitle: 'The #1 app to overcome doubt and stop caring what people think.',
+        subtitle: 'The AI app built to help you overcome doubt and think for yourself.',
     },
     {
         id: 2,
@@ -41,7 +41,7 @@ const KEYSTONE_BENEFITS = [
         icon: 'rocket-launch',
         iconAnimation: 'bounce',
         title: 'Become Authentic',
-        subtitle: 'Project your true self to get rid of any self-doubt or outside opinions.',
+        subtitle: 'Project your true self, so self-doubt and outside noise stop running the show.',
     }
 ];
 

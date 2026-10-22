@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Keystone is an Expo/React Native self-reflection companion. Users define "identity keys" across six categories (Core Values, Identity Traits, Future Self Vision, Life Goals, Avoidances, Motivations) and talk to an AI in one of two modes: **Affirm** (counters self-doubt) or **Question** (Socratic). The keys are the AI's memory; after a chat, "Review keys" proposes add/update/delete changes that apply only when the user accepts. Tapping the home orb starts a **voice conversation** (Pro only) over OpenAI Realtime/WebRTC; chat is one tap away. There are no scores and no action logs. The app uses **Superwall** (`expo-superwall@0.3.2`) for paywall/subscription management and **Supabase** for auth, data, and two Edge Functions checked into this repo. AI features call the sibling `keystone-ai-service` backend.
+Keystone is an Expo/React Native AI self-reflection app. Users define "identity keys" across six categories (Core Values, Identity Traits, Future Self Vision, Life Goals, Avoidances, Motivations) and talk to an AI in one of two modes: **Affirm** (counters self-doubt) or **Question** (Socratic). The keys are the AI's memory; after a chat, "Review keys" proposes add/update/delete changes that apply only when the user accepts. Tapping the home orb starts a **voice conversation** (Pro only) over OpenAI Realtime/WebRTC; chat is one tap away. There are no scores and no action logs. The app uses **Superwall** (`expo-superwall@0.3.2`) for paywall/subscription management and **Supabase** for auth, data, and two Edge Functions checked into this repo. AI features call the sibling `keystone-ai-service` backend.
 
 ## Tech Stack
 

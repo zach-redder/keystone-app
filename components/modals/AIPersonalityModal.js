@@ -348,7 +348,7 @@ const AIPersonalityModal = ({ visible, onClose, onUpgradePress }) => {
         <View style={styles.header}>
           <View style={styles.titleContainer}>
             <Text style={keysStyles.infoSectionTitle}>AI Personality</Text>
-            <Text style={styles.subtitle}>Choose how your AI companion communicates with you</Text>
+            <Text style={styles.subtitle}>Choose how your AI communicates with you</Text>
           </View>
           <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
             <Ionicons name="close" size={22} color="#999" />
@@ -382,7 +382,7 @@ const AIPersonalityModal = ({ visible, onClose, onUpgradePress }) => {
                     <Text style={styles.createCustomTitle}>
                       {customPersonalities.length > 0 ? 'Create Another Custom Personality' : 'Create Custom Personality'}
                     </Text>
-                    <Text style={styles.createCustomSubtitle}>Design your own AI companion with a unique name and description</Text>
+                    <Text style={styles.createCustomSubtitle}>Design your own AI personality with a unique name and description</Text>
                   </View>
                 </View>
               </TouchableOpacity>

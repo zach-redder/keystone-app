@@ -185,7 +185,7 @@ export default function SubscriptionScreen() {
 
           <Text style={styles.mainTitle}>Unlock Full Access</Text>
           <Text style={styles.subtitle}>
-            Get unlimited access to all features, personalized AI companions, and exclusive community perks.
+            Get unlimited access to all features, personalized AI personalities, and exclusive community perks.
           </Text>
 
           {paywallUnavailable && (

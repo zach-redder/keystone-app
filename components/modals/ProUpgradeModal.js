@@ -245,10 +245,9 @@ const ProUpgradeModal = ({ visible, onClose, currentPage, onSubscriptionChange }
                 {[
                   { icon: 'mic', text: 'Voice conversations with your AI' },
                   { icon: 'infinite', text: 'Unlimited daily conversations' },
-                  { icon: 'sparkles', text: 'Advanced AI feedback' },
+                  { icon: 'sparkles', text: 'Longer, deeper AI conversations' },
                   { icon: 'key', text: 'Unlimited identity keys' },
                   { icon: 'people', text: 'Community access' },
-                  { icon: 'trending-up', text: 'Detailed progress insights' },
                 ].map((feature, index) => (
                   <View
                     key={index}

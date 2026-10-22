@@ -83,7 +83,7 @@ export default function VoiceScreen() {
   const handleReset = () => {
     Alert.alert(
       'Reset Conversation',
-      `Start a fresh ${config.title} conversation? Your streaks and stats are kept.`,
+      `Start a fresh ${config.title} conversation? This clears the thread from view. Your streaks and stats are kept.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
