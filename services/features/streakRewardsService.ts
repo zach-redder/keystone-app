@@ -34,7 +34,7 @@ export const STREAK_MILESTONES: StreakMilestone[] = [
   {
     days: 21,
     title: "Habit Master!",
-    message: "21 days! Scientists say it takes this long to form a habit. You're officially in the zone!",
+    message: "21 days! Three straight weeks of showing up. You're officially in the zone!",
     emoji: "🎯",
     color: "#3D5A80"
   },
@@ -55,7 +55,7 @@ export const STREAK_MILESTONES: StreakMilestone[] = [
   {
     days: 75,
     title: "Elite Performer!",
-    message: "75 days of excellence! You're in the top 1% of committed individuals. Keep soaring!",
+    message: "75 days of excellence! That's real consistency. Keep soaring!",
     emoji: "⭐",
     color: "#E74C3C"
   },

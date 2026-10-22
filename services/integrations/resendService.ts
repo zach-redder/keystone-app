@@ -1,49 +1,26 @@
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
+import { BASE_URL } from '../../lib/apiConfig';
+import { getAuthHeaders } from '../features/affirmationService';
 
-export const addToEmailList = async (options: { email: string }) => {
-  const { email } = options;
-  const response = await fetch(`${API_BASE_URL}/add-to-email-list`, {
+// The backend takes the address from the signed-in account rather than the request, so these calls
+// only ever act on the current user and need no email in the body.
+
+export const addToEmailList = async () => {
+  const response = await fetch(`${BASE_URL}/add-to-email-list`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email }),
+    headers: await getAuthHeaders(),
   });
 
-  if (!response.ok) throw new Error(await response.text());
+  if (!response.ok) throw new Error(`Email list request failed (${response.status})`);
   return response.json();
 };
 
-export const removeFromEmailList = async (options: { email: string }) => {
-  const { email } = options;
-  const response = await fetch(`${API_BASE_URL}/remove-from-email-list`, {
+export const sendWelcomeEmail = async () => {
+  const response = await fetch(`${BASE_URL}/send-welcome-email`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email }),
+    headers: await getAuthHeaders(),
   });
 
-  if (!response.ok) throw new Error(await response.text());
-  return response.json();
-};
-
-export const updateEmailListContact = async (options: { email: string; updates: any }) => {
-  const { email, updates } = options;
-  const response = await fetch(`${API_BASE_URL}/update-email-list-contact`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, updates }),
-  });
-
-  if (!response.ok) throw new Error(await response.text());
-  return response.json();
-};
-
-export const sendWelcomeEmail = async (email: string) => {
-  const response = await fetch(`${API_BASE_URL}/send-welcome-email`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email }),
-  });
-
-  if (!response.ok) throw new Error(await response.text());
+  if (!response.ok) throw new Error(`Welcome email request failed (${response.status})`);
   return response.json();
 };
 

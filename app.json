@@ -29,6 +29,70 @@
           }
         ],
         "ITSAppUsesNonExemptEncryption": false
+      },
+      "privacyManifests": {
+        "NSPrivacyTracking": false,
+        "NSPrivacyTrackingDomains": [],
+        "NSPrivacyAccessedAPITypes": [
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+            "NSPrivacyAccessedAPITypeReasons": ["CA92.1"]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryFileTimestamp",
+            "NSPrivacyAccessedAPITypeReasons": ["C617.1"]
+          }
+        ],
+        "NSPrivacyCollectedDataTypes": [
+          {
+            "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeEmailAddress",
+            "NSPrivacyCollectedDataTypeLinked": true,
+            "NSPrivacyCollectedDataTypeTracking": false,
+            "NSPrivacyCollectedDataTypePurposes": [
+              "NSPrivacyCollectedDataTypePurposeAppFunctionality",
+              "NSPrivacyCollectedDataTypePurposeDeveloperAdvertising"
+            ]
+          },
+          {
+            "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeName",
+            "NSPrivacyCollectedDataTypeLinked": true,
+            "NSPrivacyCollectedDataTypeTracking": false,
+            "NSPrivacyCollectedDataTypePurposes": ["NSPrivacyCollectedDataTypePurposeAppFunctionality"]
+          },
+          {
+            "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeUserID",
+            "NSPrivacyCollectedDataTypeLinked": true,
+            "NSPrivacyCollectedDataTypeTracking": false,
+            "NSPrivacyCollectedDataTypePurposes": ["NSPrivacyCollectedDataTypePurposeAppFunctionality"]
+          },
+          {
+            "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeOtherUserContent",
+            "NSPrivacyCollectedDataTypeLinked": true,
+            "NSPrivacyCollectedDataTypeTracking": false,
+            "NSPrivacyCollectedDataTypePurposes": ["NSPrivacyCollectedDataTypePurposeAppFunctionality"]
+          },
+          {
+            "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeAudioData",
+            "NSPrivacyCollectedDataTypeLinked": true,
+            "NSPrivacyCollectedDataTypeTracking": false,
+            "NSPrivacyCollectedDataTypePurposes": ["NSPrivacyCollectedDataTypePurposeAppFunctionality"]
+          },
+          {
+            "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypePurchaseHistory",
+            "NSPrivacyCollectedDataTypeLinked": true,
+            "NSPrivacyCollectedDataTypeTracking": false,
+            "NSPrivacyCollectedDataTypePurposes": ["NSPrivacyCollectedDataTypePurposeAppFunctionality"]
+          },
+          {
+            "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeDeviceID",
+            "NSPrivacyCollectedDataTypeLinked": true,
+            "NSPrivacyCollectedDataTypeTracking": false,
+            "NSPrivacyCollectedDataTypePurposes": [
+              "NSPrivacyCollectedDataTypePurposeAppFunctionality",
+              "NSPrivacyCollectedDataTypePurposeAnalytics"
+            ]
+          }
+        ]
       }
     },
     "android": {

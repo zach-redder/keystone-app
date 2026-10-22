@@ -5,6 +5,7 @@ import { fetchIdentityKeys } from '../user/userKeys';
 import { getPreferredAiPersona } from '../user/userPreferences';
 import { fetchCustomPersonalities } from '../features/customPersonalitiesService';
 import { fetchAIChatMessages, getAuthHeaders, organizeKeysByCategory, ChatMode } from '../features/affirmationService';
+import { assertAiConsent } from '../user/aiConsentService';
 import { VoiceEventTracker, VoiceState, Turn } from './voiceEvents';
 import { LevelExtractor, AudioLevels } from './voiceStats';
 import { pickPersonaVoice } from './personaVoice';
@@ -137,6 +138,8 @@ export class RealtimeVoiceSession {
   constructor(private mode: ChatMode, private callbacks: VoiceSessionCallbacks) {}
 
   async start(): Promise<{ maxSeconds: number; remainingMessages: number }> {
+    // Before the microphone is opened or anything is sent: the screens ask first, this is the backstop
+    await assertAiConsent();
     this.setState('connecting');
 
     // Mic first: the permission prompt can take a while, and the server's key only lives about a minute

@@ -117,6 +117,23 @@ export const createMockSuperwallHooks = () => {
   };
 };
 
+// The subscription status the Superwall SDK holds right now, read from the native side.
+// The status a component gets from useUser() is only as fresh as the render that captured it, and
+// useUser().refresh() refreshes user attributes, not subscription state, so a "restore" that reads those
+// can report "nothing found" for a subscription the SDK already knows about. Returns null if it can't be read.
+export const fetchSubscriptionStatus = async () => {
+  if (isExpoGo()) {
+    return { status: 'INACTIVE', entitlements: [] };
+  }
+  try {
+    const { SuperwallExpoModule } = require('expo-superwall');
+    return await SuperwallExpoModule.getSubscriptionStatus();
+  } catch (error) {
+    console.warn('Could not read the subscription status:', error?.message || error);
+    return null;
+  }
+};
+
 // Export the appropriate implementation based on environment
 export const getSuperwallImplementation = () => {
   // Use mock ONLY in Expo Go to avoid native module issues

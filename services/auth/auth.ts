@@ -5,6 +5,10 @@ import { handleNewUserEmailList } from '../integrations/emailListService';
 import { redeemReferralCode } from '../user/referralService';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { Platform } from 'react-native';
+import * as Notifications from 'expo-notifications';
+import { BASE_URL } from '../../lib/apiConfig';
+import { queryClient } from '../../lib/queryClient';
+import { getAuthHeaders } from '../features/affirmationService';
 
 // Lazy load Google Sign In to avoid crashes during development
 let GoogleSignin: any = null;
@@ -31,7 +35,6 @@ interface Preferences {
 
 export const signUpUser = async (email: string, password: string) => {
   try {
-    console.log('Starting signup process for:', email);
     
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -111,7 +114,6 @@ export const signInUser = async (email: string, password: string) => {
       throw new Error('Sign-in succeeded but no user returned.');
     }
 
-    console.log('Sign-in successful for user:', user.id);
     return user;
   } catch (error) {
     const msg = (error as any)?.message?.toLowerCase() || '';
@@ -268,7 +270,6 @@ export const signInWithApple = async () => {
       const fullName = `${credential.fullName.givenName || ''} ${credential.fullName.familyName || ''}`.trim();
       if (fullName) {
         await AsyncStorage.setItem('@user_name', fullName);
-        console.log('Saved Apple user name:', fullName);
       }
     }
 
@@ -347,12 +348,10 @@ export const insertUserProfileAfterConfirmation = async (
   let userName = '';
   try {
     userName = await AsyncStorage.getItem('@user_name') || '';
-    console.log('Retrieved user name from AsyncStorage:', userName);
   } catch (error) {
     console.error('Error retrieving user name from AsyncStorage:', error);
   }
 
-  console.log('Inserting user profile:', { userId, email: user.email, name: userName });
 
   // Insert into users table
   console.log('insertUserProfileAfterConfirmation - Inserting user profile with onboarding_complete: true');
@@ -375,15 +374,10 @@ export const insertUserProfileAfterConfirmation = async (
 
   // Add user to Resend email list (non-blocking)
   if (user.email) {
-    const userEmail = user.email; // Store email to avoid TypeScript error
-    console.log('Adding user to Resend email list:', userEmail);
     // Use setTimeout to make this non-blocking
     setTimeout(async () => {
       try {
-        await handleNewUserEmailList({
-          email: userEmail,
-          sendWelcome: true,
-        });
+        await handleNewUserEmailList({ sendWelcome: true });
       } catch (resendError) {
         console.error('Error adding user to Resend email list:', resendError);
         // Don't throw the error here - we don't want to fail user creation if email list fails
@@ -527,7 +521,6 @@ export const insertUserProfileAfterConfirmation = async (
     }
 
     if (identityKeys.length > 0) {
-      console.log('Inserting identity keys:', identityKeys);
       console.log('Number of keys to insert:', identityKeys.length);
       await addIdentityKeysBatch(identityKeys);
       console.log('Identity keys inserted successfully');
@@ -644,9 +637,7 @@ export const debugAuthState = async () => {
   try {
     const { data: { session }, error } = await supabase.auth.getSession();
     console.log('=== AUTH DEBUG ===');
-    console.log('Session:', session);
     console.log('Error:', error);
-    console.log('User:', session?.user);
     console.log('Access Token:', session?.access_token ? 'Present' : 'Missing');
     console.log('Refresh Token:', session?.refresh_token ? 'Present' : 'Missing');
     console.log('==================');
@@ -659,7 +650,6 @@ export const debugAuthState = async () => {
       key.includes('token') ||
       key.includes('session')
     );
-    console.log('Auth-related AsyncStorage keys:', authKeys);
     
     return { session, error };
   } catch (error) {
@@ -679,7 +669,6 @@ export const checkUserStatus = async () => {
 
   const user = session?.user;
 
-  console.log('checkUserStatus - Session user:', user ? { id: user.id, email: user.email, emailConfirmed: user.email_confirmed_at } : 'No user');
 
   if (!user) {
     // No active session, route to sign-in screen
@@ -929,132 +918,35 @@ export const updateUserPassword = async (newPassword: string) => {
   }
 };
 
+// Deletion happens on the server: it clears every table that holds the user's data (including ones
+// the client has no permission to reach), removes the mailing-list contact, then deletes the auth
+// user last. Any failure comes back as a thrown error and leaves the account intact so the user can
+// retry; nothing local is wiped until the server confirms.
 export const deleteUserAccount = async (): Promise<boolean> => {
-  try {
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
+  const response = await fetch(`${BASE_URL}/account/delete`, {
+    method: 'POST',
+    headers: await getAuthHeaders(),
+  });
 
-    if (userError || !user) {
-      throw new Error('User not authenticated');
-    }
-
-    const userId = user.id;
-    console.log('Starting account deletion for user:', userId);
-
-    // Delete all user-related data from database tables
-    // Note: These should ideally be handled by database triggers/cascades,
-    // but we'll delete them explicitly to ensure complete cleanup
-
-    // Delete user preferences
-    const { error: prefsError } = await supabase
-      .from('user_preferences')
-      .delete()
-      .eq('user_id', userId);
-    if (prefsError) console.error('Error deleting user preferences:', prefsError);
-
-    // Delete action logs
-    const { error: logsError } = await supabase
-      .from('action_logs')
-      .delete()
-      .eq('user_id', userId);
-    if (logsError) console.error('Error deleting action logs:', logsError);
-
-    // Delete user keys
-    const { error: keysError } = await supabase
-      .from('user_keys')
-      .delete()
-      .eq('user_id', userId);
-    if (keysError) console.error('Error deleting user keys:', keysError);
-
-    // Delete reminders
-    const { error: reminderError } = await supabase
-      .from('user_reminders')
-      .delete()
-      .eq('user_id', userId);
-    if (reminderError) console.error('Error deleting reminders:', reminderError);
-
-    // Delete daily reminders
-    const { error: dailyReminderError } = await supabase
-      .from('user_daily_reminders')
-      .delete()
-      .eq('user_id', userId);
-    if (dailyReminderError) console.error('Error deleting daily reminders:', dailyReminderError);
-
-    // Delete weekly alignment snapshots
-    const { error: snapshotError } = await supabase
-      .from('weekly_alignment_snapshots')
-      .delete()
-      .eq('user_id', userId);
-    if (snapshotError) console.error('Error deleting weekly snapshots:', snapshotError);
-
-    // Delete alignment score changes
-    const { error: alignmentChangesError } = await supabase
-      .from('alignment_score_changes')
-      .delete()
-      .eq('user_id', userId);
-    if (alignmentChangesError) console.error('Error deleting alignment changes:', alignmentChangesError);
-
-    // Delete user alignment scores
-    const { error: alignmentScoresError } = await supabase
-      .from('user_alignment_scores')
-      .delete()
-      .eq('user_id', userId);
-    if (alignmentScoresError) console.error('Error deleting alignment scores:', alignmentScoresError);
-
-    // Delete referral redemptions
-    const { error: referralError } = await supabase
-      .from('referral_redemptions')
-      .delete()
-      .eq('user_id', userId);
-    if (referralError) console.error('Error deleting referral redemptions:', referralError);
-
-    // Delete AI chat logs
-    const { error: chatLogsError } = await supabase
-      .from('ai_chat_logs')
-      .delete()
-      .eq('user_id', userId);
-    if (chatLogsError) console.error('Error deleting chat logs:', chatLogsError);
-
-    // Delete messages
-    const { error: messagesError } = await supabase
-      .from('messages')
-      .delete()
-      .eq('user_id', userId);
-    if (messagesError) console.error('Error deleting messages:', messagesError);
-
-    // Delete custom personalities
-    const { error: personalitiesError } = await supabase
-      .from('custom_personalities')
-      .delete()
-      .eq('user_id', userId);
-    if (personalitiesError) console.error('Error deleting custom personalities:', personalitiesError);
-
-    // Delete user profile from users table
-    const { error: userDeleteError } = await supabase
-      .from('users')
-      .delete()
-      .eq('id', userId);
-    if (userDeleteError) {
-      console.error('Error deleting user profile:', userDeleteError);
-      throw userDeleteError;
-    }
-
-    // Sign out the user before deletion
-    await supabase.auth.signOut();
-    
-    // Clear all AsyncStorage
-    await AsyncStorage.clear();
-
-    // Note: The auth.users deletion will be handled by a database trigger
-    // that listens for deletions in the public.users table
-    // See the SQL migration file for the trigger setup
-
-    console.log('Account deleted successfully. Auth user deletion will be handled by database trigger.');
-    return true;
-  } catch (error) {
-    console.error('Error deleting user account:', error);
-    throw error;
+  if (!response.ok) {
+    throw new Error(`Account deletion failed (${response.status})`);
   }
+
+  // The account is already gone, so local cleanup is best-effort and must never turn into an error
+  try {
+    await Notifications.cancelAllScheduledNotificationsAsync();
+  } catch (notificationError) {
+    console.warn('Could not cancel scheduled notifications after account deletion');
+  }
+
+  try {
+    // The server session no longer exists, so a network sign-out would only fail
+    await supabase.auth.signOut({ scope: 'local' });
+    queryClient.clear();
+    await AsyncStorage.clear();
+  } catch (cleanupError) {
+    console.warn('Could not fully clear local data after account deletion');
+  }
+
+  return true;
 };

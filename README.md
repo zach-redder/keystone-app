@@ -1,6 +1,6 @@
 # Keystone App
 
-The Keystone mobile app — an Expo/React Native self-reflection companion.
+The Keystone mobile app — an Expo/React Native AI self-reflection app.
 
 ## Overview
 

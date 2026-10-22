@@ -1,6 +1,7 @@
 import { BASE_URL } from '../../lib/apiConfig';
 import { getAuthHeaders, ChatMessage } from './affirmationService';
 import { addIdentityKey, updateIdentityKey, deleteIdentityKey } from '../user/userKeys';
+import { assertAiConsent } from '../user/aiConsentService';
 
 export type KeyChangeAction = 'add' | 'update' | 'delete';
 
@@ -31,6 +32,7 @@ interface RawKeyChange {
 }
 
 export const proposeKeyChanges = async (keys: ExistingKey[], messages: ChatMessage[]): Promise<KeyChange[]> => {
+  await assertAiConsent();
   const response = await fetch(`${BASE_URL}/propose-key-changes`, {
     method: 'POST',
     headers: await getAuthHeaders(),

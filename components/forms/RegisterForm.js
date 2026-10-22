@@ -66,8 +66,6 @@ export default function RegisterForm() {
       }
       // Sign up the user
       await signUpUser(email, password);
-      // Store password temporarily for the confirmation process
-      await AsyncStorage.setItem('tempPassword', password);
       setShowConfirmation(true);
     } catch (err) {
       // Show a user-friendly error for missing fields or known auth errors
@@ -145,6 +143,7 @@ export default function RegisterForm() {
     return (
       <WaitForEmailConfirmation 
         email={email}
+        password={password}
         preferences={preferences}
         onTryDifferentEmail={() => {
           setShowConfirmation(false);

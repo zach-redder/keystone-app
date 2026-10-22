@@ -5,6 +5,7 @@ import { fetchIdentityKeys } from '../user/userKeys';
 import { getPreferredAiPersona } from '../user/userPreferences';
 import { queryClient, queryKeys } from '../../lib/queryClient';
 import { checkUserProStatus } from '../subscription/subscriptionService';
+import { assertAiConsent } from '../user/aiConsentService';
 
 export type ChatMode = 'affirm' | 'question';
 
@@ -52,6 +53,7 @@ export const getAuthHeaders = async (): Promise<Record<string, string>> => {
  * Calls /generate-ai-message in the given mode. The backend identifies the user from the bearer token.
  */
 export const generateAIMessage = async (mode: ChatMode, message: string, messages: ChatMessage[]): Promise<string> => {
+  await assertAiConsent();
   const limitedMessages = messages.slice(-MAX_HISTORY_MESSAGES);
 
   try {

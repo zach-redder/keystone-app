@@ -27,7 +27,7 @@ module.exports = ({ config }) => {
       [
         "@config-plugins/react-native-webrtc",
         {
-          microphonePermission: "Keystone listens through your microphone when you talk to your AI companion.",
+          microphonePermission: "Keystone listens through your microphone when you talk with the AI.",
           // The plugin always writes a camera string; voice mode never opens the camera
           cameraPermission: "Keystone does not use the camera.",
         },

@@ -1,3 +1,4 @@
+import '../utils/silenceProductionLogs';
 import React, { useEffect, useRef } from 'react';
 import { Slot, useRouter } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -5,7 +6,9 @@ import { StatusBar } from 'expo-status-bar';
 import * as Linking from 'expo-linking';
 import { supabase } from '../lib/supabase';
 import { handleReferralDeepLink } from '../services/integrations/deepLinkService';
+import { authLinkDestination, isOtpTypeAllowedForPath } from '../services/auth/deepLinkOtp';
 import { AppState } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setupReminderNotifications } from '../services/features/reminderService';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { SuperwallContextProvider } from '../contexts/SuperwallContext';
@@ -20,6 +23,12 @@ function RootShell() {
   const router = useRouter();
   const midnightTimeoutRef = useRef(null);
   const appState = useRef('active');
+
+  useEffect(() => {
+    // Earlier builds kept the sign-up password here while waiting for email confirmation; it is
+    // now held in memory only, so clear any copy an older install left behind.
+    AsyncStorage.removeItem('tempPassword').catch(() => {});
+  }, []);
 
   useEffect(() => {
     appState.current = AppState.currentState;
@@ -80,7 +89,8 @@ function RootShell() {
     // access_token/refresh_token pair (implicit flow, in the hash), or a PKCE code
     // (exchangeCodeForSession -- only works if this client's storage holds the
     // matching verifier, i.e. this same app instance initiated the request).
-    const establishSessionFromDeepLink = async (queryParams, hashParams, url) => {
+
+    const establishSessionFromDeepLink = async (path, queryParams, hashParams, url) => {
       const type = queryParams.get('type') || hashParams.get('type');
       const tokenHash = queryParams.get('token_hash');
       const code = queryParams.get('code');
@@ -88,6 +98,9 @@ function RootShell() {
       const refreshToken = hashParams.get('refresh_token');
 
       if (tokenHash && type) {
+        if (!isOtpTypeAllowedForPath(path, type)) {
+          return { data: null, error: new Error('Deep link type is not valid for this path') };
+        }
         return supabase.auth.verifyOtp({ type, token_hash: tokenHash });
       }
       if (accessToken && refreshToken) {
@@ -103,7 +116,6 @@ function RootShell() {
 
     const handleDeepLink = async (event) => {
       const { url } = event;
-      console.log('Deep link received:', url);
 
       if (!url || !url.startsWith('keystone://')) {
         // Not our custom scheme -- most likely a Universal Link to
@@ -119,16 +131,13 @@ function RootShell() {
 
         if (AUTH_LINK_PATHS.includes(path) && (Array.from(queryParams.keys()).length || Array.from(hashParams.keys()).length)) {
           console.log('Processing auth deep link for', path);
-          const { data, error } = await establishSessionFromDeepLink(queryParams, hashParams, url);
+          const { data, error } = await establishSessionFromDeepLink(path, queryParams, hashParams, url);
           if (error) {
             console.error('Failed to establish session from deep link:', error);
           } else if (data?.session) {
-            console.log('Session established from deep link!', {
-              userId: data.session.user.id,
-              email: data.session.user.email,
-            });
+            console.log('Session established from deep link');
           }
-          router.replace(`/${path}`);
+          router.replace(`/${authLinkDestination(path, data?.redirectType)}`);
           return;
         }
 
@@ -149,10 +158,7 @@ function RootShell() {
     const subscription = Linking.addEventListener('url', handleDeepLink);
     Linking.getInitialURL().then((url) => {
       if (url) {
-        console.log('App opened with initial URL:', url);
         handleDeepLink({ url });
-      } else {
-        console.log('No initial URL found');
       }
     });
 

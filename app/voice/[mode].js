@@ -6,6 +6,7 @@ import * as Haptics from 'expo-haptics';
 import AIOrb from '../../components/voice/AIOrb';
 import ProUpgradeModal from '../../components/modals/ProUpgradeModal';
 import KeyChangeReviewModal from '../../components/modals/KeyChangeReviewModal';
+import CrisisResourcesModal from '../../components/modals/CrisisResourcesModal';
 import useVoiceSession from '../../hooks/useVoiceSession';
 import useKeyReview from '../../hooks/useKeyReview';
 import { CHAT_MODES, DEFAULT_CHAT_MODE, isChatMode } from '../../constants/chatModes';
@@ -82,7 +83,7 @@ export default function VoiceScreen() {
   const handleReset = () => {
     Alert.alert(
       'Reset Conversation',
-      `Start a fresh ${config.title} conversation? Your streaks and stats are kept.`,
+      `Start a fresh ${config.title} conversation? This clears the thread from view. Your streaks and stats are kept.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -187,6 +188,7 @@ export default function VoiceScreen() {
       </View>
 
       <ProUpgradeModal visible={showUpgrade} onClose={() => setShowUpgrade(false)} />
+      <CrisisResourcesModal visible={voice.crisisDetected} onContinue={voice.dismissCrisis} />
       <KeyChangeReviewModal
         visible={review.visible}
         onClose={review.close}

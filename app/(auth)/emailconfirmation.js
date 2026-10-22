@@ -6,7 +6,9 @@ import { insertUserProfileAfterConfirmation, resendConfirmationEmail } from '../
 import { styles } from '../../styles/authentication';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export default function WaitForEmailConfirmationScreen({ email, preferences: initialPreferences, onTryDifferentEmail }) {
+// `password` is only ever held in memory: it lets this screen poll for the confirmed email while it is open.
+// It is never written to disk, so quitting mid-confirmation just means signing in normally afterwards.
+export default function WaitForEmailConfirmationScreen({ email, password, preferences: initialPreferences, onTryDifferentEmail }) {
   const router = useRouter();
   const [polling, setPolling] = useState(true);
   const [error, setError] = useState(null);
@@ -25,18 +27,15 @@ export default function WaitForEmailConfirmationScreen({ email, preferences: ini
       // We need to check the auth.users table directly to see if email_confirmed_at is not null
       // Since we can't directly query auth.users from the client, we'll use a different approach
       
-      // Try to sign in with the stored credentials to check if email is confirmed
-      const storedPassword = await AsyncStorage.getItem('tempPassword');
-      
-      if (!storedPassword) {
-        console.log('No stored password found');
+      // Try to sign in with the credentials from registration to check if email is confirmed
+      if (!password) {
         return { confirmed: false, error: 'no_password' };
       }
       
       // Attempt to sign in - this will only work if email is confirmed
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
-        password: storedPassword,
+        password,
       });
       
       if (error) {
@@ -88,9 +87,6 @@ export default function WaitForEmailConfirmationScreen({ email, preferences: ini
   }, []);
 
   useEffect(() => {
-    // Debug session state on mount
-    debugSessionState();
-
     // Listen for auth state changes (email confirmation)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth state change:', event, session ? 'with session' : 'no session');
@@ -265,43 +261,6 @@ export default function WaitForEmailConfirmationScreen({ email, preferences: ini
     } else {
       router.replace('/register');
     }
-  };
-
-  // Debug function to check session state
-  const debugSessionState = async () => {
-    console.log('=== SESSION DEBUG ===');
-    
-    try {
-      // Check session
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      console.log('Session error:', sessionError);
-      console.log('Session exists:', !!session);
-      if (session) {
-        console.log('User ID:', session.user.id);
-        console.log('Email:', session.user.email);
-        console.log('Email confirmed:', session.user.email_confirmed_at);
-      } else {
-        console.log('No session - expected until email is confirmed');
-      }
-      
-      // Check AsyncStorage
-      const storedToken = await AsyncStorage.getItem('sb-supabase-auth-token');
-      console.log('Stored token exists:', !!storedToken);
-      
-      // Check all auth-related keys
-      const allKeys = await AsyncStorage.getAllKeys();
-      const authKeys = allKeys.filter(key => 
-        key.includes('auth') || 
-        key.includes('supabase') || 
-        key.includes('token')
-      );
-      console.log('Auth keys in storage:', authKeys);
-      
-    } catch (err) {
-      console.error('Debug error:', err);
-    }
-    
-    console.log('==================');
   };
 
   if (isCheckingRouteSession) {
