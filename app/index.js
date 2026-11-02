@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Redirect } from 'expo-router';
 import { checkUserStatus } from '../services/auth/auth';
+import { getPostSignupResume, getPreAuthResume } from '../services/onboarding/resumeStorage';
+import { getAccessDecision } from '../services/subscription/accessGateService';
 import SplashScreen from './SplashScreen';
 
 export default function Index() {
@@ -8,70 +10,46 @@ export default function Index() {
 
   useEffect(() => {
     const check = async () => {
-      console.log('=== MAIN APP ROUTING ===');
       const { status } = await checkUserStatus();
 
-      console.log('Main app routing - status:', status);
-  
       switch (status) {
         case 'no_session':
-          // No active session, route to sign-in
-          console.log('Main app routing - Redirecting to /signin');
-          setRedirectTo('/onboarding/Welcome');
+          // Picks a killed app back up where the user left off before creating an account
+          setRedirectTo((await getPreAuthResume()) ?? '/onboarding/Welcome');
           break;
-          
+
         case 'needs_email_confirmation':
-          // User signed up but email not confirmed
-          console.log('Main app routing - Redirecting to /register');
           setRedirectTo('/register');
           break;
-          
+
         case 'needs_onboarding':
-          // Brand new user or user who needs to start onboarding
-          console.log('Main app routing - Redirecting to /onboarding/Welcome');
           setRedirectTo('/onboarding/Welcome');
           break;
-          
-        case 'needs_quiz':
-          // User has started identity keys but needs to complete quiz
-          console.log('Main app routing - Redirecting to /onboarding/Quiz/1');
-          setRedirectTo('/onboarding/Quiz/1');
+
+        case 'needs_profile':
+          // Signed in and confirmed, but the profile was never created; the confirmation
+          // screen finishes it from the selections still stored locally
+          setRedirectTo('/emailconfirmation');
           break;
-          
-        case 'needs_user_info':
-          // User has completed quiz but needs to enter user info
-          console.log('Main app routing - Redirecting to /onboarding/Quiz/UserInfo');
-          setRedirectTo('/onboarding/Quiz/UserInfo');
+
+        case 'complete': {
+          // After sign-up the notification, rating and paywall screens still follow
+          const resume = await getPostSignupResume();
+          if (resume) {
+            setRedirectTo(resume);
+          } else {
+            setRedirectTo((await getAccessDecision()) === 'allow' ? '/tabs/home' : '/onboarding/FreeTrial');
+          }
           break;
-          
-        case 'needs_referral_code':
-          // User has completed quiz and user info, ready for referral code step
-          console.log('Main app routing - Redirecting to /onboarding/ReferralCode');
-          setRedirectTo('/onboarding/ReferralCode');
-          break;
-          
-        case 'complete':
-          // User has completed onboarding - proceed directly to main app (free users can access)
-          console.log('Main app routing - User onboarding complete, proceeding to main app');
-          setRedirectTo('/tabs/home');
-          break;
-          
-        case 'error':
-          // Database error, route to sign-in as fallback
-          console.error('Database error in user status check');
-          console.log('Main app routing - Redirecting to /signin (error)');
-          setRedirectTo('/signin');
-          break;
-          
+        }
+
         default:
-          // Unknown status, route to sign-in as fallback
-          console.error('Unknown user status:', status);
-          console.log('Main app routing - Redirecting to /signin (unknown)');
+          console.error('Unexpected user status:', status);
           setRedirectTo('/signin');
           break;
       }
     };
-  
+
     check();
   }, []);
 

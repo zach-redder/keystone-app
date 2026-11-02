@@ -17,7 +17,7 @@ export default function SignInScreen() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
-          router.replace('/tabs/home');
+          router.replace('/');
           return;
         }
       } catch (error) {

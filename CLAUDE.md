@@ -20,7 +20,7 @@ Keystone is an Expo/React Native AI self-reflection app. Users define "identity 
 - `npm run android` — Run on Android device/emulator
 - `npm run ios` — Run on iOS device/simulator
 - `npm run web` — Run on web browser
-- `npm test` — unit tests for the voice logic (`services/voice/*.test.ts`, run with `tsx`)
+- `npm test` — unit tests for the pure logic in `services/voice`, `services/onboarding`, `services/subscription` and friends (`*.test.ts`, run with `tsx`)
 
 After changing native dependencies:
 ```bash
@@ -33,14 +33,14 @@ There is no `lint` script. **Voice mode cannot run in Expo Go**: it uses `react-
 ## Architecture
 
 ### Core Structure
-- **Expo Router**: file-based routing in `/app`, using route groups (`(auth)`, `(identity)`, `(quiz)`, `(subscription)`, etc.) to organize onboarding sub-flows without affecting the URL path.
+- **Expo Router**: file-based routing in `/app`, using route groups (`(auth)`, `(identity)`, `(screens)`, `(subscription)`, etc.) to organize onboarding sub-flows without affecting the URL path.
 - **Supabase**: backend for authentication, Postgres data, and receipt validation.
 - **Context API**: global state via React Context (`SuperwallContext`); no Redux/Zustand.
 
 ### Key Directories
 - `/app` — screens and routing
   - `/app/tabs` — bottom tab navigation (`keys.js`, `home.js` = AI orb, `stats.js`, `profile.js`) and two full-screen routes outside the tabs: `/app/voice/[mode].js` (voice, the default) and `/app/chat/[mode].js` (text). `/hooks` holds `useVoiceSession` and `useKeyReview` (shared by both screens); `/components/voice` holds the orb
-  - `/app/onboarding` — identity key selection, quiz, benefits deep-dives, subscription paywall
+  - `/app/onboarding` — the onboarding flow (see Onboarding Flow below): quiz, identity key selection, preview, post-sign-up screens, paywall
   - `/app/(auth)` — sign in, register, reset password, email confirmation
 - `/contexts` — React Context providers for global state (`SuperwallContext.js`)
 - `/services` — business logic, split into `auth/`, `features/`, `integrations/`, `subscription/`, `user/`
@@ -48,7 +48,15 @@ There is no `lint` script. **Voice mode cannot run in Expo Go**: it uses `react-
 - `/supabase/functions` — `handle-subscription` (Superwall webhook receiver) Edge Function, deployed to the shared Supabase project (see Subscriptions below)
 
 ### Navigation Flow
-`app/index.js` computes a status via `checkUserStatus()` (`services/auth/auth.ts`) — one of `no_session`, `needs_email_confirmation`, `needs_onboarding`, `needs_quiz`, `needs_user_info`, `needs_referral_code`, `complete`, `error` — by inspecting the Supabase session, `users` table, and AsyncStorage onboarding markers, then redirects accordingly. This status machine is the core navigation pattern; when adding a new onboarding step, it usually needs a new status here plus a corresponding redirect target.
+`app/index.js` computes a status via `checkUserStatus()` (`services/auth/auth.ts`) — one of `no_session`, `needs_email_confirmation`, `needs_onboarding`, `needs_profile`, `complete`, `error` — by inspecting the Supabase session, `users` table, and AsyncStorage, then redirects accordingly. `needs_profile` means signed in and confirmed but the profile row was never created (the app was closed mid-sign-up); it routes to `/emailconfirmation`, which finishes creating it from the selections still stored locally.
+
+### Onboarding Flow
+
+Welcome → quiz (4 questions, `Quiz/[questionNumber].js`) → Core Values → Life Goals → Future Self Vision (`(identity)/[step].js`) → `HearYou` → `Preview` (scripted, built from the user's own keys; no AI call) → `/register` (account created here) → `NotificationPermission` → `AppRating` → `KeysReady` → `FreeTrial` (the Superwall `onboarding_complete` placement) → home.
+
+Two AsyncStorage markers let a killed app resume (`services/onboarding/resume.ts`, allow-listed routes only): `onboarding_resume_route` before the account exists (read by `app/index.js` when there is no session) and `post_signup_pending` after it (set by `insertUserProfileAfterConfirmation`, cleared by `finishPostSignup()` when the paywall step is handled). Screens record their own step with `usePreAuthResume` / `usePostSignupResume` (`hooks/useOnboardingResume.js`). Quiz Q1 stores `onboarding_intent` (drives suggested key chips in `services/onboarding/keySuggestions.ts`); Q4 stores `onboarding_nudge` (becomes `preferred_reminder_time` via `services/onboarding/defaultPreferences.ts`).
+
+**Hard paywall is built but off.** `app/index.js` asks `services/subscription/accessGateService.ts` before entering the app; `constants/accessConfig.ts` holds `HARD_PAYWALL_ENABLED` (false), `HARD_PAYWALL_GRANDFATHER_BEFORE` and `COMMUNITY_URL`. Turning it on without a cutoff date paywalls every existing free account. When on, closing the paywall without buying leads to `NotReady`, not the app.
 
 Root layout (`_layout.js`) handles app-wide providers and deep linking (see Deep Linking below). Tab navigation for authenticated users lives in `/app/tabs`. Onboarding flow lives in `/app/onboarding`.
 
@@ -72,7 +80,7 @@ The app uses **Superwall** for paywall presentation and subscription management,
 - **useUser hook**: subscription status + user identification. `identify(user.id)` is called with the Supabase auth user's UUID, so Superwall's `originalAppUserId` in webhooks/exports is always that same UUID, not a Superwall-generated alias.
 - **useSuperwallEvents hook**: transaction/subscription event handling.
 
-Product IDs and paywall placements are configured in the Superwall dashboard, not hardcoded in the app (`constants/subscriptions.js` has display-only copies for onboarding UI — keep them in sync manually if pricing changes).
+Product IDs and paywall placements are configured in the Superwall dashboard, not hardcoded in the app (prices and the App Store billing disclosure live only there and in App Store Connect — the app no longer carries copies).
 
 **Two sync paths keep `users.is_pro` current:**
 1. **Client-side**: `SuperwallContext` calls `services/subscription/subscriptionService.ts`'s `handleSuperwallPurchaseComplete` whenever `useSuperwallEvents`' `onSubscriptionStatusChange` fires with an active status, writing `is_pro`/`subscription_source` directly.

@@ -6,13 +6,16 @@ import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { getSuperwallImplementation, isExpoGo } from '../../../utils/superwallCompat';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { finishPostSignup } from '../../../services/onboarding/resumeStorage';
+import { getAccessDecision } from '../../../services/subscription/accessGateService';
+import { usePostSignupResume } from '../../../hooks/useOnboardingResume';
 import { useSuperwallContext } from '../../../contexts/SuperwallContext';
 
 const { usePlacement, useSuperwallEvents } = getSuperwallImplementation();
 
 export default function FreeTrial() {
     const router = useRouter();
+    usePostSignupResume('/onboarding/FreeTrial');
     const { isSubscribed } = useSuperwallContext();
     const [hasShownPaywall, setHasShownPaywall] = useState(false);
     const hasNavigatedRef = useRef(false);
@@ -21,44 +24,51 @@ export default function FreeTrial() {
     const scaleValue = useRef(new Animated.Value(0.9)).current;
     const pulseValue = useRef(new Animated.Value(1)).current;
 
-    const navigateToRegister = () => {
+    // The account already exists at this point, so finishing just clears the resume marker
+    const finishOnboarding = async () => {
         if (hasNavigatedRef.current) return;
         hasNavigatedRef.current = true;
         setHasShownPaywall(true);
-        router.replace('/register');
+        await finishPostSignup();
+        router.replace('/');
     };
 
     // Navigate when subscription becomes active (e.g. after purchase) – context updates from SuperwallContext
     useEffect(() => {
         if (isSubscribed) {
-            console.log('FreeTrial: isSubscribed true – navigating to register');
+            console.log('FreeTrial: isSubscribed true – finishing onboarding');
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            navigateToRegister();
+            finishOnboarding();
         }
     }, [isSubscribed]);
 
     useSuperwallEvents({
         onSubscriptionStatusChange: (status) => {
             if (status?.status === 'ACTIVE') {
-                console.log('FreeTrial: subscription ACTIVE – navigating to register');
+                console.log('FreeTrial: subscription ACTIVE – finishing onboarding');
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                navigateToRegister();
+                finishOnboarding();
             }
         },
         onSuperwallEvent: (eventInfo) => {
             const eventName = eventInfo?.event?.event;
             if (eventName === 'transactionComplete') {
-                console.log('FreeTrial: transactionComplete – navigating to register');
-                navigateToRegister();
+                console.log('FreeTrial: transactionComplete – finishing onboarding');
+                finishOnboarding();
             }
         },
     });
     
     const { registerPlacement } = usePlacement({
-        onDismiss: (paywallInfo, result) => {
+        onDismiss: async (paywallInfo, result) => {
             console.log('Paywall dismissed from FreeTrial:', paywallInfo, result);
-            // If they dismissed without purchasing, still proceed (free user). If they purchased, context/events will also trigger navigation.
-            navigateToRegister();
+            // Closing without buying only ends onboarding for accounts the access gate lets in
+            if (result?.type === 'declined' && (await getAccessDecision()) === 'paywall') {
+                router.replace('/onboarding/NotReady');
+                return;
+            }
+            // Purchase and restore also end up here or in the subscription events below; the guard makes it run once
+            finishOnboarding();
         },
     });
 
@@ -124,34 +134,24 @@ export default function FreeTrial() {
         
         // In dev mode (Expo Go), skip paywall and go straight to registration as free user
         if (isExpoGo()) {
-            console.log('🔄 Dev mode detected - skipping paywall, proceeding to registration as free user');
-            await AsyncStorage.setItem('onboarding_paywall_shown', 'true');
-            setHasShownPaywall(true);
-            router.replace('/register');
+            console.log('Expo Go detected - skipping paywall');
+            await finishOnboarding();
             return;
         }
         
         // In production, show the paywall
-        // Mark that we've shown the paywall
-        await AsyncStorage.setItem('onboarding_paywall_shown', 'true');
-        
         // Trigger Superwall paywall
         try {
             await registerPlacement({
                 placement: 'onboarding_complete',
                 feature: () => {
-                    console.log('User has subscription - proceeding to register');
-                    // If user already has subscription, proceed directly
-                    setHasShownPaywall(true);
-                    router.replace('/register');
+                    finishOnboarding();
                 }
             });
             // Note: If paywall is shown and dismissed, onDismiss callback will handle navigation
         } catch (error) {
             console.warn('Error presenting paywall:', error);
-            // On error, proceed to registration anyway
-            setHasShownPaywall(true);
-            router.replace('/register');
+            await finishOnboarding();
         }
     };
 

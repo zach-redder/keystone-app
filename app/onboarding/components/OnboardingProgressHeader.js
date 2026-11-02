@@ -11,23 +11,17 @@ const shared = {
   shouldAnimate: true,
 };
 
-// Complete onboarding flow with proper step ordering
-const getStepIndex = (pathname, questionNumber = null) => {
-  // Total steps: 7 quiz questions + 3 identity steps = 10 total steps
-  if (pathname.includes('Quiz')) {
-    // Quiz questions 1-7 (steps 0-6)
-    return questionNumber ? parseInt(questionNumber) - 1 : 0;
-  } else if (pathname.includes('FutureSelfVision')) {
-    return 7; // Step 8 (after 7 quiz questions)
-  } else if (pathname.includes('LifeGoals')) {
-    return 8; // Step 9
-  } else if (pathname.includes('CoreValues')) {
-    return 9; // Step 10
-  }
-  return 0;
-};
+const QUIZ_QUESTION_COUNT = 4;
+const IDENTITY_STEPS = ['CoreValues', 'LifeGoals', 'FutureSelfVision'];
+const TOTAL_STEPS = QUIZ_QUESTION_COUNT + IDENTITY_STEPS.length;
 
-const TOTAL_STEPS = 10; // 7 quiz + 3 identity
+const getStepIndex = (pathname, questionNumber = null) => {
+  if (pathname.includes('Quiz')) {
+    return questionNumber ? parseInt(questionNumber) - 1 : 0;
+  }
+  const identityIndex = IDENTITY_STEPS.findIndex((name) => pathname.includes(name));
+  return identityIndex === -1 ? 0 : QUIZ_QUESTION_COUNT + identityIndex;
+};
 
 export default function OnboardingProgressHeader({ showBackButton = true }) {
   const router = useRouter();
@@ -64,8 +58,7 @@ export default function OnboardingProgressHeader({ showBackButton = true }) {
         // Go to previous quiz question
         router.push(`/onboarding/Quiz/${currentQuestionNum - 1}`);
       } else {
-        // Go back to Good News screen
-        router.push('/onboarding/GoodNews');
+        router.push('/onboarding/Welcome');
       }
     } else {
       // For identity screens, use standard back navigation

@@ -5,11 +5,12 @@ import { styles } from '../../../styles/onboarding';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AntDesign } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { validateReferralCode } from '../../../services/user/referralService';
+import { validateReferralCode, redeemReferralCode } from '../../../services/user/referralService';
+import { finishPostSignup } from '../../../services/onboarding/resumeStorage';
 
 export default function ReferralCode() {
     const router = useRouter();
+    const validateTimeoutRef = useRef(null);
     const [referralCode, setReferralCode] = useState('');
     const [isValidating, setIsValidating] = useState(false);
     const [isRedeeming, setIsRedeeming] = useState(false);
@@ -38,29 +39,14 @@ export default function ReferralCode() {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }, []);
 
-    const handleSkip = async () => {
+    const handleSkip = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        // Mark referral code step as complete
-        await AsyncStorage.setItem('referral_code_complete', 'true');
+        router.back();
+    };
 
-        // Save final preferences before navigating
-        try {
-            const aiPersonality = await AsyncStorage.getItem('ai_personality');
-
-            const finalPreferences = {
-                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-                notification_opt_in: true,
-                preferred_reminder_time: '12:00:00',
-                preferred_ai_persona: aiPersonality ? JSON.parse(aiPersonality)[0] : 'Gentle Guide',
-            };
-
-            await AsyncStorage.setItem('final_preferences', JSON.stringify(finalPreferences));
-            console.log('Final preferences saved before navigation:', finalPreferences);
-        } catch (error) {
-            console.error('Error saving final preferences:', error);
-        }
-
-        router.push('/onboarding/NotificationPermission');
+    const handleRedeemed = async () => {
+        await finishPostSignup();
+        router.replace('/');
     };
 
     const handleBack = () => {
@@ -106,83 +92,28 @@ export default function ReferralCode() {
     const handleCodeChange = (text) => {
         setReferralCode(text);
         // Debounce validation
-        clearTimeout(window.validateTimeout);
-        window.validateTimeout = setTimeout(() => validateCode(text), 500);
+        clearTimeout(validateTimeoutRef.current);
+        validateTimeoutRef.current = setTimeout(() => validateCode(text), 500);
     };
 
     const handleSubmit = async () => {
         if (!referralCode || !isValid) return;
-        
+
         setIsRedeeming(true);
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        
+
         try {
-            console.log('🎁 Redeeming referral code:', referralCode);
-            
-            // Since user isn't authenticated yet, we need to validate and save to AsyncStorage
-            const validation = await validateReferralCode(referralCode);
-            
-            if (validation.valid && validation.referralCode) {
-                // Save referral code info to AsyncStorage for later use
-                const referralInfo = {
-                    code: referralCode.toUpperCase().trim(),
-                    subscriptionType: validation.referralCode.subscription_type,
-                    description: validation.referralCode.description,
-                    durationMonths: validation.referralCode.duration_months,
-                    redeemedAt: new Date().toISOString()
-                };
-                
-                await AsyncStorage.setItem('pending_referral_code', JSON.stringify(referralInfo));
-                await AsyncStorage.setItem('subscription_complete', 'true');
-                await AsyncStorage.setItem('referral_code_complete', 'true');
-                
-                console.log('💾 Saved referral code to AsyncStorage:', referralInfo);
-                
-                // Save final preferences before navigating to registration
-                try {
-                    const aiPersonality = await AsyncStorage.getItem('ai_personality');
-                    
-                    const finalPreferences = {
-                        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-                        notification_opt_in: true,
-                        preferred_reminder_time: '12:00:00',
-                        preferred_ai_persona: aiPersonality ? JSON.parse(aiPersonality)[0] : 'Gentle Guide',
-                    };
-                    
-                    await AsyncStorage.setItem('final_preferences', JSON.stringify(finalPreferences));
-                    console.log('Final preferences saved before registration:', finalPreferences);
-                } catch (error) {
-                    console.error('Error saving final preferences:', error);
-                }
-                
-                // Show success alert
-                Alert.alert(
-                    '🎉 Success!',
-                    `Code redeemed! You'll get ${validation.referralCode.subscription_type === 'monthly' ? '1 month' : 
-                    validation.referralCode.subscription_type === 'yearly' ? '1 year' : 'lifetime'} of Pro access after registration.`,
-                    [
-                        {
-                            text: 'Continue',
-                            onPress: () => router.push('/register'), // Skip paywall since they have a code
-                        }
-                    ]
-                );
+            const result = await redeemReferralCode(referralCode);
+            if (result.success) {
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                Alert.alert('Code redeemed', result.message, [{ text: 'Continue', onPress: handleRedeemed }]);
             } else {
-                Alert.alert(
-                    'Error',
-                    validation.error || 'Invalid referral code',
-                    [{ text: 'OK' }]
-                );
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+                Alert.alert('Error', result.message, [{ text: 'OK' }]);
             }
         } catch (error) {
             console.error('Error redeeming code:', error);
-            Alert.alert(
-                'Error',
-                'An error occurred while processing your referral code. Please try again.',
-                [{ text: 'OK' }]
-            );
+            Alert.alert('Error', 'An error occurred while processing your referral code. Please try again.', [{ text: 'OK' }]);
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
         } finally {
             setIsRedeeming(false);
@@ -281,7 +212,7 @@ export default function ReferralCode() {
                         activeOpacity={0.7}
                     >
                         <Text style={styles.skipButtonText}>
-                            Skip This Step
+                            Not now
                         </Text>
                     </TouchableOpacity>
                 </Animated.View>

@@ -17,50 +17,13 @@ export default function OnboardingLayout() {
         }}
       />
       <Stack.Screen 
-        name="(screens)/Animation" 
-        options={{
-          animation: 'slide_from_right',
-        }}
-      />
-      <Stack.Screen 
-        name="(screens)/GoodNews" 
-        options={{
-          animation: 'slide_from_right',
-        }}
-      />
-      <Stack.Screen 
-        name="(screens)/BenefitsDeepDive" 
-        options={{
-          animation: 'slide_from_right',
-          gestureEnabled: false,
-        }}
-      />
-      <Stack.Screen 
         name="Quiz/[questionNumber]" 
         options={{
           animation: 'slide_from_right',
         }}
       />
-      <Stack.Screen 
-        name="Quiz/UserInfo" 
-        options={{
-          animation: 'slide_from_right',
-        }}
-      />
-      <Stack.Screen 
-        name="(quiz)/Progress" 
-        options={{
-          animation: 'slide_from_right',
-          gestureEnabled: false, // Disable back gesture for progress screen
-        }}
-      />
-      <Stack.Screen 
-        name="(quiz)/IdentityScore" 
-        options={{
-          animation: 'slide_from_right',
-          gestureEnabled: false, // Disable back gesture for score screen
-        }}
-      />
+      <Stack.Screen name="(screens)/HearYou" options={{ animation: 'fade', gestureEnabled: false }} />
+      <Stack.Screen name="(screens)/Preview" options={{ animation: 'slide_from_right' }} />
       <Stack.Screen 
         name="(identity)/[step]" 
         options={{
@@ -68,26 +31,13 @@ export default function OnboardingLayout() {
         }}
       />
       <Stack.Screen 
-        name="(identity)/AnimatedProfileCard" 
+        name="(identity)/KeysReady" 
         options={{
           animation: 'slide_from_right',
           gestureEnabled: false,
         }}
       />
-      <Stack.Screen
-        name="doubt-consequences"
-        options={{
-          animation: 'slide_from_right',
-          gestureEnabled: false, // No back gesture in doubt sequence
-        }}
-      />
-      <Stack.Screen
-        name="benefits"
-        options={{
-          animation: 'slide_from_right',
-          gestureEnabled: false, // No back gesture in benefits sequence
-        }}
-      />
+      <Stack.Screen name="(subscription)/NotReady" options={{ animation: 'fade', gestureEnabled: false }} />
       <Stack.Screen 
         name="(subscription)/FreeTrial" 
         options={{
@@ -102,22 +52,10 @@ export default function OnboardingLayout() {
         }}
       />
       <Stack.Screen 
-        name="(subscription)/PaywallTrial" 
-        options={{
-          animation: 'slide_from_right',
-        }}
-      />
-      <Stack.Screen 
-        name="(subscription)/Subscription" 
-        options={{
-          animation: 'slide_from_right',
-          gestureEnabled: false,
-        }}
-      />
-      <Stack.Screen 
         name="(rating)/NotificationPermission" 
         options={{
           animation: 'slide_from_right',
+          gestureEnabled: false,
         }}
       />
       <Stack.Screen 

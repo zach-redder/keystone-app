@@ -6,66 +6,50 @@ import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import OnboardingProgressHeader from '../components/OnboardingProgressHeader';
+import { usePreAuthResume } from '../../../hooks/useOnboardingResume';
 
 const QUIZ_QUESTIONS = [
     {
         id: 1,
-        question: "How often do you stay true to your word?",
+        question: "What brings you to Keystone?",
+        why: "So we can start you with the right keys.",
         options: [
-            "Always",
-            "Often",
-            "Sometimes",
-            "Never"
+            { label: "I doubt myself too much", intent: "self_doubt" },
+            { label: "I say yes when I mean no", intent: "people_pleasing" },
+            { label: "I'm not sure which direction I'm going", intent: "direction" },
+            { label: "I start strong, then fall off", intent: "follow_through" }
         ]
     },
     {
         id: 2,
-        question: "How often do you say yes to people when you mean no?",
+        question: "How often do you doubt yourself?",
+        why: "It helps us set the tone of your reminders.",
         options: [
-            "Always",
-            "Often",
-            "Sometimes",
-            "Never"
+            { label: "Always" },
+            { label: "Often" },
+            { label: "Sometimes" },
+            { label: "Rarely" }
         ]
     },
     {
         id: 3,
-        question: "How often do you keep your dreams & goals hidden?",
+        question: "When you fall off track, what do you tend to do?",
+        why: "No judgment. This shapes how we nudge you back.",
         options: [
-            "Always",
-            "Often",
-            "Sometimes",
-            "Never"
+            { label: "Get back up immediately" },
+            { label: "Restart the next day" },
+            { label: "Wait for Monday" },
+            { label: "Give up" }
         ]
     },
     {
         id: 4,
-        question: "How often do you avoid difficult conversations?",
+        question: "When do you most need a nudge?",
+        why: "We will use this for your reminders.",
         options: [
-            "Always",
-            "Often",
-            "Sometimes",
-            "Never"
-        ]
-    },
-    {
-        id: 5,
-        question: "When you fall off track what do you tend to do?",
-        options: [
-            "Get back up immediately",
-            "Restart the next day",
-            "Wait for Monday",
-            "Give up"
-        ]
-    },
-    {
-        id: 6,
-        question: "How often do you doubt yourself?",
-        options: [
-            "Always",
-            "Often",
-            "Sometimes",
-            "Never"
+            { label: "In the morning", nudge: "morning" },
+            { label: "In the moment doubt hits", nudge: "moment" },
+            { label: "In the evening", nudge: "evening" }
         ]
     }
 ];
@@ -73,6 +57,7 @@ const QUIZ_QUESTIONS = [
 export default function QuizQuestion() {
     const router = useRouter();
     const { questionNumber } = useLocalSearchParams();
+    usePreAuthResume(`/onboarding/Quiz/${questionNumber}`);
     const currentQuestionIndex = parseInt(questionNumber) - 1;
     const currentQuestion = QUIZ_QUESTIONS[currentQuestionIndex];
     
@@ -115,7 +100,8 @@ export default function QuizQuestion() {
         }
     };
 
-    const handleOptionSelect = async (option, optionIndex) => {
+    const handleOptionSelect = async (selected, optionIndex) => {
+        const option = selected.label;
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         setTappedOption(option);
         setSelectedOption(option);
@@ -127,6 +113,8 @@ export default function QuizQuestion() {
             answers[`question_${questionNumber}`] = option;
             answers[`question_${questionNumber}_score`] = optionIndex; // Store numeric score too
             await AsyncStorage.setItem('quiz_answers', JSON.stringify(answers));
+            if (selected.intent) await AsyncStorage.setItem('onboarding_intent', selected.intent);
+            if (selected.nudge) await AsyncStorage.setItem('onboarding_nudge', selected.nudge);
         } catch (error) {
             console.error('Error saving quiz answer:', error);
         }
@@ -135,18 +123,18 @@ export default function QuizQuestion() {
         setTimeout(async () => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             const nextQuestionNum = parseInt(questionNumber) + 1;
-            if (nextQuestionNum <= 6) {
+            if (nextQuestionNum <= QUIZ_QUESTIONS.length) {
                 router.push(`/onboarding/Quiz/${nextQuestionNum}`);
             } else {
                 // Quiz completed
-                router.push('/onboarding/FutureSelfVision');
+                router.push('/onboarding/CoreValues');
             }
         }, 400);
     };
 
     const handleSkipQuiz = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        router.push('/onboarding/FutureSelfVision');
+        router.push('/onboarding/CoreValues');
     };
 
     if (!currentQuestion) {
@@ -183,15 +171,19 @@ export default function QuizQuestion() {
                 ]}
             >
                 <Text style={styles.quizQuestionNumber}>
-                    Question {questionNumber} of 6
+                    {questionNumber} of {QUIZ_QUESTIONS.length}
                 </Text>
                 
                 <Text style={styles.quizQuestion}>
                     {currentQuestion.question}
                 </Text>
 
+                <Text style={{ color: '#b3b3b3', fontSize: 15, textAlign: 'center', marginBottom: 20 }}>
+                    {currentQuestion.why}
+                </Text>
+
                 <View style={{ width: '100%', flex: 1 }}>
-                    {currentQuestion.options.map((option, index) => (
+                    {currentQuestion.options.map(({ label: option }, index) => (
                         <TouchableOpacity
                             key={index}
                             style={[
@@ -199,7 +191,7 @@ export default function QuizQuestion() {
                                 selectedOption === option && styles.quizOptionSelected,
                                 tappedOption === option && styles.quizOptionTapped
                             ]}
-                            onPress={() => handleOptionSelect(option, index)}
+                            onPress={() => handleOptionSelect(currentQuestion.options[index], index)}
                             activeOpacity={0.9}
                         >
                             <Text style={[

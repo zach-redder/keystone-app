@@ -4,14 +4,12 @@ import { useRouter } from 'expo-router';
 import { styles } from '../../../styles/onboarding';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
-import { AntDesign } from '@expo/vector-icons';
 
 export default function Welcome() {
   const router = useRouter();
   const scaleValue = useRef(new Animated.Value(1)).current;
   const pulseValue = useRef(new Animated.Value(1)).current;
   const fadeValue = useRef(new Animated.Value(0)).current;
-  const starScale = useRef(new Animated.Value(0.8)).current;
 
   useEffect(() => {
     // Button pulse animation
@@ -30,20 +28,11 @@ export default function Welcome() {
       ])
     ).start();
 
-    // Star entrance animations
-    Animated.parallel([
-      Animated.timing(fadeValue, {
-        toValue: 1,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-      Animated.spring(starScale, {
-        toValue: 1,
-        tension: 100,
-        friction: 8,
-        useNativeDriver: true,
-      }),
-    ]).start();
+    Animated.timing(fadeValue, {
+      toValue: 1,
+      duration: 800,
+      useNativeDriver: true,
+    }).start();
   }, []);
 
   const handlePressIn = () => {
@@ -64,7 +53,7 @@ export default function Welcome() {
 
   const handleGetStarted = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    router.push('/onboarding/Animation'); // Navigate to the first step
+    router.push('/onboarding/Quiz/1');
   };
 
   const handleLoginRedirect = () => {
@@ -82,23 +71,9 @@ export default function Welcome() {
       <View style={styles.titleContainer}>
         <Image source={require('../../../assets/images/logos/keystone_transparent.png')} style={styles.logo} />
         <Text style={styles.title}>Keystone</Text>
-        <Text style={styles.subtitle}>You just chose to kill doubt and achieve your dreams.</Text>
-        <View style={styles.starsContainer}>
-          {[1, 2, 3, 4, 5].map((star, index) => (
-            <Animated.View
-              key={index}
-              style={[
-                styles.premiumStar,
-                {
-                  opacity: fadeValue,
-                  transform: [{ scale: starScale }]
-                }
-              ]}
-            >
-              <AntDesign name="star" size={24} color="#D4DE95" style={styles.starGlow} />
-            </Animated.View>
-          ))}
-        </View>
+        <Animated.Text style={[styles.subtitle, { opacity: fadeValue }]}>
+          A place to remember who you are, and become who you want to be.
+        </Animated.Text>
       </View>
       <Animated.View style={{ transform: [{ scale: pulseValue }] }}>
         <TouchableOpacity
@@ -107,7 +82,7 @@ export default function Welcome() {
           onPressIn={handlePressIn}
           onPressOut={handlePressOut}
         >
-          <Text style={styles.buttonText}>Get Started!</Text>
+          <Text style={styles.buttonText}>Get Started</Text>
         </TouchableOpacity>
       </Animated.View>
       <TouchableOpacity style={styles.secondaryButton} onPress={handleLoginRedirect}>
