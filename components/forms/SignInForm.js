@@ -23,7 +23,7 @@ export default function SignInForm() {
 
     try {
       await signInUser(email, password);
-      router.replace('/tabs/home');
+      router.replace('/');
     } catch (err) {
       const msg = err?.message?.toLowerCase() || '';
       if (msg.includes('missing email or phone')) {
@@ -77,7 +77,7 @@ export default function SignInForm() {
       if (user) {
         console.log('Google sign-in successful, navigating to home...');
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        router.replace('/tabs/home');
+        router.replace('/');
       }
     } catch (err) {
       console.error('Google sign-in error:', err);
@@ -99,7 +99,7 @@ export default function SignInForm() {
       if (user) {
         console.log('Apple sign-in successful, navigating to home...');
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        router.replace('/tabs/home');
+        router.replace('/');
       }
     } catch (err) {
       console.error('Apple sign-in error:', err);

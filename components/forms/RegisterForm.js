@@ -2,9 +2,10 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { signUpUser, checkEmailExists, signInWithGoogle, signInWithApple } from '../../services/auth/auth';
+import { getSignupPreferences } from '../../services/onboarding/signupPreferences';
+import { usePreAuthResume } from '../../hooks/useOnboardingResume';
 import { styles } from '../../styles/authentication';
 import WaitForEmailConfirmation from '../../app/(auth)/emailconfirmation';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,6 +20,7 @@ export default function RegisterForm() {
   const [preferences, setPreferences] = useState(null);
   const [oauthLoading, setOauthLoading] = useState(false);
   const router = useRouter();
+  usePreAuthResume('/register');
 
   const handleSignUp = async () => {
     if (!email || !password || !confirmPassword) {
@@ -34,27 +36,7 @@ export default function RegisterForm() {
     setError(null);
 
     try {
-      // Get preferences from AsyncStorage before proceeding
-      const savedPrefs = await AsyncStorage.getItem('final_preferences');
-      let userPreferences = savedPrefs ? JSON.parse(savedPrefs) : null;
-      
-      console.log('Retrieved preferences from AsyncStorage:', userPreferences);
-      
-      // If no preferences found, create default preferences
-      if (!userPreferences) {
-        console.log('No preferences found, creating default preferences');
-        userPreferences = {
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-          notification_opt_in: true,
-          preferred_reminder_time: '12:00:00',
-          preferred_ai_persona: 'Gentle Guide',
-        };
-        
-        // Save the default preferences
-        await AsyncStorage.setItem('final_preferences', JSON.stringify(userPreferences));
-        console.log('Default preferences created and saved:', userPreferences);
-      }
-      
+      const userPreferences = await getSignupPreferences();
       setPreferences(userPreferences);
       
       // Check if email already exists in the database
@@ -106,7 +88,7 @@ export default function RegisterForm() {
       if (user) {
         console.log('Google sign-in successful, navigating to home...');
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        router.replace('/tabs/home');
+        router.replace('/');
       }
     } catch (err) {
       console.error('Google sign-in error:', err);
@@ -128,7 +110,7 @@ export default function RegisterForm() {
       if (user) {
         console.log('Apple sign-in successful, navigating to home...');
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        router.replace('/tabs/home');
+        router.replace('/');
       }
     } catch (err) {
       console.error('Apple sign-in error:', err);
@@ -158,7 +140,10 @@ export default function RegisterForm() {
   return (
     <View style={styles.container}>
       <Image source={require('../../assets/images/logos/keystone_transparent.png')} style={styles.logo} />
-      <Text style={styles.title}>Register to get started!</Text>
+      <Text style={styles.title}>Save your keys</Text>
+      <Text style={{ color: '#b3b3b3', fontSize: 16, textAlign: 'center', marginBottom: 20, paddingHorizontal: 24 }}>
+        Create an account so your values and goals are here whenever you come back.
+      </Text>
 
       <TextInput
         placeholder="Email"

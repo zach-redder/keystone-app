@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { insertUserProfileAfterConfirmation, resendConfirmationEmail } from '../../services/auth/auth';
+import { getSignupPreferences } from '../../services/onboarding/signupPreferences';
 import { styles } from '../../styles/authentication';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -145,26 +146,8 @@ export default function WaitForEmailConfirmationScreen({ email, password, prefer
     setError(null);
     
     try {
-      // If preferences weren't passed in, try to get them from AsyncStorage
-      let preferences = initialPreferences;
-      if (!preferences) {
-        console.log('No initial preferences, checking AsyncStorage...');
-        const savedPrefs = await AsyncStorage.getItem('final_preferences');
-        preferences = savedPrefs ? JSON.parse(savedPrefs) : null;
-        console.log('Preferences from AsyncStorage:', preferences);
-      } else {
-        console.log('Using passed preferences:', preferences);
-      }
-
-      if (!preferences) {
-        console.log('No preferences found, user needs to complete onboarding');
-        // Clean up stored password
-        await AsyncStorage.removeItem('tempPassword');
-        // Don't redirect - let the main app routing handle this
-        // The app will detect the user is signed in but needs onboarding
-        router.replace('/');
-        return;
-      }
+      // Preferences are only passed in on the same-session path; otherwise they come from storage
+      const preferences = initialPreferences ?? (await getSignupPreferences());
 
       console.log('Creating user profile with preferences:', preferences);
       // Create the user profile with preferences

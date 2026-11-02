@@ -1,15 +1,20 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, Animated } from 'react-native';
 import { useRouter } from 'expo-router';
+import { usePostSignupResume } from '../../../hooks/useOnboardingResume';
 import { styles } from '../../../styles/onboarding';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Notifications from 'expo-notifications';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { nudgeLine } from '../../../services/onboarding/nudgeCopy';
 
 export default function NotificationPermission() {
     const router = useRouter();
+    usePostSignupResume('/onboarding/NotificationPermission');
     const [hasResponded, setHasResponded] = useState(false);
+    const [nudge, setNudge] = useState(null);
 
     const fadeValue = useRef(new Animated.Value(0)).current;
     const slideValue = useRef(new Animated.Value(30)).current;
@@ -18,6 +23,10 @@ export default function NotificationPermission() {
     const notificationBoxFade = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
+        AsyncStorage.getItem('onboarding_nudge')
+            .then(setNudge)
+            .catch((error) => console.error('Error loading nudge preference:', error));
+
         // Entry haptic
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
@@ -154,12 +163,12 @@ export default function NotificationPermission() {
 
                 {/* Title */}
                 <Text style={[styles.benefitTitle, { marginBottom: 15, textAlign: 'center' }]}>
-                    Stay Connected
+                    Stay grounded
                 </Text>
 
                 {/* Brief Description */}
                 <Text style={[styles.benefitSubtitle, { marginBottom: 60, textAlign: 'center', fontSize: 16 }]}>
-                    Notifications help your AI keep you aligned with your goals.
+                    {nudgeLine(nudge)}
                 </Text>
 
                 {/* Notification Box */}

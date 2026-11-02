@@ -9,6 +9,8 @@ import * as Notifications from 'expo-notifications';
 import { BASE_URL } from '../../lib/apiConfig';
 import { queryClient } from '../../lib/queryClient';
 import { getAuthHeaders } from '../features/affirmationService';
+import { POST_SIGNUP_KEY, PRE_AUTH_RESUME_KEY } from '../onboarding/resume';
+import { getSignupPreferences } from '../onboarding/signupPreferences';
 
 // Lazy load Google Sign In to avoid crashes during development
 let GoogleSignin: any = null;
@@ -193,13 +195,7 @@ export const signInWithGoogle = async () => {
     if (!profileExists) {
       console.log('Creating profile for new Google user...');
       // Get preferences from AsyncStorage or use defaults
-      const savedPrefs = await AsyncStorage.getItem('final_preferences');
-      const preferences = savedPrefs ? JSON.parse(savedPrefs) : {
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        notification_opt_in: true,
-        preferred_reminder_time: '12:00:00',
-        preferred_ai_persona: 'Gentle Guide',
-      };
+      const preferences = await getSignupPreferences();
       await insertUserProfileAfterConfirmation(preferences);
     }
 
@@ -280,13 +276,7 @@ export const signInWithApple = async () => {
     if (!profileExists) {
       console.log('Creating profile for new Apple user...');
       // Get preferences from AsyncStorage or use defaults
-      const savedPrefs = await AsyncStorage.getItem('final_preferences');
-      const preferences = savedPrefs ? JSON.parse(savedPrefs) : {
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        notification_opt_in: true,
-        preferred_reminder_time: '12:00:00',
-        preferred_ai_persona: 'Gentle Guide',
-      };
+      const preferences = await getSignupPreferences();
       await insertUserProfileAfterConfirmation(preferences);
     }
 
@@ -392,7 +382,7 @@ export const insertUserProfileAfterConfirmation = async (
     timezone: preferences.timezone || 'UTC',
     notification_opt_in: preferences.notification_opt_in ?? true,
     preferred_reminder_time: preferences.preferred_reminder_time || '09:00:00',
-    preferred_ai_persona: preferences.preferred_ai_persona || 'gentle',
+    preferred_ai_persona: preferences.preferred_ai_persona || 'Gentle Guide',
   };
 
   console.log('Inserting user preferences:', userPreferences);
@@ -434,106 +424,31 @@ export const insertUserProfileAfterConfirmation = async (
     // Add a small delay to ensure AsyncStorage operations are complete
     await new Promise(resolve => setTimeout(resolve, 500));
     
-    const futureSelfVision = await AsyncStorage.getItem('future_self_vision');
-    const lifeGoals = await AsyncStorage.getItem('life_goals');
-    const coreValues = await AsyncStorage.getItem('core_values');
-    
-    console.log('Raw AsyncStorage data:', {
-      futureSelfVision,
-      lifeGoals,
-      coreValues,
-    });
-    
-    // Get custom options for each category
-    const futureSelfCustom = await AsyncStorage.getItem('futureselfvision_custom_options');
-    const lifeGoalsCustom = await AsyncStorage.getItem('lifegoals_custom_options');
-    const coreValuesCustom = await AsyncStorage.getItem('corevalues_custom_options');
+    const selectedByCategory: [IdentityKey['category'], string | null][] = [
+      ['future_self_vision', await AsyncStorage.getItem('future_self_vision')],
+      ['life_goals', await AsyncStorage.getItem('life_goals')],
+      ['core_values', await AsyncStorage.getItem('core_values')],
+    ];
 
-    console.log('Custom options:', {
-      futureSelfCustom,
-      lifeGoalsCustom,
-      coreValuesCustom,
-    });
-
+    // A custom chip is added to the selected list when it is created, so the selected
+    // list is the complete source; reading the *_custom_options lists too duplicated
+    // selected custom keys and saved ones the user had deselected.
     const identityKeys: IdentityKey[] = [];
-
-    if (futureSelfVision) {
-      const visions = JSON.parse(futureSelfVision);
-      visions.forEach((vision: string) => {
-        identityKeys.push({
-          category: 'future_self_vision',
-          description: vision,
-        });
-      });
-    }
-
-    // Add custom future self visions
-    if (futureSelfCustom) {
-      const customVisions = JSON.parse(futureSelfCustom);
-      customVisions.forEach((vision: string) => {
-        identityKeys.push({
-          category: 'future_self_vision',
-          description: vision,
-        });
-      });
-    }
-
-    if (lifeGoals) {
-      const goals = JSON.parse(lifeGoals);
-      goals.forEach((goal: string) => {
-        identityKeys.push({
-          category: 'life_goals',
-          description: goal,
-        });
-      });
-    }
-
-    // Add custom life goals
-    if (lifeGoalsCustom) {
-      const customGoals = JSON.parse(lifeGoalsCustom);
-      customGoals.forEach((goal: string) => {
-        identityKeys.push({
-          category: 'life_goals',
-          description: goal,
-        });
-      });
-    }
-
-    if (coreValues) {
-      const values = JSON.parse(coreValues);
-      values.forEach((value: string) => {
-        identityKeys.push({
-          category: 'core_values',
-          description: value,
-        });
-      });
-    }
-
-    // Add custom core values
-    if (coreValuesCustom) {
-      const customValues = JSON.parse(coreValuesCustom);
-      customValues.forEach((value: string) => {
-        identityKeys.push({
-          category: 'core_values',
-          description: value,
-        });
-      });
+    const seen = new Set<string>();
+    for (const [category, raw] of selectedByCategory) {
+      if (!raw) continue;
+      for (const description of JSON.parse(raw) as string[]) {
+        const dedupeKey = `${category}:${description.trim().toLowerCase()}`;
+        if (seen.has(dedupeKey)) continue;
+        seen.add(dedupeKey);
+        identityKeys.push({ category, description });
+      }
     }
 
     if (identityKeys.length > 0) {
-      console.log('Number of keys to insert:', identityKeys.length);
       await addIdentityKeysBatch(identityKeys);
-      console.log('Identity keys inserted successfully');
     } else {
-      console.log('No identity keys to insert - this might be the issue!');
-      console.log('Raw data check:', {
-        futureSelfVision: !!futureSelfVision,
-        lifeGoals: !!lifeGoals,
-        coreValues: !!coreValues,
-        futureSelfCustom: !!futureSelfCustom,
-        lifeGoalsCustom: !!lifeGoalsCustom,
-        coreValuesCustom: !!coreValuesCustom,
-      });
+      console.warn('No identity keys to insert from onboarding selections');
     }
 
     // Clean up AsyncStorage - include all the new keys
@@ -544,8 +459,15 @@ export const insertUserProfileAfterConfirmation = async (
       'futureselfvision_custom_options',
       'lifegoals_custom_options',
       'corevalues_custom_options',
+      'quiz_answers',
+      'referral_code_complete',
+      'subscription_complete',
+      PRE_AUTH_RESUME_KEY,
     ]);
 
+    // Account and profile now exist; the remaining onboarding screens (notifications, rating,
+    // paywall) resume from here until the paywall step is handled.
+    await AsyncStorage.setItem(POST_SIGNUP_KEY, '/onboarding/NotificationPermission');
   } catch (error) {
     console.error('Error inserting identity keys:', error);
     throw error;
@@ -580,7 +502,11 @@ export const signOutUser = async () => {
     await AsyncStorage.multiRemove([
       'onboarding_complete',
       'user_preferences',
-      'final_preferences'
+      'final_preferences',
+      POST_SIGNUP_KEY,
+      PRE_AUTH_RESUME_KEY,
+      'onboarding_intent',
+      'onboarding_nudge',
     ]);
   } catch (storageError) {
     console.error('Error clearing auth storage:', storageError);
@@ -724,75 +650,25 @@ export const checkUserStatus = async () => {
   console.log('checkUserStatus - User database record:', data);
 
   if (!data) {
-    // User is signed in and email confirmed, but no database record exists
-    // This means they need to start onboarding from the beginning
-    // Clear any stale onboarding data
-    console.log('checkUserStatus - No database record, clearing onboarding data and returning needs_onboarding');
+    // Signed in and confirmed, but the profile row was never created (e.g. the app was closed
+    // between confirming the email and finishing sign-up). Their selections are still local,
+    // so finish creating the profile instead of wiping them.
+    const savedKeys = await AsyncStorage.multiGet(['future_self_vision', 'life_goals', 'core_values']);
+    if (savedKeys.some(([, value]) => value)) {
+      return { status: 'needs_profile' };
+    }
     await clearOnboardingData();
     return { status: 'needs_onboarding' };
   }
 
-  // Check AsyncStorage for onboarding progress
-  const onboardingComplete = await AsyncStorage.getItem('onboarding_complete');
-  const hasUserInfo = await AsyncStorage.getItem('@user_name');
-  const hasQuizAnswers = await AsyncStorage.getItem('quiz_answers');
-  const hasFutureSelf = await AsyncStorage.getItem('future_self_vision');
-  const hasLifeGoals = await AsyncStorage.getItem('life_goals');
-  const hasCoreValues = await AsyncStorage.getItem('core_values');
-
-  console.log('checkUserStatus - AsyncStorage onboarding state:', {
-    onboardingComplete,
-    hasUserInfo,
-    hasQuizAnswers,
-    hasFutureSelf,
-    hasLifeGoals,
-    hasCoreValues
-  });
-
-  // Update local storage with current database state
   await AsyncStorage.setItem('onboarding_complete', data.onboarding_complete ? 'true' : 'false');
 
-  console.log('checkUserStatus - Database onboarding_complete:', data.onboarding_complete);
-
-  // If user has completed onboarding in database, they're done
   if (data.onboarding_complete) {
     await AsyncStorage.setItem(ONBOARDING_VERIFIED_KEY, user.id);
-    console.log('checkUserStatus - Onboarding complete in database, returning complete');
     return { status: 'complete' };
   }
 
-  // Check for user info completion (quiz + user info)
-  if (hasUserInfo && hasQuizAnswers) {
-    // Check if user has completed referral code step
-    const hasReferralCode = await AsyncStorage.getItem('referral_code_complete');
-    if (hasReferralCode === 'true') {
-      // User has completed referral code step, mark onboarding complete
-      console.log('checkUserStatus - Has user info and quiz, referral complete, marking onboarding complete');
-      await AsyncStorage.setItem('onboarding_complete', 'true');
-      return { status: 'complete' };
-    } else {
-      // User has completed quiz and user info, route to referral code step
-      console.log('checkUserStatus - Has user info and quiz, needs referral, returning needs_referral_code');
-      return { status: 'needs_referral_code' };
-    }
-  }
-
-  // Check for quiz completion
-  if (hasQuizAnswers) {
-    // User has completed quiz but not user info
-    console.log('checkUserStatus - Has quiz answers, returning needs_user_info');
-    return { status: 'needs_user_info' };
-  }
-
-  // Check for identity keys completion
-  if (hasFutureSelf || hasLifeGoals || hasCoreValues) {
-    // User has started identity keys but not completed quiz
-    console.log('checkUserStatus - Has identity keys, returning needs_quiz');
-    return { status: 'needs_quiz' };
-  }
-
-  // User is signed in but hasn't started onboarding
-  console.log('checkUserStatus - No onboarding progress, returning needs_onboarding');
+  // A profile row without onboarding_complete only comes from older builds; start over
   return { status: 'needs_onboarding' };
 };
 
@@ -857,6 +733,10 @@ export const clearOnboardingData = async () => {
   try {
     console.log('Clearing onboarding data from AsyncStorage...');
     await AsyncStorage.multiRemove([
+      POST_SIGNUP_KEY,
+      PRE_AUTH_RESUME_KEY,
+      'onboarding_intent',
+      'onboarding_nudge',
       'onboarding_complete',
       'final_preferences',
       'user_preferences',
